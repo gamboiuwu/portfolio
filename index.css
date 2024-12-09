@@ -12,9 +12,16 @@
 @font-face {
     font-family: 'Jost';
     font-style: normal;
-    font-weight: 400;
+    font-weight: 350;
     src: url('./fonts/ShipporiGothic.ttf') format('woff');
 }
+
+@font-face {
+    font-family: 'DelaSuko';
+    font-style: normal;
+    src: url('./fonts/DelaSuko.ttf') format('woff');
+}
+
 
 * {
     margin: 0;
@@ -34,13 +41,13 @@
     --line-height-normal: 1.7;
     --line-height-small: 1.2;
 
-    --black: #000;
-    --pink: #ff3258;
-    --white: #f0e9f2;
-    --white-1: #e5e5e6da;
+    --background_color: #1d3330;
+    --pink: #41fcff;
+    --white: #e9f2f1;
+    --white-1: #28f8e6;
 
 
-    --container-max-width: 1180px;
+    --container-max-width: 1200px;
     --container-normal-width: 800px;
     --container-medium-width: 700px; 
     --container-small-width: 500px;
@@ -51,7 +58,7 @@
     --gutter-small-1: 2.5rem;
     --gutter-small: 2rem;
 
-    --border-light: 1px solid rgb(36, 35, 35);
+    --border-light: 1px solid rgb(26, 48, 33);
 }
 
 html {
@@ -72,7 +79,7 @@ body {
     font-weight: 400;
     color: var(--white-1);
     line-height: var(--line-height-normal);
-    background: var(--black);
+    background: var(--background_color);
     overflow-x: hidden;
 }
 
@@ -119,7 +126,21 @@ img {
 /* ----- Headlines and Paragraphs ----- */
 /* --------------------------------------- */
 
-h1,
+h1 {
+   font-family: 'DelaSuko';
+   line-height: 50%;
+   color: var(--white);
+}
+
+.typeofheader {
+    font-family: 'DelaSuko';
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
+    line-height: 50%;
+    color: var(--white);
+}
+
 h2,
 h3 {
     font-family: 'Jost', sans-serif;
@@ -129,7 +150,7 @@ h3 {
 }
 
 .heading-primary {
-    line-height: 1;
+    line-height: 1.2;
     font-size: var(--font-size-huge);
     font-weight: 400;
 }
@@ -292,8 +313,13 @@ body:not(.user-is-tabbing) a:focus {
     background: var(--pink);
 }
 
+.center {
+    text-align: center;
+}
+
 .link__text span {
     padding-left: 1rem;
+    text-align: center;
     font-family: sans-serif;
 }
 
