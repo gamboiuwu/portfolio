@@ -17,11 +17,37 @@
 }
 
 @font-face {
-    font-family: 'DelaSuko';
+    font-family: 'coolvetics';
     font-style: normal;
-    src: url('./fonts/DelaSuko.ttf') format('woff');
+    font-weight:250;
+    src: url('./fonts/RaveoVF.ttf') format('woff');
 }
 
+@font-face {
+    font-family: 'Monument';
+    font-style:normal;
+    font-weight: 300;
+    src: url('./fonts/PPMonumentExtended-Black.otf') format('woff');
+}
+
+@font-face {
+    font-family: 'StretchPro';
+    font-style:normal;
+    font-weight: 300;
+    src: url('./fonts/StretchPro.otf') format('woff');
+}
+
+@keyframes textColorChange {
+    0% {
+        color: var(--white); /* Initial color */
+    }
+    50% {
+        color: var(--pink); /* Midway color */
+    }
+    100% {
+        color: var(#000000); /* Final color */
+    }
+}
 
 * {
     margin: 0;
@@ -30,16 +56,16 @@
 }
 
 :root {
-    --font-size-small: 1.8rem;
-    --font-size-normal: 2.2rem;
+    --font-size-small: 1.2rem;
+    --font-size-normal: 2.3rem;
     --font-size-medium: 2.8rem;
     --font-size-medium-1: 3.6rem;
     --font-size-large: 5.5rem;
     --font-size-huge: 7.5rem;
     --font-stack: 'Hk Grotesk', sans-serif;
 
-    --line-height-normal: 1.7;
-    --line-height-small: 1.2;
+    --line-height-normal: 1.2;
+    --line-height-small: 1.8;
 
     --background_color: #1d3330;
     --pink: #41fcff;
@@ -52,13 +78,13 @@
     --container-medium-width: 700px; 
     --container-small-width: 500px;
 
-    --gutter-huge: 12rem;
+    --gutter-huge: 4rem;
     --gutter-medium: 6rem;
     --gutter-normal: 3rem;
     --gutter-small-1: 2.5rem;
     --gutter-small: 2rem;
 
-    --border-light: 1px solid rgb(26, 48, 33);
+    --border-light: 1px solid rgb(7, 255, 251);
 }
 
 html {
@@ -126,25 +152,30 @@ img {
 /* ----- Headlines and Paragraphs ----- */
 /* --------------------------------------- */
 
+b {
+    font-weight: 500;
+}
+
 h1 {
-   font-family: 'DelaSuko';
+   font-family: 'StretchPro';
    line-height: 50%;
    color: var(--white);
 }
 
 .typeofheader {
-    font-family: 'DelaSuko';
+    font-family: 'coolvetics';
     display: block;
     margin-left: auto;
     margin-right: auto;
-    line-height: 50%;
+    line-height: 0%;
     color: var(--white);
 }
 
 h2,
 h3 {
-    font-family: 'Jost', sans-serif;
+    font-family: 'StretchPro', sans-serif;
     font-weight: 400;
+    font-stretch:expanded;
     line-height: var(--line-height-small);
     color: var(--white);
 }
@@ -196,6 +227,7 @@ h3 {
 
 p {
     margin: var(--gutter-small-1) 0;
+    font-family: 'coolvetics';
 }
 
 @media(max-width: 900px) {
@@ -211,8 +243,8 @@ p {
 a {
     color: var(--white);
     font-weight: 400;
-    font-family: 'Jost', sans-serif;
-    transition: all .2s;
+    font-family: 'coolvetics', sans-serif;
+    transition: all .7s;
     outline: 2px solid transparent;
 }
 
@@ -231,7 +263,8 @@ body:not(.user-is-tabbing) a:focus {
 }
 
 .link:hover {
-    color: var(--pink);
+    color: var(--black);
+    
 }
 
 .btn {
@@ -240,8 +273,9 @@ body:not(.user-is-tabbing) a:focus {
     padding: 1rem 4.2rem;
     text-decoration: none;
     color: inherit;
-    border: 1px solid  var(--pink);
+    border: 2px solid  var(--pink);
     font-weight: 400;
+    transition: textColorChange 2s infinite;
 }
 
 .btn:focus {
@@ -255,10 +289,12 @@ body:not(.user-is-tabbing) a:focus {
     top: 0;
     left: 0;
     right: 100%;
-    background: var(--white);
+    background: var(--white-1);
+    color:#000000;
     height: 100%;
     z-index: -1;
     transition: all 0.2s cubic-bezier(1, 0.68, 0.16, 0.9);
+    transition: textColorChange 1s infinite;
 }
 
 .btn:hover::after,
@@ -283,7 +319,9 @@ body:not(.user-is-tabbing) a:focus {
 
 .link__text {
     position: relative;
-    display: inline-block;
+    display: inline-flex; /* Changed to flex to enable centering */
+    justify-content: center; /* Horizontally center the text */
+    align-items: center; /* Vertically center the text */
     padding: .6rem;
     color: inherit;
     text-decoration: none;
@@ -448,7 +486,7 @@ body:not(.user-is-tabbing) a:focus {
 .header__text p {
     margin: 1.5rem 0 3.5rem;
     max-width: var(--container-medium-width);
-    font-family: 'Jost', sans-serif;
+    font-family: 'coolvetics', sans-serif;
     font-size: var(--font-size-medium);
 }
 
