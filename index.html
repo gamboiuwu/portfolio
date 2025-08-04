@@ -59,9 +59,9 @@
 							<section class="tiles">
 								<article class="style1">
 									<span class="image">
-										<img src="images/pic01.jpg" alt="" />
+										<img src="images/yuka.png" alt="" />
 									</span>
-									<a href="generic.html">
+									<a href="https://yuka.design/">
 										<h2>Yuka Designs</h2>
 										<div class="content">
 											<p>An eco-friendly techwear brand.</p>
@@ -86,44 +86,84 @@
 				<!-- Footer -->
 					<footer id="footer">
 						<div class="inner">
-							<section>
-								<h2>Get in touch</h2>
-								<form method="post" action="#">
-									<div class="fields">
-										<div class="field half">
-											<input type="text" name="name" id="name" placeholder="Name" />
-										</div>
-										<div class="field half">
-											<input type="email" name="email" id="email" placeholder="Email" />
-										</div>
-										<div class="field">
-											<textarea name="message" id="message" placeholder="Message"></textarea>
-										</div>
-									</div>
-									<ul class="actions">
-										<li><input type="submit" value="Send" class="primary" /></li>
-									</ul>
-								</form>
-							</section>
-							<section>
-  <h2>Follow Me</h2>
-  <ul class="icons">
-    <li><a href="https://x.com/gamboiuwu" class="icon brands style2 fa-twitter"><span class="label">Twitter</span></a></li>
-    <li><a href="https://instagram.com/gamboi.v" class="icon brands style2 fa-instagram"><span class="label">Instagram</span></a></li>
-    <li><a href="mailto:contact@yukadesigns.com" class="icon solid style2 fa-envelope"><span class="label">Email</span></a></li>
-    <li><a href="https://yuka.design/" class="icon solid style2 fa-globe"><span class="label">Website</span></a></li>
-    <li><a href="https://events.nyfurs.org" class="icon solid style2 fa-paw"><span class="label">NYFurs</span></a></li>
-	<li><a href="https://www.artstation.com/gamboiuwu" class="icon brands style2 fa-artstation"><span class="label">ArtStation</span></a></li>
+							<!-- 
+    =======================================================================
+
+    This is a working contact form. To receive email, 
+    Replace YOUR_ACCESS_KEY_HERE with your actual Access Key.
+
+    Create Access Key here 👉 https://web3forms.com/
+
+    =======================================================================
+ -->
+
+<!-- Outer wrapper -->
+<div class="flex flex-col items-center min-h-screen bg-gray-900">
+
+  <!-- Contact Form Container -->
+  <div class="container mx-auto">
+    <div class="max-w-md mx-auto my-10 bg-gray-800 p-5 rounded-md shadow-sm">
+      <div class="text-center">
+        <h1 class="my-3 text-3xl font-semibold text-gray-100">
+          Contact Me
+        </h1>
+        <p class="text-gray-400">
+          Fill up the form below to send me a message.
+        </p>
+      </div>
+      <div class="m-7">
+        <form action="https://api.web3forms.com/submit" method="POST" id="form">
+          <input type="hidden" name="access_key" value="133febc5-2004-45d4-86c9-4d7d95995c46" />
+          <input type="hidden" name="subject" value="New Submission from Web3Forms" />
+          <input type="checkbox" name="botcheck" style="display: none;" />
+
+          <!-- Input Fields -->
+          <div class="mb-6">
+            <label for="name" class="block mb-2 text-sm text-gray-400">Full Name</label>
+            <input type="text" name="name" id="name" placeholder="John Doe" required class="w-full px-3 py-2 h-12 rounded-sm placeholder-gray-500 text-gray-900 bg-gray-100 text-sm focus:outline-none" />
+          </div>
+          <div class="mb-6">
+            <label for="email" class="block mb-2 text-sm text-gray-400">Email Address</label>
+            <input type="email" name="email" id="email" placeholder="you@company.com" required class="w-full px-3 py-2 h-12 rounded-sm placeholder-gray-500 text-gray-900 bg-gray-100 text-sm focus:outline-none" />
+          </div>
+          <div class="mb-6">
+            <label for="phone" class="block mb-2 text-sm text-gray-400">Phone Number</label>
+            <input type="text" name="phone" id="phone" placeholder="+1 (555) 1234-567" required class="w-full px-3 py-2 h-12 rounded-sm placeholder-gray-500 text-gray-900 bg-gray-100 text-sm focus:outline-none" />
+          </div>
+          <div class="mb-6">
+            <label for="message" class="block mb-2 text-sm text-gray-400">Your Message</label>
+            <textarea rows="5" name="message" id="message" placeholder="Your Message" class="w-full px-3 py-2 rounded-sm placeholder-gray-500 text-gray-900 bg-gray-100 text-sm focus:outline-none" required></textarea>
+          </div>
+
+          <div class="mb-6">
+            <button type="submit" class="w-full bg-indigo-600 text-white py-4 px-4 rounded-sm hover:bg-indigo-500 focus:outline-none">
+              Send Message
+            </button>
+          </div>
+          <p class="text-base text-center text-gray-400" id="result"></p>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Follow Me Section -->
+  <div class="my-10 text-center">
+    <h2 class="text-2xl text-gray-100 mb-4">Follow Me</h2>
+    <ul class="icons flex justify-center gap-4">
+      <li><a href="https://x.com/gamboiuwu" class="icon brands style2 fa-twitter text-gray-400 hover:text-white"><span class="label">Twitter</span></a></li>
+      <li><a href="https://instagram.com/gamboi.v" class="icon brands style2 fa-instagram text-gray-400 hover:text-white"><span class="label">Instagram</span></a></li>
+      <li><a href="mailto:contact@yukadesigns.com" class="icon solid style2 fa-envelope text-gray-400 hover:text-white"><span class="label">Email</span></a></li>
+      <li><a href="https://yuka.design/" class="icon solid style2 fa-globe text-gray-400 hover:text-white"><span class="label">Website</span></a></li>
+      <li><a href="https://events.nyfurs.org" class="icon solid style2 fa-paw text-gray-400 hover:text-white"><span class="label">NYFurs</span></a></li>
+      <li><a href="https://www.artstation.com/gamboiuwu" class="icon brands style2 fa-artstation text-gray-400 hover:text-white"><span class="label">ArtStation</span></a></li>
+    </ul>
+  </div>
+
+  <!-- Copyright -->
+  <ul class="text-gray-500 text-sm mb-4">
+    <li>&copy; Anthony Ryabchikov. All rights reserved</li>
   </ul>
-</section>
-
-							<ul class="copyright">
-								<li>&copy; Anthony Ryabchikov. All rights reserved</li>
-							</ul>
-						</div>
-					</footer>
-
-			</div>
+</div>
 
 		<!-- Scripts -->
 			<script src="assets/js/jquery.min.js"></script>
@@ -131,6 +171,7 @@
 			<script src="assets/js/breakpoints.min.js"></script>
 			<script src="assets/js/util.js"></script>
 			<script src="assets/js/main.js"></script>
+			<script src="assets/js/mail.js"></script>
 
 	</body>
 </html>
