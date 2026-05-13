@@ -5,224 +5,317 @@
 	Free for personal and commercial use under the CCA 3.0 license (html5up.net/license)
 -->
 <html>
+<head>
+	<meta charset="utf-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
 
-	<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
-  
-  <meta name="description" content="Portfolio of Anthony Ryabchikov – designer, developer, and creator of Yuka Designs. Creative work in techwear fashion, web development, and digital art.">
-  <meta name="keywords" content="portfolio, artist, gamboiuwu, anthony, ryabchikov">
-  <meta name="author" content="Anthony Ryabchikov">
-  <meta name="theme-color" content="#8ac2ea" data-react-helmet="true">
-  <meta property="og:title" content="Anthony Ryabchikov">
-  <meta property="og:site_name" content="Anthony Ryabchikov | Designer, Developer, and Creator">
-  <meta property="og:description" content="Portfolio of Anthony Ryabchikov – designer, developer, and creator of Yuka Designs. Creative work in techwear fashion, web development, and digital art.">
-  <meta property="og:url" content="https://antryab.com">
-  <meta property="og:image" content="https://antryab.com/images/yuka_header.png">
-  <meta property="og:image:alt" content="Yuka header">
-  
-  <title>Anthony Ryabchikov | Designer, Developer, and Creator</title>
+	<meta name="description" content="Portfolio of Anthony Ryabchikov – designer, developer, and creator of Yuka Designs. Creative work in techwear fashion, web development, and digital art.">
+	<meta name="keywords" content="portfolio, artist, gamboiuwu, anthony, ryabchikov">
+	<meta name="author" content="Anthony Ryabchikov">
+	<meta name="theme-color" content="#7ecaf6">
+	<meta property="og:title" content="Anthony Ryabchikov">
+	<meta property="og:site_name" content="Anthony Ryabchikov | Designer, Developer, and Creator">
+	<meta property="og:description" content="Portfolio of Anthony Ryabchikov – designer, developer, and creator of Yuka Designs. Creative work in techwear fashion, web development, and digital art.">
+	<meta property="og:url" content="https://antryab.com">
+	<meta property="og:image" content="https://antryab.com/images/yuka_header.png">
+	<meta property="og:image:alt" content="Yuka header">
 
-  <meta name="robots" content="index, follow" />
+	<title>Anthony Ryabchikov | Designer, Developer, and Creator</title>
 
-  <!-- Twitter Meta -->
-  <meta name="twitter:card" content="summary_large_image" />
-  <meta name="twitter:title" content="Anthony Ryabchikov | Designer, Developer, and Creator" />
-  <meta name="twitter:description" content="Check out Anthony Ryabchikov’s portfolio: techwear, code, art." />
-  <meta name="twitter:image" content="https://antryab.com/images/yuka_header.png" />
+	<meta name="robots" content="index, follow" />
 
-  <!-- Favicon -->
-	<link rel="icon" type="image/png" href="image/favicon.png" />
+	<meta name="twitter:card" content="summary_large_image" />
+	<meta name="twitter:title" content="Anthony Ryabchikov | Designer, Developer, and Creator" />
+	<meta name="twitter:description" content="Check out Anthony Ryabchikov's portfolio: techwear, code, art." />
+	<meta name="twitter:image" content="https://antryab.com/images/yuka_header.png" />
 
-  <!-- Stylesheets -->
-  <link rel="stylesheet" href="assets/css/main.css" />
-  <noscript><link rel="stylesheet" href="assets/css/noscript.css" /></noscript>
+	<link rel="icon" type="image/png" href="images/favicon.png" />
+	<link rel="stylesheet" href="assets/css/main.css" />
+	<noscript><link rel="stylesheet" href="assets/css/noscript.css" /></noscript>
+
+	<style>
+	/* ═══════════════════════════════════════════════
+	   HOMEPAGE — CUSTOM DESIGN
+	   Palette: pink #f2849e  ·  cyan #7ecaf6
+	═══════════════════════════════════════════════ */
+
+	:root {
+		--pk:      #f2849e;
+		--cy:      #7ecaf6;
+		--brd:     rgba(255,255,255,0.06);
+		--brd-pk:  rgba(242,132,158,0.22);
+		--brd-cy:  rgba(126,202,246,0.20);
+	}
+
+	/* ── BIO SECTION ─────────────────────────────── */
+	.bio-block {
+		padding-bottom: 2.25em;
+		border-bottom: 1px solid var(--brd);
+		margin-bottom: 2.5em;
+	}
+	.section-label {
+		display: block;
+		font-size: 0.62em;
+		font-weight: 700;
+		letter-spacing: 0.2em;
+		text-transform: uppercase;
+		color: var(--cy);
+		opacity: 0.65;
+		margin-bottom: 0.6em;
+	}
+	.hero-name {
+		border-left: 3px solid var(--pk);
+		padding-left: 0.45em !important;
+		margin-bottom: 0.3em !important;
+		line-height: 1.05 !important;
+	}
+	.bio-subtitle {
+		font-size: 0.82em;
+		color: #6a6a6a;
+		letter-spacing: 0.02em;
+		margin-bottom: 1em !important;
+	}
+	.bio-block p {
+		color: #b0b0b0;
+		line-height: 1.75;
+		max-width: 68ch;
+	}
+
+	/* ── SELECTED WORKS ──────────────────────────── */
+	.works-intro {
+		margin-bottom: 1.75em;
+	}
+	.works-heading {
+		border-left: 3px solid var(--cy);
+		padding-left: 0.45em !important;
+		margin-bottom: 0.3em !important;
+	}
+	.works-sub {
+		font-size: 0.78em;
+		color: #555;
+		letter-spacing: 0.02em;
+		margin-bottom: 0 !important;
+	}
+
+	/* ── TILE HOVER ACCENT ───────────────────────── */
+	.tiles article a::after {
+		background: linear-gradient(
+			to top,
+			rgba(242,132,158,0.18) 0%,
+			transparent 60%
+		) !important;
+	}
+
+	/* ── FOOTER ──────────────────────────────────── */
+	#footer .inner {
+		display: flex;
+		flex-direction: column;
+		gap: 1.25em;
+	}
+	#footer .inner > .contact-strip {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		flex-wrap: wrap;
+		gap: 1em;
+		padding-bottom: 1.5em;
+		border-bottom: 1px solid var(--brd);
+	}
+	.contact-strip-left {
+		display: flex;
+		flex-direction: column;
+		gap: 0.3em;
+	}
+	.contact-strip-left span {
+		font-size: 0.62em;
+		font-weight: 700;
+		letter-spacing: 0.2em;
+		text-transform: uppercase;
+		color: var(--cy);
+		opacity: 0.6;
+	}
+	.contact-strip-left p {
+		margin: 0;
+		font-size: 0.9em;
+		color: #888;
+	}
+	.contact-strip-left a {
+		color: var(--cy) !important;
+		border-bottom: 1px solid transparent;
+		transition: border-color 0.2s;
+	}
+	.contact-strip-left a:hover {
+		border-bottom-color: var(--cy);
+	}
+	.contact-strip-right a.button {
+		font-size: 0.78em;
+		letter-spacing: 0.12em;
+		padding: 0.65em 1.6em;
+		border-radius: 3px;
+		background: transparent;
+		border: 1px solid var(--pk);
+		color: var(--pk) !important;
+		transition: background 0.2s, color 0.2s;
+	}
+	.contact-strip-right a.button:hover {
+		background: var(--pk);
+		color: #0d0d0f !important;
+	}
+	</style>
 </head>
 
-	<body class="is-preload">
-		<!-- Wrapper -->
-			<div id="wrapper">
+<body class="is-preload">
+	<!-- Wrapper -->
+	<div id="wrapper">
 
-				<!-- Header -->
-					<header id="header">
-						<div class="inner">
+		<!-- Header -->
+		<header id="header">
+			<div class="inner">
+				<a href="index.html" class="logo">
+					<span class="symbol"><img src="images/favicon.png" alt="" /></span><span class="title">RYABCHIKOV</span>
+				</a>
+				<nav>
+					<ul>
+						<li><a href="#menu">Menu</a></li>
+					</ul>
+				</nav>
+			</div>
+		</header>
 
-							<!-- Logo -->
-								<a href="index.html" class="logo">
-									<span class="symbol"><img src="images/favicon.png" alt="" /></span><span class="title">RYABCHIKOV</span>
-								</a>
+		<!-- Menu -->
+		<nav id="menu">
+			<h2>Menu</h2>
+			<ul>
+				<li><a href="index.html">Home</a></li>
+				<li><a href="commissions/">Commissions</a></li>
+				<li><a href="">Examples</a></li>
+				<li><a href="mailto:gamboiuwu@nyfurs.org">Contact</a></li>
+			</ul>
+		</nav>
 
-							<!-- Nav -->
-								<nav>
-									<ul>
-										<li><a href="#menu">Menu</a></li>
-									</ul>
-								</nav>
+		<!-- Main -->
+		<div id="main">
+			<div class="inner">
 
-						</div>
-					</header>
+				<!-- Bio -->
+				<div class="bio-block">
+					<span class="section-label">// PORTFOLIO</span>
+					<h1 class="hero-name">Anthony Ryabchikov</h1>
+					<h2 class="bio-subtitle">Studio Artist BFA &middot; Business &amp; Liberal Arts Minor &middot; Japanese Minor &mdash; Fall 2026</h2>
+					<p>Anthony Ryabchikov, aka gamboiuwu, is a freelance artist specializing in character design, studio art, animation, and videography. With over ten years dedicated to studio art and event coordination, Anthony brings a confident, personal voice to every project.</p>
+				</div>
 
-				<!-- Menu -->
-					<nav id="menu">
-						<h2>Menu</h2>
-						<ul>
-							<li><a href="index.html">Home</a></li>
-							<li><a href="commissions/">Commissions</a></li>
-							<li><a href="">Examples</a></li>
-							<li><a href="">Contact</a></li>
-						</ul>
-					</nav>
+				<!-- Selected Works -->
+				<div class="works-intro">
+					<span class="section-label">// SELECTED WORKS</span>
+					<h2 class="works-heading">Projects</h2>
+					<p class="works-sub">Interdisciplinary work spanning design, live events, and studio art — through academic study and applied practice.</p>
+				</div>
 
-				<!-- Main -->
-					<div id="main">
-						<div class="inner">
-							<header>
-								<h1>Anthony Ryabchikov</h1>
-								<h2>Studio Artist BFA, Business & Liberal Arts Minor, Japanese Minor (Fall 2026)</h2>
-								<p>Anthony Ryabchikov, aka gamboiuwu, is a highly skilled and confident freelance artist specializing in character design, studio art, animation, and videography. With a strong desire to make a positive impact on the world, Anthony has dedicated over ten years to perfecting their craft in the studio art field, and event coordination.</p>
-								<h1>Selected Works</h1>
-								<h2>Interdisciplinary work exploring design, event experiences, and studio art through academic study and applied practice.</h2>
-							</header>
-							<section class="tiles">
-								<article class="style1">
-									<span class="image">
-										<img src="images/yuka.png" alt="" />
-									</span>
-									<a href="https://yuka.design/">
-										<h2>Yuka Designs</h2>
-										<div class="content">
-											<p>An eco-friendly techwear brand.</p>
-										</div>
-									</a>
-								</article>
-								<article class="style2">
-									<span class="image">
-										<img src="images/Divide_2024.jpg" alt="" />
-									</span>
-									<a href="commissions/">
-										<h2>Commissions</h2>
-										<div class="content">
-											<p>Freelance commissions</p>
-										</div>
-									</a>
-								</article>
-								<article class="style3">
-									<span class="image">
-										<img src="images/fff.png" alt="" />
-									</span>
-									<a href="https://nyfurs.org/">
-										<h2>New York Furs</h2>
-										<div class="content">
-											<p>Board Director and Founder of the not-for-profit organization New York Furs that specializes in bringing unique events to the NY community.</p>
-										</div>
-									</a>
-								</article>
-								<article class="style4">
-									<span class="image">
-										<img src="images/letfexraut.jpg" alt="" />
-									</span>
-									<a href="https://letfexraut.bandcamp.com/">
-										<h2>letfexraut</h2>
-										<div class="content">
-											<p>Music alias ranging from breakcore to post-2000s trance music.</p>
-										</div>
-									</a>
-								</article>
-								<article class="style5">
-									<span class="image">
-										<img src="images/extortia.png" alt="" />
-									</span>
-									<a href="https://www.youtube.com/watch?v=-MMhvUsZJW4">
-										<h2>Extortia</h2>
-										<div class="content">
-											<p>Award-Winning Indie game developer of Extortia, a sci-fi space game. Received awards by Resonance Awards 2021 for "Most Innovative Project" and "Best Sound Design".</p>
-										</div>
-									</a>
-								</article>
-							</section>
-						</div>
+				<section class="tiles">
+					<article class="style1">
+						<span class="image">
+							<img src="images/yuka.png" alt="Yuka Designs techwear brand" />
+						</span>
+						<a href="https://yuka.design/">
+							<h2>Yuka Designs</h2>
+							<div class="content">
+								<p>An eco-friendly techwear brand.</p>
+							</div>
+						</a>
+					</article>
+					<article class="style2">
+						<span class="image">
+							<img src="images/Divide_2024.jpg" alt="Commission artwork preview" />
+						</span>
+						<a href="commissions/">
+							<h2>Commissions</h2>
+							<div class="content">
+								<p>Freelance commissions — digital art, stickers, animation.</p>
+							</div>
+						</a>
+					</article>
+					<article class="style3">
+						<span class="image">
+							<img src="images/fff.png" alt="New York Furs" />
+						</span>
+						<a href="https://nyfurs.org/">
+							<h2>New York Furs</h2>
+							<div class="content">
+								<p>Board Director and Founder of the not-for-profit bringing unique events to the NY community.</p>
+							</div>
+						</a>
+					</article>
+					<article class="style4">
+						<span class="image">
+							<img src="images/letfexraut.jpg" alt="letfexraut music" />
+						</span>
+						<a href="https://letfexraut.bandcamp.com/">
+							<h2>letfexraut</h2>
+							<div class="content">
+								<p>Music alias ranging from breakcore to post-2000s trance.</p>
+							</div>
+						</a>
+					</article>
+					<article class="style5">
+						<span class="image">
+							<img src="images/extortia.png" alt="Extortia game" />
+						</span>
+						<a href="https://www.youtube.com/watch?v=-MMhvUsZJW4">
+							<h2>Extortia</h2>
+							<div class="content">
+								<p>Award-winning sci-fi indie game. Resonance Awards 2021: Most Innovative Project &amp; Best Sound Design.</p>
+							</div>
+						</a>
+					</article>
+				</section>
+
+			</div>
+		</div>
+
+		<!-- Footer -->
+		<footer id="footer">
+			<div class="inner">
+
+				<div class="contact-strip">
+					<div class="contact-strip-left">
+						<span>// GET IN TOUCH</span>
+						<p>
+							<a href="mailto:gamboiuwu@nyfurs.org">gamboiuwu@nyfurs.org</a>
+							&nbsp;&middot;&nbsp; Discord / Telegram: <code>@gamboiuwu</code>
+						</p>
 					</div>
+					<div class="contact-strip-right">
+						<a href="commissions/" class="button">View Commissions</a>
+					</div>
+				</div>
 
-				<!-- Footer -->
-					<footer id="footer">
-						<div class="inner">
+				<section>
+					<ul class="icons">
+						<li><a href="https://x.com/gamboiuwu" class="icon brands style2 fa-twitter"><span class="label">Twitter</span></a></li>
+						<li><a href="https://instagram.com/gamboi.v" class="icon brands style2 fa-instagram"><span class="label">Instagram</span></a></li>
+						<li><a href="mailto:gamboiuwu@nyfurs.org" class="icon solid style2 fa-envelope"><span class="label">Email</span></a></li>
+						<li><a href="https://yuka.design/" class="icon solid style2 fa-globe"><span class="label">Yuka Designs</span></a></li>
+						<li><a href="https://events.nyfurs.org" class="icon solid style2 fa-paw"><span class="label">NYFurs</span></a></li>
+						<li><a href="https://www.artstation.com/gamboiuwu" class="icon brands style2 fa-artstation"><span class="label">ArtStation</span></a></li>
+					</ul>
+				</section>
 
+				<ul class="copyright">
+					<li>&copy; Anthony Ryabchikov. All rights reserved.</li>
+				</ul>
 
-<!-- Outer wrapper -->
-<div class="flex flex-col items-center min-h-screen bg-gray-900">
+			</div>
+		</footer>
 
-  <!-- Contact Form Container -->
-  <div class="container mx-auto">
-    <div class="max-w-md mx-auto my-10 bg-gray-800 p-5 rounded-md shadow-sm">
-      <div class="text-center">
-        <h1 class="my-3 text-3xl font-semibold text-gray-100">
-          Contact Me
-        </h1>
-        <p class="text-gray-400">
-          Fill up the form below to send me a message.
-        </p>
-      </div>
-      <div class="m-7">
-        <form action="https://api.web3forms.com/submit" method="POST" id="form">
-          <input type="hidden" name="access_key" value="133febc5-2004-45d4-86c9-4d7d95995c46" />
-          <input type="hidden" name="subject" value="New Submission from Web3Forms" />
-          <input type="checkbox" name="botcheck" style="display: none;" />
+	</div><!-- /#wrapper -->
 
-          <!-- Input Fields -->
-          <div class="mb-6">
-            <label for="name" class="block mb-2 text-sm text-gray-400">Full Name</label>
-            <input type="text" name="name" id="name" placeholder="John Doe" required class="w-full px-3 py-2 h-12 rounded-sm placeholder-gray-500 text-gray-900 bg-gray-100 text-sm focus:outline-none" />
-          </div>
-          <div class="mb-6">
-            <label for="email" class="block mb-2 text-sm text-gray-400">Email Address</label>
-            <input type="email" name="email" id="email" placeholder="you@gmail.com" required class="w-full px-3 py-2 h-12 rounded-sm placeholder-gray-500 text-gray-900 bg-gray-100 text-sm focus:outline-none" />
-          </div>
-          <div class="mb-6">
-            <label for="phone" class="block mb-2 text-sm text-gray-400">Phone Number</label>
-            <input type="text" name="phone" id="phone" placeholder="+1(555)-555-5555" required class="w-full px-3 py-2 h-12 rounded-sm placeholder-gray-500 text-gray-900 bg-gray-100 text-sm focus:outline-none" />
-          </div>
-          <div class="mb-6">
-            <label for="message" class="block mb-2 text-sm text-gray-400">Your Message</label>
-            <textarea rows="5" name="message" id="message" placeholder="Your Message" class="w-full px-3 py-2 rounded-sm placeholder-gray-500 text-gray-900 bg-gray-100 text-sm focus:outline-none" required></textarea>
-          </div>
+	<!-- Scripts -->
+	<script src="assets/js/jquery.min.js"></script>
+	<script src="assets/js/browser.min.js"></script>
+	<script src="assets/js/breakpoints.min.js"></script>
+	<script src="assets/js/util.js"></script>
+	<script src="assets/js/main.js"></script>
 
-          <div class="mb-6">
-            <button type="submit" class="w-full bg-indigo-600 text-white py-4 px-4 rounded-sm hover:bg-indigo-500 focus:outline-none">
-              Send Message
-            </button>
-          </div>
-          <p class="text-base text-center text-gray-400" id="result"></p>
-        </form>
-      </div>
-    </div>
-  </div>
-
-  <!-- Follow Me Section -->
-  <div class="my-10 text-center">
-    <h2 class="text-2xl text-gray-100 mb-4">Follow Me</h2>
-    <ul class="icons flex justify-center gap-4">
-      <li><a href="https://x.com/gamboiuwu" class="icon brands style2 fa-twitter text-gray-400 hover:text-white"><span class="label">Twitter</span></a></li>
-      <li><a href="https://instagram.com/gamboi.v" class="icon brands style2 fa-instagram text-gray-400 hover:text-white"><span class="label">Instagram</span></a></li>
-      <li><a href="mailto:gamboiuwu@nyfurs.org" class="icon solid style2 fa-envelope text-gray-400 hover:text-white"><span class="label">Email</span></a></li>
-      <li><a href="https://yuka.design/" class="icon solid style2 fa-globe text-gray-400 hover:text-white"><span class="label">Website</span></a></li>
-      <li><a href="https://events.nyfurs.org" class="icon solid style2 fa-paw text-gray-400 hover:text-white"><span class="label">NYFurs</span></a></li>
-      <li><a href="https://www.artstation.com/gamboiuwu" class="icon brands style2 fa-artstation text-gray-400 hover:text-white"><span class="label">ArtStation</span></a></li>
-    </ul>
-  </div>
-
-  <!-- Copyright -->
-  <ul class="text-gray-500 text-sm mb-4">
-    <li>&copy; Anthony Ryabchikov. All rights reserved</li>
-  </ul>
-</div>
-
-		<!-- Scripts -->
-			<script src="assets/js/jquery.min.js"></script>
-			<script src="assets/js/browser.min.js"></script>
-			<script src="assets/js/breakpoints.min.js"></script>
-			<script src="assets/js/util.js"></script>
-			<script src="assets/js/main.js"></script>
-			<script src="assets/js/mail.js"></script>
-
-	</body>
+</body>
 </html>

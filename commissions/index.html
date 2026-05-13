@@ -230,7 +230,7 @@
 			border-radius: 4px;
 			border: 1px solid var(--brd);
 			background: var(--bg3);
-			cursor: default;
+			cursor: zoom-in;
 		}
 		.comm-gallery-item img {
 			width: 100%; height: 300px;
@@ -267,6 +267,7 @@
 			overflow: hidden;
 			background: var(--bg3);
 			transition: border-color .2s, transform .2s;
+			cursor: zoom-in;
 		}
 		.sticker-gallery-item:hover {
 			border-color: var(--brd-cy);
@@ -403,6 +404,68 @@
 			text-transform: uppercase;
 			color: #3a3a3a;
 			margin-bottom: 1em;
+		}
+
+		/* ── LIGHTBOX ───────────────────────────────── */
+		#lb {
+			position: fixed; inset: 0; z-index: 9999;
+			background: rgba(4,4,6,0.92);
+			backdrop-filter: blur(12px);
+			-webkit-backdrop-filter: blur(12px);
+			display: flex; align-items: center; justify-content: center;
+			opacity: 0; pointer-events: none;
+			transition: opacity 0.22s ease;
+		}
+		#lb.active { opacity: 1; pointer-events: all; }
+		#lb-stage {
+			max-width: min(90vw, 1100px);
+			width: 100%;
+			display: flex; flex-direction: column; align-items: center;
+			transform: translateY(12px) scale(0.97);
+			transition: transform 0.3s cubic-bezier(0.25, 1, 0.5, 1);
+		}
+		#lb.active #lb-stage { transform: translateY(0) scale(1); }
+		#lb-img {
+			max-width: 100%; max-height: 80vh;
+			object-fit: contain; display: block;
+			border-radius: 4px;
+			border: 1px solid var(--brd);
+		}
+		#lb-caption {
+			margin-top: 0.8em; text-align: center;
+			font-size: 0.72em; font-weight: 900;
+			text-transform: uppercase; letter-spacing: 0.12em;
+			color: #888; min-height: 1.2em;
+		}
+		#lb-counter {
+			font-size: 0.58em; color: #383838;
+			letter-spacing: 0.1em; margin-top: 0.3em;
+		}
+		#lb-close {
+			position: fixed; top: 1.25em; right: 1.5em;
+			background: rgba(17,17,19,0.75); border: 1px solid var(--brd);
+			border-radius: 3px; color: #666;
+			font-size: 1.1em; line-height: 1; cursor: pointer;
+			padding: 0.35em 0.6em;
+			transition: color 0.15s, border-color 0.15s;
+			z-index: 10000;
+		}
+		#lb-close:hover { color: var(--pk); border-color: var(--brd-pk); }
+		.lb-arrow {
+			position: fixed; top: 50%; transform: translateY(-50%);
+			background: rgba(17,17,19,0.75); border: 1px solid var(--brd);
+			color: #666; font-size: 1.6em; line-height: 1; cursor: pointer;
+			padding: 0.45em 0.6em; border-radius: 3px;
+			transition: color 0.15s, border-color 0.15s, background 0.15s;
+			z-index: 10000;
+		}
+		.lb-arrow:hover { color: var(--cy); border-color: var(--brd-cy); background: rgba(126,202,246,0.07); }
+		#lb-prev { left: 1em; }
+		#lb-next { right: 1em; }
+		.lb-arrow:disabled { opacity: 0.18; pointer-events: none; }
+		@media (max-width: 736px) {
+			#lb-prev { left: 0.4em; } #lb-next { right: 0.4em; }
+			.lb-arrow { font-size: 1.2em; padding: 0.4em 0.5em; }
 		}
 
 		/* ── RESPONSIVE ──────────────────────────────── */
@@ -659,6 +722,18 @@
 
 		</div><!-- /#wrapper -->
 
+		<!-- Lightbox -->
+		<div id="lb" role="dialog" aria-modal="true" aria-label="Image viewer">
+			<button id="lb-close" aria-label="Close">&times;</button>
+			<button class="lb-arrow" id="lb-prev" aria-label="Previous">&#8249;</button>
+			<button class="lb-arrow" id="lb-next" aria-label="Next">&#8250;</button>
+			<div id="lb-stage">
+				<img id="lb-img" alt="" />
+				<p id="lb-caption"></p>
+				<p id="lb-counter"></p>
+			</div>
+		</div>
+
 		<script src="../assets/js/jquery.min.js"></script>
 		<script src="../assets/js/browser.min.js"></script>
 		<script src="../assets/js/breakpoints.min.js"></script>
@@ -671,6 +746,76 @@
 				CommissionData.renderCommissions();
 				CommissionData.renderStickers();
 			});
+		</script>
+		<script>
+		(function () {
+			var lb     = document.getElementById('lb');
+			var lbImg  = document.getElementById('lb-img');
+			var lbCap  = document.getElementById('lb-caption');
+			var lbCnt  = document.getElementById('lb-counter');
+			var lbPrev = document.getElementById('lb-prev');
+			var lbNext = document.getElementById('lb-next');
+			var items  = [];
+			var cur    = 0;
+
+			function collectItems() {
+				items = [];
+				document.querySelectorAll('.comm-gallery-item, .sticker-gallery-item').forEach(function (fig) {
+					var img = fig.querySelector('img');
+					var cap = fig.querySelector('figcaption');
+					if (img && img.src) items.push({ src: img.src, alt: img.alt || '', caption: cap ? cap.textContent.trim() : '' });
+				});
+			}
+
+			function show() {
+				var it = items[cur];
+				lbImg.src = it.src;
+				lbImg.alt = it.alt;
+				lbCap.textContent = it.caption || it.alt;
+				lbCnt.textContent = (cur + 1) + ' / ' + items.length;
+				lbPrev.disabled = cur === 0;
+				lbNext.disabled = cur === items.length - 1;
+			}
+
+			function openAt(idx) {
+				collectItems();
+				if (!items.length) return;
+				cur = Math.max(0, Math.min(idx, items.length - 1));
+				show();
+				lb.classList.add('active');
+				document.body.style.overflow = 'hidden';
+			}
+
+			function close() {
+				lb.classList.remove('active');
+				document.body.style.overflow = '';
+				setTimeout(function () { lbImg.src = ''; }, 250);
+			}
+
+			document.getElementById('lb-close').addEventListener('click', close);
+			lb.addEventListener('click', function (e) { if (e.target === lb) close(); });
+
+			lbPrev.addEventListener('click', function () { if (cur > 0) { cur--; show(); } });
+			lbNext.addEventListener('click', function () { if (cur < items.length - 1) { cur++; show(); } });
+
+			document.addEventListener('keydown', function (e) {
+				if (!lb.classList.contains('active')) return;
+				if (e.key === 'Escape')      close();
+				if (e.key === 'ArrowLeft'  && cur > 0)                  { cur--; show(); }
+				if (e.key === 'ArrowRight' && cur < items.length - 1)   { cur++; show(); }
+			});
+
+			/* Delegate clicks on gallery figures */
+			document.addEventListener('click', function (e) {
+				var fig = e.target.closest('.comm-gallery-item, .sticker-gallery-item');
+				if (!fig) return;
+				collectItems();
+				var img = fig.querySelector('img');
+				if (!img) return;
+				var idx = items.findIndex(function (it) { return it.src === img.src; });
+				openAt(idx >= 0 ? idx : 0);
+			});
+		}());
 		</script>
 
 	</body>
