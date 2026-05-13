@@ -1,0 +1,930 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+	<title>Admin — gamboiuwu</title>
+	<meta charset="utf-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+	<meta name="robots" content="noindex, nofollow" />
+	<link rel="stylesheet" href="../assets/css/main.css" />
+	<noscript><link rel="stylesheet" href="../assets/css/noscript.css" /></noscript>
+	<style>
+		/* ---- Layout ---- */
+		#admin-login  { max-width: 420px; margin: 4em auto; }
+		#admin-dash   { display: none; }
+
+		.admin-topbar {
+			display: flex; align-items: center; justify-content: space-between;
+			padding: 0.75em 0 1.25em; border-bottom: 1px solid rgba(201,201,201,0.12);
+			margin-bottom: 1.75em;
+		}
+		.admin-topbar h2 { margin: 0; font-size: 1em; letter-spacing: 0.18em; color: #aaa; }
+		.admin-topbar .btn-group { display: flex; gap: 0.5em; }
+
+		/* ---- Tabs ---- */
+		.admin-tabs {
+			display: flex; gap: 0; border-bottom: 1px solid rgba(201,201,201,0.12);
+			margin-bottom: 2em; overflow-x: auto;
+		}
+		.admin-tab {
+			background: none; border: none; border-bottom: 2px solid transparent;
+			color: #666; cursor: pointer; font-family: inherit; font-size: 0.75em;
+			font-weight: 900; letter-spacing: 0.15em; padding: 0.8em 1.4em;
+			text-transform: uppercase; transition: color 0.2s, border-color 0.2s;
+			white-space: nowrap;
+		}
+		.admin-tab:hover { color: #ccc; }
+		.admin-tab.active { color: #dedede; border-bottom-color: #f2849e; }
+
+		.tab-content { display: none; }
+		.tab-content.active { display: block; }
+
+		/* ---- Cards ---- */
+		.admin-card {
+			background: rgba(255,255,255,0.02);
+			border: 1px solid rgba(201,201,201,0.1);
+			border-radius: 8px; padding: 1.5em; margin-bottom: 1.75em;
+		}
+		.admin-card > h3 {
+			font-size: 0.72em; font-weight: 900; text-transform: uppercase;
+			letter-spacing: 0.15em; color: #888; margin: 0 0 1.25em;
+		}
+		.admin-card p.hint { font-size: 0.85em; color: #666; margin: 0 0 1em; line-height: 1.6; }
+
+		/* ---- Art items ---- */
+		.art-item {
+			display: flex; align-items: flex-start; gap: 0.85em;
+			background: rgba(255,255,255,0.025); border: 1px solid rgba(201,201,201,0.08);
+			border-radius: 6px; margin-bottom: 0.6em; padding: 0.85em;
+		}
+		.art-thumb {
+			width: 58px; height: 58px; object-fit: cover; border-radius: 4px;
+			flex-shrink: 0; background: #1a1a1a;
+		}
+		.art-thumb-placeholder {
+			width: 58px; height: 58px; border-radius: 4px; flex-shrink: 0;
+			background: #1a1a1a; border: 1px dashed #333;
+			display: flex; align-items: center; justify-content: center;
+			font-size: 0.65em; color: #444; text-align: center; line-height: 1.3;
+		}
+		.art-fields { flex: 1; display: flex; flex-direction: column; gap: 0.4em; min-width: 0; }
+		.art-field {
+			width: 100%; background: rgba(255,255,255,0.04);
+			border: 1px solid rgba(201,201,201,0.15); border-radius: 4px;
+			color: #dedede; font-family: inherit; font-size: 0.82em;
+			padding: 0.42em 0.6em; transition: border-color 0.15s;
+		}
+		.art-field:focus { outline: none; border-color: #f2849e; }
+		.art-field::placeholder { color: #444; }
+		.art-field-select {
+			background: rgba(255,255,255,0.04); border: 1px solid rgba(201,201,201,0.15);
+			border-radius: 4px; color: #dedede; font-family: inherit; font-size: 0.82em;
+			padding: 0.42em 0.6em;
+		}
+		.art-actions { display: flex; flex-direction: column; gap: 0.3em; flex-shrink: 0; }
+		.icon-btn {
+			background: rgba(255,255,255,0.04); border: 1px solid rgba(201,201,201,0.12);
+			border-radius: 4px; color: #aaa; cursor: pointer; font-size: 0.75em;
+			line-height: 1; padding: 0.4em 0.55em; transition: all 0.15s;
+		}
+		.icon-btn:hover:not(:disabled) { background: rgba(255,255,255,0.09); color: #dedede; }
+		.icon-btn:disabled { opacity: 0.25; cursor: default; }
+		.icon-btn.danger { color: #c06060; border-color: rgba(192,96,96,0.25); }
+		.icon-btn.danger:hover { background: rgba(192,96,96,0.12); color: #e07070; }
+
+		/* ---- Form fields ---- */
+		.field-row { display: flex; gap: 0.6em; align-items: center; margin-bottom: 0.75em; }
+		.field-label {
+			font-size: 0.75em; font-weight: 900; letter-spacing: 0.1em;
+			text-transform: uppercase; color: #666; white-space: nowrap; min-width: 5em;
+		}
+		.field-input {
+			flex: 1; background: rgba(255,255,255,0.04);
+			border: 1px solid rgba(201,201,201,0.15); border-radius: 4px;
+			color: #dedede; font-family: inherit; font-size: 0.9em; padding: 0.5em 0.75em;
+			transition: border-color 0.15s;
+		}
+		.field-input:focus { outline: none; border-color: #f2849e; }
+		.field-input::placeholder { color: #444; }
+		select.field-input { background: rgba(255,255,255,0.04); }
+		textarea.field-input { resize: vertical; min-height: 120px; font-family: monospace; font-size: 0.82em; }
+
+		/* ---- Font preview ---- */
+		#font-preview-wrap {
+			background: rgba(255,255,255,0.03); border: 1px solid rgba(201,201,201,0.1);
+			border-radius: 6px; padding: 1.25em 1.5em; margin: 0.75em 0; display: none;
+		}
+		#font-preview-text { font-size: 1.4em; line-height: 1.5; color: #dedede; }
+		#font-preview-sub  { font-size: 0.8em; color: #555; margin-top: 0.3em; }
+
+		/* ---- Loaded fonts list ---- */
+		.font-chip {
+			display: flex; align-items: center; justify-content: space-between;
+			background: rgba(255,255,255,0.03); border: 1px solid rgba(201,201,201,0.1);
+			border-radius: 6px; padding: 0.7em 1em; margin-bottom: 0.5em;
+		}
+		.font-chip-name { font-size: 1.05em; }
+		.font-chip-meta { font-size: 0.7em; color: #555; text-transform: uppercase; letter-spacing: 0.08em; margin-top: 0.15em; }
+
+		/* ---- Color swatch ---- */
+		.color-row { display: flex; gap: 0.75em; align-items: center; margin-bottom: 1em; }
+		.color-swatch {
+			width: 36px; height: 36px; border-radius: 50%; border: 2px solid rgba(255,255,255,0.1);
+			cursor: pointer; flex-shrink: 0;
+		}
+		input[type="color"] { width: 0; height: 0; opacity: 0; position: absolute; }
+
+		/* ---- Danger zone ---- */
+		.danger-zone {
+			border: 1px solid rgba(192,96,96,0.25); border-radius: 8px;
+			padding: 1.25em 1.5em; margin-top: 1.5em;
+		}
+		.danger-zone h3 { color: #c06060; }
+
+		/* ---- Status / toast ---- */
+		.status-line { font-size: 0.85em; min-height: 1.2em; margin-top: 0.5em; }
+		.status-line.ok  { color: #6ecf6e; }
+		.status-line.err { color: #e07070; }
+
+		#toast {
+			position: fixed; bottom: 2em; right: 2em;
+			background: #1a2e1a; color: #6ecf6e;
+			border: 1px solid #3a5e3a; border-radius: 6px;
+			padding: 0.7em 1.4em; font-size: 0.88em;
+			opacity: 0; transition: opacity 0.25s; pointer-events: none; z-index: 9999;
+		}
+		#toast.err { background: #2e1a1a; color: #e07070; border-color: #5e3a3a; }
+		#toast.show { opacity: 1; }
+
+		/* ---- File input ---- */
+		input[type="file"].art-field { padding: 0.3em 0.6em; color: #aaa; }
+
+		/* ---- Section note ---- */
+		.section-note {
+			font-size: 0.82em; color: #555; border-left: 2px solid rgba(201,201,201,0.1);
+			padding-left: 0.75em; margin: 0.5em 0 1em; line-height: 1.6;
+		}
+
+		/* ---- Login ---- */
+		#login-error { color: #e07070; font-size: 0.85em; margin-top: 0.5em; min-height: 1.2em; }
+		#first-time-note { color: #888; font-size: 0.82em; margin-bottom: 1em; display: none; }
+
+		/* ---- Responsive ---- */
+		@media (max-width: 600px) {
+			.art-thumb, .art-thumb-placeholder { width: 44px; height: 44px; }
+			.admin-tab { padding: 0.7em 0.9em; font-size: 0.68em; }
+		}
+	</style>
+</head>
+<body class="is-preload">
+<div id="wrapper">
+
+	<!-- Header -->
+	<header id="header">
+		<div class="inner">
+			<a href="../index.html" class="logo">
+				<span class="symbol"><img src="../images/favicon.png" alt="" /></span>
+				<span class="title">RYABCHIKOV</span>
+			</a>
+			<nav><ul><li><a href="#menu">Menu</a></li></ul></nav>
+		</div>
+	</header>
+
+	<!-- Menu -->
+	<nav id="menu">
+		<h2>Menu</h2>
+		<ul>
+			<li><a href="../index.html">Home</a></li>
+			<li><a href="../commissions/">Commissions</a></li>
+			<li><a href="">Examples</a></li>
+			<li><a href="">Contact</a></li>
+		</ul>
+	</nav>
+
+	<!-- Main -->
+	<div id="main">
+	<div class="inner">
+
+		<!-- ===================== LOGIN ===================== -->
+		<div id="admin-login">
+			<h1>Admin Access</h1>
+			<p id="first-time-note">First visit — the password you enter will become your admin password.</p>
+			<div class="fields">
+				<div class="field half">
+					<label for="admin-pass">Password</label>
+					<input type="password" id="admin-pass" name="admin-pass" autocomplete="current-password" />
+				</div>
+			</div>
+			<ul class="actions">
+				<li><button class="button primary" id="login-btn">Enter</button></li>
+			</ul>
+			<div id="login-error"></div>
+		</div>
+
+		<!-- ===================== DASHBOARD ===================== -->
+		<div id="admin-dash">
+
+			<div class="admin-topbar">
+				<h2>Commission Admin</h2>
+				<div class="btn-group">
+					<button class="button primary small" id="save-btn">Save All</button>
+					<button class="button small" id="preview-btn">View Page</button>
+					<button class="button small" id="logout-btn">Log Out</button>
+				</div>
+			</div>
+
+			<div class="admin-tabs">
+				<button class="admin-tab active" data-tab="gallery">Gallery</button>
+				<button class="admin-tab" data-tab="fonts">Fonts</button>
+				<button class="admin-tab" data-tab="styles">Styles</button>
+				<button class="admin-tab" data-tab="security">Security</button>
+			</div>
+
+			<!-- ============ GALLERY TAB ============ -->
+			<div id="tab-gallery" class="tab-content active">
+
+				<div class="admin-card">
+					<h3>Commission Art</h3>
+					<p class="hint">Images shown in the main gallery on the commissions page. Drag the ↑↓ buttons to reorder.</p>
+					<div id="comm-list"></div>
+					<ul class="actions" style="margin-top:1em">
+						<li><button class="button small" id="add-comm-btn">+ Add Image</button></li>
+					</ul>
+				</div>
+
+				<div class="admin-card">
+					<h3>Telegram Stickers</h3>
+					<p class="hint">Sticker preview images. Set the category (Simple / Complex) for each.</p>
+					<div id="sticker-list"></div>
+					<ul class="actions" style="margin-top:1em">
+						<li><button class="button small" id="add-sticker-btn">+ Add Sticker</button></li>
+					</ul>
+				</div>
+
+			</div>
+
+			<!-- ============ FONTS TAB ============ -->
+			<div id="tab-fonts" class="tab-content">
+
+				<div class="admin-card">
+					<h3>Browse on 1001fonts</h3>
+					<p class="hint">
+						1001fonts.com has thousands of free fonts. Browse there, note the font name or download the file, then load it below.
+					</p>
+					<a href="https://www.1001fonts.com/" target="_blank" rel="noopener" class="button small">Open 1001fonts.com ↗</a>
+				</div>
+
+				<div class="admin-card">
+					<h3>Load from Google Fonts</h3>
+					<p class="hint">Enter any <a href="https://fonts.google.com" target="_blank" rel="noopener">Google Fonts</a> family name — many fonts from 1001fonts are also available here, loaded instantly via CDN.</p>
+					<div class="field-row">
+						<input type="text" id="gf-name" class="field-input" placeholder="e.g. Playfair Display, Oswald, Raleway…" />
+						<button class="button small" id="gf-preview-btn">Preview</button>
+					</div>
+					<div id="font-preview-wrap">
+						<div id="font-preview-text">The quick brown fox jumps over the lazy dog</div>
+						<div id="font-preview-sub"></div>
+					</div>
+					<div id="gf-apply-row" style="display:none">
+						<div class="field-row">
+							<span class="field-label">Apply to</span>
+							<select id="gf-target" class="field-input">
+								<option value="heading">Headings</option>
+								<option value="body">Body Text</option>
+								<option value="both">Both</option>
+							</select>
+							<button class="button small primary" id="gf-apply-btn">Apply</button>
+						</div>
+					</div>
+				</div>
+
+				<div class="admin-card">
+					<h3>Upload Font File (from 1001fonts)</h3>
+					<p class="hint">
+						Download a font from 1001fonts (.woff2, .ttf, or .otf), then upload it here.
+						It will be embedded in the page for this browser session and saved for future visits.
+					</p>
+					<div class="field-row">
+						<span class="field-label">Name</span>
+						<input type="text" id="upload-font-name" class="field-input" placeholder="Display name (e.g. Blackletter)" />
+					</div>
+					<div class="field-row">
+						<span class="field-label">Apply to</span>
+						<select id="upload-font-target" class="field-input">
+							<option value="heading">Headings</option>
+							<option value="body">Body Text</option>
+							<option value="both">Both</option>
+						</select>
+					</div>
+					<div class="field-row">
+						<input type="file" id="font-file-input" class="field-input" accept=".woff2,.woff,.ttf,.otf" />
+						<button class="button small primary" id="font-upload-btn">Upload &amp; Apply</button>
+					</div>
+					<div id="upload-font-status" class="status-line"></div>
+				</div>
+
+				<div class="admin-card">
+					<h3>Active Font Assignments</h3>
+					<div id="loaded-fonts-list">
+						<p class="hint">No custom fonts assigned yet.</p>
+					</div>
+				</div>
+
+			</div>
+
+			<!-- ============ STYLES TAB ============ -->
+			<div id="tab-styles" class="tab-content">
+
+				<div class="admin-card">
+					<h3>Accent Color</h3>
+					<p class="hint">Controls button colors, link hovers, and the "Open" status badge. Default is pink (#f2849e).</p>
+					<div class="color-row">
+						<div id="color-swatch" class="color-swatch" title="Click to pick color"></div>
+						<input type="color" id="accent-picker" value="#f2849e" />
+						<input type="text" id="accent-hex" class="field-input" placeholder="#f2849e" style="max-width:130px" />
+						<button class="button small" id="accent-reset-btn">Reset</button>
+					</div>
+				</div>
+
+				<div class="admin-card">
+					<h3>Custom CSS</h3>
+					<p class="hint">Injected directly into the commissions page. Use to override any styles site-wide.</p>
+					<textarea id="custom-css-input" class="field-input" placeholder="/* your CSS here */"></textarea>
+					<div class="section-note">Changes take effect on the commissions page after Save All.</div>
+				</div>
+
+			</div>
+
+			<!-- ============ SECURITY TAB ============ -->
+			<div id="tab-security" class="tab-content">
+
+				<div class="admin-card">
+					<h3>Change Password</h3>
+					<p class="hint">Your admin password is stored as a SHA-256 hash in this browser's localStorage. It only protects this browser — anyone with console access can bypass it. Good enough for personal use.</p>
+					<div class="field-row">
+						<span class="field-label">Current</span>
+						<input type="password" id="pw-current" class="field-input" autocomplete="current-password" />
+					</div>
+					<div class="field-row">
+						<span class="field-label">New</span>
+						<input type="password" id="pw-new" class="field-input" autocomplete="new-password" />
+					</div>
+					<div class="field-row">
+						<span class="field-label">Confirm</span>
+						<input type="password" id="pw-confirm" class="field-input" autocomplete="new-password" />
+					</div>
+					<ul class="actions">
+						<li><button class="button primary small" id="change-pw-btn">Change Password</button></li>
+					</ul>
+					<div id="pw-status" class="status-line"></div>
+				</div>
+
+				<div class="danger-zone">
+					<h3>Danger Zone</h3>
+					<p class="hint" style="color:#c06060">Reset all gallery data back to the defaults baked into the site. Custom fonts and styles are unaffected.</p>
+					<ul class="actions">
+						<li><button class="button small" id="reset-data-btn" style="border-color:rgba(192,96,96,0.4);color:#c06060">Reset Gallery to Defaults</button></li>
+					</ul>
+					<p class="hint" style="color:#c06060;margin-top:0.75em">Clear all custom fonts and style overrides.</p>
+					<ul class="actions">
+						<li><button class="button small" id="reset-styles-btn" style="border-color:rgba(192,96,96,0.4);color:#c06060">Reset Fonts &amp; Styles</button></li>
+					</ul>
+				</div>
+
+			</div>
+
+		</div><!-- /#admin-dash -->
+
+	</div>
+	</div><!-- /#main -->
+
+	<!-- Footer -->
+	<footer id="footer">
+		<div class="inner">
+			<section>
+				<h2 style="font-size:0.85em;text-transform:uppercase;letter-spacing:0.1em;">Follow Me</h2>
+				<ul class="icons">
+					<li><a href="https://x.com/gamboiuwu" class="icon brands style2 fa-twitter"><span class="label">Twitter</span></a></li>
+					<li><a href="https://instagram.com/gamboi.v" class="icon brands style2 fa-instagram"><span class="label">Instagram</span></a></li>
+					<li><a href="mailto:gamboiuwu@nyfurs.org" class="icon solid style2 fa-envelope"><span class="label">Email</span></a></li>
+					<li><a href="https://yuka.design/" class="icon solid style2 fa-globe"><span class="label">Website</span></a></li>
+					<li><a href="https://www.artstation.com/gamboiuwu" class="icon brands style2 fa-artstation"><span class="label">ArtStation</span></a></li>
+				</ul>
+			</section>
+			<ul class="copyright">
+				<li>&copy; Anthony Ryabchikov. All rights reserved.</li>
+			</ul>
+		</div>
+	</footer>
+
+</div><!-- /#wrapper -->
+
+<div id="toast"></div>
+
+<script src="../assets/js/jquery.min.js"></script>
+<script src="../assets/js/browser.min.js"></script>
+<script src="../assets/js/breakpoints.min.js"></script>
+<script src="../assets/js/util.js"></script>
+<script src="../assets/js/main.js"></script>
+<script src="../assets/js/commission-data.js"></script>
+<script>
+(function () {
+	'use strict';
+
+	/* ── Constants ── */
+	var SESS_KEY  = '_gam_sess';
+	var HASH_KEY  = '_gam_pw_hash';
+	var MAX_ATT   = 5;
+	var LOCKOUT   = 30000; // ms
+
+	/* ── State ── */
+	var attempts   = 0;
+	var lockedOut  = false;
+	var pendingFont = '';   // Google Font name previewed but not yet applied
+	var currentData, currentFonts, currentStyles;
+
+	/* ── DOM refs ── */
+	var loginEl   = document.getElementById('admin-login');
+	var dashEl    = document.getElementById('admin-dash');
+	var loginErr  = document.getElementById('login-error');
+
+	/* ================================================================
+	   AUTH
+	================================================================ */
+
+	async function sha256(str) {
+		var buf  = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+		return Array.from(new Uint8Array(buf)).map(function(b){ return b.toString(16).padStart(2,'0'); }).join('');
+	}
+
+	async function handleLogin() {
+		if (lockedOut) return;
+		var pass = document.getElementById('admin-pass').value;
+		if (!pass) { loginErr.textContent = 'Enter a password.'; return; }
+
+		var hash   = await sha256(pass);
+		var stored = localStorage.getItem(HASH_KEY);
+
+		if (!stored) {
+			/* First-time setup */
+			localStorage.setItem(HASH_KEY, hash);
+			grantAccess();
+			return;
+		}
+		if (hash === stored) {
+			attempts = 0;
+			grantAccess();
+		} else {
+			attempts++;
+			if (attempts >= MAX_ATT) {
+				lockedOut = true;
+				loginErr.textContent = 'Too many failed attempts. Locked out for 30 seconds.';
+				document.getElementById('login-btn').disabled = true;
+				setTimeout(function() {
+					lockedOut = false;
+					attempts  = 0;
+					document.getElementById('login-btn').disabled = false;
+					loginErr.textContent = '';
+				}, LOCKOUT);
+			} else {
+				loginErr.textContent = 'Incorrect password. (' + (MAX_ATT - attempts) + ' attempts left)';
+			}
+		}
+	}
+
+	function grantAccess() {
+		sessionStorage.setItem(SESS_KEY, '1');
+		showDashboard();
+	}
+
+	function logout() {
+		sessionStorage.removeItem(SESS_KEY);
+		location.reload();
+	}
+
+	/* ================================================================
+	   DASHBOARD INIT
+	================================================================ */
+
+	function showDashboard() {
+		loginEl.style.display = 'none';
+		dashEl.style.display  = 'block';
+		currentData   = CommissionData.get();
+		currentFonts  = CommissionData.getFonts();
+		currentStyles = CommissionData.getStyles();
+		renderGalleryTab();
+		refreshFontsList();
+		refreshStylesTab();
+	}
+
+	/* ================================================================
+	   GALLERY TAB
+	================================================================ */
+
+	function renderGalleryTab() {
+		renderSection('commissions', 'comm-list');
+		renderSection('stickers',    'sticker-list');
+	}
+
+	function renderSection(section, containerId) {
+		var container = document.getElementById(containerId);
+		var items     = currentData[section] || [];
+		container.innerHTML = '';
+
+		items.forEach(function(item, i) {
+			var div = document.createElement('div');
+			div.className = 'art-item';
+
+			var thumbHtml = item.src
+				? '<img class="art-thumb" src="' + esc(item.src) + '" alt="" onerror="this.outerHTML=\'<div class=art-thumb-placeholder>No preview</div>\'" />'
+				: '<div class="art-thumb-placeholder">No image</div>';
+
+			var extraFields = '';
+			if (section === 'commissions') {
+				extraFields = '<input type="text" class="art-field" data-field="caption" data-section="' + section + '" data-index="' + i + '" value="' + esc(item.caption || '') + '" placeholder="Caption (e.g. Complex Full Body)" />';
+			} else {
+				extraFields = '<select class="art-field art-field-select" data-field="category" data-section="' + section + '" data-index="' + i + '">'
+					+ '<option value="Simple"' + (item.category === 'Simple' ? ' selected' : '') + '>Simple</option>'
+					+ '<option value="Complex"' + (item.category === 'Complex' ? ' selected' : '') + '>Complex</option>'
+					+ '</select>';
+			}
+
+			div.innerHTML = thumbHtml
+				+ '<div class="art-fields">'
+				+   '<input type="text" class="art-field" data-field="src" data-section="' + section + '" data-index="' + i + '" value="' + esc(item.src || '') + '" placeholder="Image URL or path (e.g. ../images/fullcomm/my-art.png)" />'
+				+   extraFields
+				+   '<input type="text" class="art-field" data-field="alt" data-section="' + section + '" data-index="' + i + '" value="' + esc(item.alt || '') + '" placeholder="Alt text (describe the image)" />'
+				+ '</div>'
+				+ '<div class="art-actions">'
+				+   '<button class="icon-btn move-up" data-section="' + section + '" data-index="' + i + '"' + (i === 0 ? ' disabled' : '') + '>↑</button>'
+				+   '<button class="icon-btn move-dn" data-section="' + section + '" data-index="' + i + '"' + (i === items.length - 1 ? ' disabled' : '') + '>↓</button>'
+				+   '<button class="icon-btn danger del-item" data-section="' + section + '" data-index="' + i + '">×</button>'
+				+ '</div>';
+
+			container.appendChild(div);
+		});
+	}
+
+	/* Event delegation — field edits */
+	document.addEventListener('input', function(e) {
+		var t = e.target;
+		if (!t.dataset.field) return;
+		var section = t.dataset.section, i = +t.dataset.index, field = t.dataset.field;
+		currentData[section][i][field] = t.value;
+		if (field === 'src') {
+			var thumb = t.closest('.art-item').querySelector('.art-thumb');
+			if (thumb) thumb.src = t.value;
+		}
+	});
+
+	document.addEventListener('change', function(e) {
+		var t = e.target;
+		if (t.tagName === 'SELECT' && t.dataset.field) {
+			var section = t.dataset.section, i = +t.dataset.index, field = t.dataset.field;
+			currentData[section][i][field] = t.value;
+		}
+	});
+
+	/* Event delegation — move / delete */
+	document.addEventListener('click', function(e) {
+		var t = e.target;
+
+		if (t.classList.contains('move-up')) {
+			var sec = t.dataset.section, idx = +t.dataset.index;
+			if (idx === 0) return;
+			var arr = currentData[sec];
+			var tmp = arr[idx - 1]; arr[idx - 1] = arr[idx]; arr[idx] = tmp;
+			renderSection(sec, sec === 'commissions' ? 'comm-list' : 'sticker-list');
+		}
+		if (t.classList.contains('move-dn')) {
+			var sec = t.dataset.section, idx = +t.dataset.index;
+			var arr = currentData[sec];
+			if (idx >= arr.length - 1) return;
+			var tmp = arr[idx]; arr[idx] = arr[idx + 1]; arr[idx + 1] = tmp;
+			renderSection(sec, sec === 'commissions' ? 'comm-list' : 'sticker-list');
+		}
+		if (t.classList.contains('del-item')) {
+			if (!confirm('Remove this item?')) return;
+			var sec = t.dataset.section, idx = +t.dataset.index;
+			currentData[sec].splice(idx, 1);
+			renderSection(sec, sec === 'commissions' ? 'comm-list' : 'sticker-list');
+		}
+	});
+
+	document.getElementById('add-comm-btn').addEventListener('click', function() {
+		currentData.commissions.push({ src: '', alt: '', caption: '' });
+		renderSection('commissions', 'comm-list');
+	});
+
+	document.getElementById('add-sticker-btn').addEventListener('click', function() {
+		currentData.stickers.push({ src: '', alt: '', category: 'Simple' });
+		renderSection('stickers', 'sticker-list');
+	});
+
+	/* ================================================================
+	   FONTS TAB
+	================================================================ */
+
+	/* Google Fonts preview */
+	document.getElementById('gf-preview-btn').addEventListener('click', function() {
+		var name = document.getElementById('gf-name').value.trim();
+		if (!name) return;
+		CommissionData.loadGoogleFont(name);
+		document.fonts.ready.then(function() {
+			var wrap = document.getElementById('font-preview-wrap');
+			var text = document.getElementById('font-preview-text');
+			var sub  = document.getElementById('font-preview-sub');
+			text.style.fontFamily = '"' + name + '", sans-serif';
+			text.textContent = 'The quick brown fox jumps over the lazy dog — ' + name;
+			sub.textContent  = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ  0123456789  !@#$%';
+			sub.style.fontFamily = '"' + name + '", sans-serif';
+			wrap.style.display = 'block';
+			document.getElementById('gf-apply-row').style.display = 'block';
+			pendingFont = name;
+		});
+	});
+
+	document.getElementById('gf-name').addEventListener('keydown', function(e) {
+		if (e.key === 'Enter') document.getElementById('gf-preview-btn').click();
+	});
+
+	document.getElementById('gf-apply-btn').addEventListener('click', function() {
+		if (!pendingFont) return;
+		var target = document.getElementById('gf-target').value;
+		if (target === 'heading' || target === 'both') currentFonts.heading = pendingFont;
+		if (target === 'body'    || target === 'both') currentFonts.body    = pendingFont;
+		refreshFontsList();
+		toast('"' + pendingFont + '" applied to ' + target + '. Save All to persist.');
+	});
+
+	/* Font file upload */
+	document.getElementById('font-file-input').addEventListener('change', function() {
+		var file = this.files[0];
+		if (!file) return;
+		var suggested = file.name.replace(/\.[^.]+$/, '').replace(/[-_]/g, ' ');
+		var nameInput = document.getElementById('upload-font-name');
+		if (!nameInput.value) nameInput.value = suggested;
+	});
+
+	document.getElementById('font-upload-btn').addEventListener('click', function() {
+		var file   = document.getElementById('font-file-input').files[0];
+		var name   = document.getElementById('upload-font-name').value.trim();
+		var target = document.getElementById('upload-font-target').value;
+		var status = document.getElementById('upload-font-status');
+
+		if (!file || !name) {
+			status.textContent = 'Choose a font file and enter a name.';
+			status.className   = 'status-line err';
+			return;
+		}
+
+		var reader = new FileReader();
+		reader.onload = function(ev) {
+			var dataUrl = ev.target.result;
+			var ext     = file.name.split('.').pop().toLowerCase();
+			var fmt     = ext === 'ttf' ? 'truetype' : ext === 'otf' ? 'opentype' : 'woff2';
+			var face    = '@font-face{font-family:"' + name + '";src:url("' + dataUrl + '") format("' + fmt + '")}';
+
+			/* Inject immediately for preview */
+			var tag = document.createElement('style');
+			tag.textContent = face;
+			document.head.appendChild(tag);
+
+			/* Save to font list */
+			currentFonts.custom = currentFonts.custom || [];
+			/* Remove any previous entry with same name */
+			currentFonts.custom = currentFonts.custom.filter(function(f){ return f.name !== name; });
+			currentFonts.custom.push({ name: name, face: face, assignment: target });
+
+			if (target === 'heading' || target === 'both') currentFonts.heading = name;
+			if (target === 'body'    || target === 'both') currentFonts.body    = name;
+
+			/* Show preview */
+			var wrap = document.getElementById('font-preview-wrap');
+			var text = document.getElementById('font-preview-text');
+			text.style.fontFamily = '"' + name + '", sans-serif';
+			text.textContent = 'The quick brown fox — ' + name;
+			wrap.style.display = 'block';
+
+			refreshFontsList();
+			status.textContent = '"' + name + '" uploaded. Save All to persist.';
+			status.className   = 'status-line ok';
+			toast('"' + name + '" loaded from file!');
+		};
+		reader.readAsDataURL(file);
+	});
+
+	/* Remove font assignment */
+	document.addEventListener('click', function(e) {
+		if (!e.target.dataset.removeFontField) return;
+		var field = e.target.dataset.removeFontField;
+		if (field === 'heading') currentFonts.heading = '';
+		if (field === 'body')    currentFonts.body    = '';
+		var customName = e.target.dataset.removeCustomName;
+		if (customName) {
+			currentFonts.custom = (currentFonts.custom || []).filter(function(f){ return f.name !== customName; });
+		}
+		refreshFontsList();
+	});
+
+	function refreshFontsList() {
+		var container = document.getElementById('loaded-fonts-list');
+		var entries   = [];
+
+		if (currentFonts.heading) {
+			CommissionData.loadGoogleFont(currentFonts.heading);
+			entries.push({ name: currentFonts.heading, meta: 'Headings', field: 'heading', isCustom: false });
+		}
+		if (currentFonts.body && currentFonts.body !== currentFonts.heading) {
+			CommissionData.loadGoogleFont(currentFonts.body);
+			entries.push({ name: currentFonts.body, meta: 'Body', field: 'body', isCustom: false });
+		}
+		(currentFonts.custom || []).forEach(function(f) {
+			if (!entries.find(function(e){ return e.name === f.name; })) {
+				entries.push({ name: f.name, meta: 'Custom upload · ' + (f.assignment || ''), field: null, isCustom: true, customName: f.name });
+			}
+		});
+
+		if (!entries.length) {
+			container.innerHTML = '<p class="hint">No custom fonts assigned yet.</p>';
+			return;
+		}
+
+		container.innerHTML = entries.map(function(e) {
+			var removeAttr = e.field
+				? 'data-remove-font-field="' + e.field + '"'
+				: 'data-remove-font-field="custom" data-remove-custom-name="' + esc(e.customName) + '"';
+			return '<div class="font-chip">'
+				+ '<div>'
+				+   '<div class="font-chip-name" style="font-family:\'' + esc(e.name) + '\',sans-serif">' + esc(e.name) + '</div>'
+				+   '<div class="font-chip-meta">' + esc(e.meta) + '</div>'
+				+ '</div>'
+				+ '<button class="icon-btn danger" ' + removeAttr + '>Remove</button>'
+				+ '</div>';
+		}).join('');
+	}
+
+	/* ================================================================
+	   STYLES TAB
+	================================================================ */
+
+	function refreshStylesTab() {
+		var color = currentStyles.accentColor || '#f2849e';
+		document.getElementById('accent-picker').value = color;
+		document.getElementById('accent-hex').value    = color;
+		document.getElementById('color-swatch').style.background = color;
+		document.getElementById('custom-css-input').value = currentStyles.customCSS || '';
+	}
+
+	document.getElementById('color-swatch').addEventListener('click', function() {
+		document.getElementById('accent-picker').click();
+	});
+
+	document.getElementById('accent-picker').addEventListener('input', function() {
+		var c = this.value;
+		currentStyles.accentColor = c;
+		document.getElementById('accent-hex').value = c;
+		document.getElementById('color-swatch').style.background = c;
+	});
+
+	document.getElementById('accent-hex').addEventListener('input', function() {
+		var val = this.value.trim();
+		if (/^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(val)) {
+			currentStyles.accentColor = val;
+			document.getElementById('accent-picker').value = val;
+			document.getElementById('color-swatch').style.background = val;
+		}
+	});
+
+	document.getElementById('accent-reset-btn').addEventListener('click', function() {
+		var def = '#f2849e';
+		currentStyles.accentColor = '';
+		document.getElementById('accent-picker').value = def;
+		document.getElementById('accent-hex').value    = def;
+		document.getElementById('color-swatch').style.background = def;
+	});
+
+	document.getElementById('custom-css-input').addEventListener('input', function() {
+		currentStyles.customCSS = this.value;
+	});
+
+	/* ================================================================
+	   SECURITY TAB
+	================================================================ */
+
+	document.getElementById('change-pw-btn').addEventListener('click', async function() {
+		var current  = document.getElementById('pw-current').value;
+		var newPw    = document.getElementById('pw-new').value;
+		var confirm  = document.getElementById('pw-confirm').value;
+		var statusEl = document.getElementById('pw-status');
+
+		if (!current || !newPw || !confirm) {
+			statusEl.textContent = 'All fields are required.'; statusEl.className = 'status-line err'; return;
+		}
+		if (newPw !== confirm) {
+			statusEl.textContent = 'New passwords do not match.'; statusEl.className = 'status-line err'; return;
+		}
+		if (newPw.length < 6) {
+			statusEl.textContent = 'Password must be at least 6 characters.'; statusEl.className = 'status-line err'; return;
+		}
+
+		var currentHash = await sha256(current);
+		if (currentHash !== localStorage.getItem(HASH_KEY)) {
+			statusEl.textContent = 'Current password is incorrect.'; statusEl.className = 'status-line err'; return;
+		}
+
+		var newHash = await sha256(newPw);
+		localStorage.setItem(HASH_KEY, newHash);
+		statusEl.textContent = 'Password changed successfully.';
+		statusEl.className   = 'status-line ok';
+		document.getElementById('pw-current').value = '';
+		document.getElementById('pw-new').value     = '';
+		document.getElementById('pw-confirm').value = '';
+	});
+
+	document.getElementById('reset-data-btn').addEventListener('click', function() {
+		if (!confirm('Reset all gallery data to defaults? This cannot be undone.')) return;
+		CommissionData.reset();
+		currentData = CommissionData.get();
+		renderGalleryTab();
+		toast('Gallery reset to defaults.');
+	});
+
+	document.getElementById('reset-styles-btn').addEventListener('click', function() {
+		if (!confirm('Clear all font and style overrides?')) return;
+		localStorage.removeItem('_gam_fonts_v1');
+		localStorage.removeItem('_gam_styles_v1');
+		currentFonts  = CommissionData.getFonts();
+		currentStyles = CommissionData.getStyles();
+		refreshFontsList();
+		refreshStylesTab();
+		toast('Fonts and styles cleared.');
+	});
+
+	/* ================================================================
+	   SAVE ALL
+	================================================================ */
+
+	document.getElementById('save-btn').addEventListener('click', function() {
+		CommissionData.save(currentData);
+		CommissionData.saveFonts(currentFonts);
+		CommissionData.saveStyles(currentStyles);
+		toast('All changes saved!');
+	});
+
+	/* ================================================================
+	   TABS
+	================================================================ */
+
+	document.querySelectorAll('.admin-tab').forEach(function(tab) {
+		tab.addEventListener('click', function() {
+			document.querySelectorAll('.admin-tab').forEach(function(t){ t.classList.remove('active'); });
+			document.querySelectorAll('.tab-content').forEach(function(t){ t.classList.remove('active'); });
+			tab.classList.add('active');
+			document.getElementById('tab-' + tab.dataset.tab).classList.add('active');
+		});
+	});
+
+	/* ================================================================
+	   UTILITIES
+	================================================================ */
+
+	document.getElementById('preview-btn').addEventListener('click', function() {
+		window.open('../commissions/', '_blank');
+	});
+	document.getElementById('logout-btn').addEventListener('click', logout);
+
+	document.getElementById('login-btn').addEventListener('click', handleLogin);
+	document.getElementById('admin-pass').addEventListener('keydown', function(e) {
+		if (e.key === 'Enter') handleLogin();
+	});
+
+	function toast(msg, isErr) {
+		var t = document.getElementById('toast');
+		t.textContent = msg;
+		t.className   = 'show' + (isErr ? ' err' : '');
+		clearTimeout(t._timer);
+		t._timer = setTimeout(function(){ t.className = (isErr ? 'err' : ''); }, 3000);
+	}
+
+	function esc(s) {
+		return String(s == null ? '' : s)
+			.replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+	}
+
+	/* ================================================================
+	   INIT
+	================================================================ */
+
+	if (!localStorage.getItem(HASH_KEY)) {
+		document.getElementById('first-time-note').style.display = 'block';
+	}
+
+	if (sessionStorage.getItem(SESS_KEY)) {
+		showDashboard();
+	}
+
+}());
+</script>
+
+</body>
+</html>

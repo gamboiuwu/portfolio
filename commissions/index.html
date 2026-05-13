@@ -11,282 +11,319 @@
 		<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
 		<link rel="stylesheet" href="../assets/css/main.css" />
 		<noscript><link rel="stylesheet" href="../assets/css/noscript.css" /></noscript>
-		
-		  
-  <meta name="description" content="gamboiuwu's Commission Details">
-  <meta name="keywords" content="portfolio, artist, gamboiuwu, anthony, ryabchikov">
-  <meta name="author" content="Anthony Ryabchikov">
-  <meta name="theme-color" content="#8ac2ea" data-react-helmet="true">
-  <meta property="og:title" content="gamboiuwu Commission Details">
-  <meta property="og:site_name" content="Anthony Ryabchikov | Designer, Artist, and Creator">
-  <meta property="og:description" content="My furry art commissions are currently open! I do full prints, telegram stickers and more.">
-  <meta property="og:url" content="https://antryab.com/commissions">
-  <meta property="og:image" content="../images/2089_Preview.jpeg">
-  <meta name="twitter:image" content="../images/2089_Preview.jpeg" />
-  <meta property="og:image:alt" content="Preview of gamboiuwu's portfolio">
-		
+
+		<meta name="description" content="gamboiuwu's Commission Details">
+		<meta name="keywords" content="portfolio, artist, gamboiuwu, anthony, ryabchikov">
+		<meta name="author" content="Anthony Ryabchikov">
+		<meta name="theme-color" content="#8ac2ea">
+		<meta property="og:title" content="gamboiuwu Commission Details">
+		<meta property="og:site_name" content="Anthony Ryabchikov | Designer, Artist, and Creator">
+		<meta property="og:description" content="My furry art commissions are currently open! I do full prints, telegram stickers and more.">
+		<meta property="og:url" content="https://antryab.com/commissions">
+		<meta property="og:image" content="../images/2089_Preview.jpeg">
+		<meta name="twitter:image" content="../images/2089_Preview.jpeg" />
+		<meta property="og:image:alt" content="Preview of gamboiuwu's commission artwork">
+
+		<style>
+			/* Commission image gallery */
+			.comm-gallery {
+				display: flex; gap: 1.25em; justify-content: center;
+				flex-wrap: wrap; margin: 1.5em 0 2em;
+			}
+			.comm-gallery-item {
+				flex: 1 1 220px; max-width: calc(50% - 0.625em); text-align: center;
+			}
+			.comm-gallery-item img {
+				width: 100%; height: 220px; object-fit: cover;
+				border-radius: 6px; display: block;
+			}
+			.comm-gallery-item figcaption {
+				margin-top: 0.5em; font-size: 0.85em; font-weight: 700; color: #dedede;
+			}
+
+			/* Sticker gallery */
+			.sticker-gallery {
+				display: flex; gap: 0.75em; justify-content: center;
+				flex-wrap: wrap; margin: 1.5em 0 0.5em;
+			}
+			.sticker-gallery-item { flex: 1 1 120px; max-width: 160px; }
+			.sticker-gallery-item img {
+				width: 100%; height: 140px; object-fit: contain;
+				border-radius: 6px; display: block;
+			}
+			.sticker-group-label {
+				text-align: center; font-size: 0.85em; font-weight: 700;
+				color: #aaa; margin-bottom: 1.5em;
+			}
+
+			/* Status badges */
+			.status-badge {
+				display: inline-block; font-size: 0.6em; font-weight: 700;
+				text-transform: uppercase; letter-spacing: 0.08em;
+				padding: 0.25em 0.7em; border-radius: 999px;
+				vertical-align: middle; line-height: 1.4;
+			}
+			.status-badge.open  { background: #1a2e1a; color: #6ecf6e; border: 1px solid #3a5e3a; }
+			.status-badge.closed { background: #2a2a2a; color: #888; border: 1px solid #444; }
+
+			/* Section dividers */
+			.section-divider { border: 0; border-top: 1px solid rgba(201,201,201,0.15); margin: 3em 0; }
+
+			/* Bio section */
+			.bio-section p { margin-bottom: 0.75em; }
+
+			/* CTA button group */
+			.cta-group { display: flex; flex-direction: column; gap: 0.75em; margin: 1.5em 0; }
+
+			/* Artist signature */
+			.gam-sig { max-width: 180px; height: auto; opacity: 0.75; display: block; margin-top: 1.5em; }
+		</style>
 	</head>
 	<body class="is-preload">
 		<!-- Wrapper -->
-			<div id="wrapper">
+		<div id="wrapper">
 
-				<!-- Header -->
-					<header id="header">
-						<div class="inner">
+			<!-- Header -->
+			<header id="header">
+				<div class="inner">
 
-							<!-- Logo -->
-								<a href="index.html" class="logo">
-									<span class="symbol"><img src="../images/favicon.png" alt="" /></span><span class="title">RYABCHIKOV</span>
-								</a>
+					<!-- Logo -->
+					<a href="../index.html" class="logo">
+						<span class="symbol"><img src="../images/favicon.png" alt="" /></span><span class="title">RYABCHIKOV</span>
+					</a>
 
-							<!-- Nav -->
-								<nav>
-									<ul>
-										<li><a href="#menu">Menu</a></li>
-									</ul>
-								</nav>
-
-						</div>
-					</header>
-
-				<!-- Menu -->
-					<nav id="menu">
-						<h2>Menu</h2>
+					<!-- Nav -->
+					<nav>
 						<ul>
-							<li><a href="../index.html">Home</a></li>
-							<li><a href="../commissions/index.html">Commissions</a></li>
-							<li><a href="">Examples</a></li>
-							<li><a href="">Contact</a></li>
+							<li><a href="#menu">Menu</a></li>
 						</ul>
 					</nav>
 
-				<!-- Main -->
-					<div id="main">
-						<div class="inner">
-							<h1>gamboiuwu Commissions</h1>
-  <a href="https://antryab.com/newcommission/" class="button primary fit">Commission Inquiry Form</a>
-							<span class="image main"><img src="../images/2089_Preview.jpeg" alt="" /></span>
-							<p>This section is dedicated to the art commissions written under the alias, gamboiuwu. Commissions are currently OPEN. Feel free to ask for more examples of my work at any time! If you're not seeing a certain style, I may still be able to do it if you message me.</p>
-              <p>I am an artist who's worked in traditional and digital media for about 5 years now. I specialize in pastel, charcoal, oil and traditional canvases. Lately, I've been open to working in digital works, and would love to take on any furry-related art commissions. I work in a wide range of artstyles, so if there is a certain type you are looking for, feel free to let me know.</p>
-							<p>My other works can be found on my <a href="https://www.artstation.com/gamboiuwu">Artstation</a>, or on this website.</p>
-              <p>Don't know what to commission me for? Contact me anyway! It's my job as an artist to come up with a unique idea for you. ^_^</p>
-              <p>Methods of Payment Accepted: Venmo, Cashapp, PayPal. An invoice will be sent upon agreement of a price. Tips are always appreciated but not required. Commercial use is prohibited unless a formal agreement is made.</p>
-							<p>Last Updated: Apr 2, 2026</p>
-							<a href="https://docs.google.com/document/d/1V-82sLqum65MKccV_CdIjF0BdJskLSzUujYtSdfL2R4/" class="button primary fit">Terms of Service</a>
-              <a href="https://antryab.com/newcommission/" class="button primary fit">Commission Inquiry Form</a>
-							
-							<section id="commission-prices" class="section">
-  <h2>Art (Digital)</h2>
-  
-<div style="display: flex; flex-direction: column; align-items: center; margin-top: 1em;">
-  <div style="display: flex; gap: 20px; justify-content: center; flex-wrap: wrap;">
-    
-    <div style="text-align: center; flex: 1 1 200px; max-width: 50%;">
-      <img src="../images/fullcomm/comm1.png" alt="Sticker Preview 1" style="width: 100%; height: auto; border-radius: 8px; object-fit: cover;" />
-      <div style="margin-top: 0.5em;"><b>Complex Full Body w/ Complex Environment</b></div>
-    </div>
+				</div>
+			</header>
 
-    <div style="text-align: center; flex: 1 1 200px; max-width: 50%;">
-      <img src="../images/fullcomm/comm2.jpeg" alt="Sticker Preview 2" style="width: 100%; height: auto; border-radius: 8px; object-fit: cover;" />
-      <div style="margin-top: 0.5em;"><b>Complex Full Body</b></div>
-    </div>
+			<!-- Menu -->
+			<nav id="menu">
+				<h2>Menu</h2>
+				<ul>
+					<li><a href="../index.html">Home</a></li>
+					<li><a href="../commissions/index.html">Commissions</a></li>
+					<li><a href="">Examples</a></li>
+					<li><a href="">Contact</a></li>
+				</ul>
+			</nav>
 
-  </div>
-  <div style="text-align: center; flex: 1 1 200px; max-width: 20%;">
-      <img src="../images/fullcomm/comm3.png" alt="Sticker Preview 3" style="width: 100%; height: auto; border-radius: 8px; object-fit: cover;" />
-      <div style="margin-top: 0.5em;"><b>Flat Headshot</b></div>
-    </div>
-</div>
+			<!-- Main -->
+			<div id="main">
+				<div class="inner">
 
-  <div class="table-wrapper">
-    <table>
-      <thead>
-        <tr>
-          <th>Art (Digital)</th>
-          <th>Sketch</th>
-          <th>Flat</th>
-          <th>Flat Shade</th>
-          <th>Complex</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td>Headshot (Bust)</td>
-          <td>$19</td>
-          <td>$48</td>
-          <td>$77</td>
-          <td>$96</td>
-        </tr>
-        <tr>
-          <td>Half Body</td>
-          <td>$37</td>
-          <td>$93</td>
-          <td>$149</td>
-          <td>$186</td>
-        </tr>
-        <tr>
-          <td>Full Body/Environment</td>
-          <td>$54</td>
-          <td>$134</td>
-          <td>$214</td>
-          <td>$268</td>
-        </tr>
-      </tbody>
-    </table>
-  </div>
+					<h1>gamboiuwu Commissions <span class="status-badge open">Open</span></h1>
 
-  <h3>Add-Ons</h3>
-  <ul>
-    <li>Physical Print (13x19in): +$10</li>
-    <li>NSFW: +$20</li>
-    <li>Rush: 48-hr: +$10, 24-hr: +$20, 12-hr: +$30</li>
-  </ul>
+					<span class="image main"><img src="../images/2089_Preview.jpeg" alt="Commission preview artwork" /></span>
 
-  <h3>Telegram Stickers</h3>
- <div style="display: flex; flex-direction: column; align-items: center; margin-top: 1em;">
-  <div style="display: flex; gap: 5px;">
-    <div style="text-align: center;">
-      <img src="../images/stickers/sticker1.png" alt="Sticker Preview 1" style="width: 25%; height: auto; border-radius: 8px;">
-	  <img src="../images/stickers/sticker3.png" alt="Sticker Preview 2" style="width: 25%; height: auto; border-radius: 8px;">
-      <div style="margin-top: 0.5em;"><b>Simple</b></div>
-    </div>
-    <div style="text-align: center;">
-      <img src="../images/stickers/sticker2.png" alt="Sticker Preview 3" style="width: 50%; height: auto; border-radius: 8px;">
-	  <img src="../images/stickers/sticker4.png" alt="Sticker Preview 4" style="width: 50%; height: auto; border-radius: 8px;">
-	  <img src="../images/stickers/sticker5.png" alt="Sticker Preview 5" style="width: 50%; height: auto; border-radius: 8px;">
-      <div style="margin-top: 0.5em;"><b>Complex</b></div>
-    </div>
-  </div>
-</div>
-
-  <div class="table-wrapper">
-    <table>
-      <thead>
-        <tr>
-          <th></th>
-          <th>1 Pack</th>
-          <th>3 Pack</th>
-          <th>5 Pack</th>
-          <th>10 Pack</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td>Simple (flat)</td>
-          <td>$17</td>
-          <td>$45</td>
-          <td>$59</td>
-          <td>$101</td>
-        </tr>
-        <tr>
-          <td>Complex</td>
-          <td>$24</td>
-          <td>$65</td>
-          <td>$90</td>
-          <td>$144</td>
-        </tr>
-      </tbody>
-    </table>
-  </div>
-  <p>No additional upcharge for NSFW stickers.</p>
-
-  <h3>Animation <span style="color:#999;">[CLOSED]</span></h3>
-  <div class="table-wrapper">
-    <table>
-      <thead>
-        <tr>
-          <th></th>
-          <th>Sketch</th>
-          <th>Shaded</th>
-          <th>Complex</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td>Loop</td>
-          <td>$100</td>
-          <td>$200</td>
-          <td>$280</td>
-        </tr>
-        <tr>
-          <td>5 Seconds</td>
-          <td>$150</td>
-          <td>$320</td>
-          <td>$510</td>
-        </tr>
-      </tbody>
-    </table>
-  </div>
-  <ul>
-    <li>NSFW animation: +$100</li>
-    <li>Must be discussed prior to animation work</li>
-  </ul>
-
-  <h2>You can also contact me on Discord or Telegram. @gamboiuwu</h2>
-  <p><strong>Contact:</strong> <a href="mailto:gamboiuwu@nyfurs.org">gamboiuwu@nyfurs.org</a> or Discord</p>
-  <p><em>Prices may be subject to change.</em></p>
-  <img src="../images/gamsig.png" alt="gamboiuwu signature" style="max-width: 200px; height: auto; opacity: 0.8;" />
-
-</section>
-
-							
-						</div>
+					<div class="bio-section">
+						<p>I'm an artist working in traditional and digital media for about 5 years, specializing in pastel, charcoal, oil, and canvas work. Lately I've been open to digital commissions and would love to take on any furry-related art. I work in a wide range of styles — if you're looking for something specific, just ask!</p>
+						<p>My other works are on <a href="https://www.artstation.com/gamboiuwu">ArtStation</a> and throughout this site. Don't know what to commission? Reach out anyway — it's my job to come up with a unique idea for you. ^_^</p>
+						<p><strong>Payment:</strong> Venmo, Cashapp, PayPal. Invoice sent upon price agreement. Tips appreciated but not required. Commercial use requires a formal agreement.</p>
+						<p><small>Last Updated: Apr 2, 2026</small></p>
 					</div>
 
-				<!-- Outer wrapper -->
-<!-- Footer -->
-					<footer id="footer">
-						<div class="inner">
+					<div class="cta-group">
+						<a href="https://docs.google.com/document/d/1V-82sLqum65MKccV_CdIjF0BdJskLSzUujYtSdfL2R4/" class="button fit">Terms of Service</a>
+						<a href="https://antryab.com/newcommission/" class="button primary fit">Commission Inquiry Form</a>
+					</div>
 
+					<section id="commission-prices">
 
-<!-- Outer wrapper -->
-<div class="flex flex-col items-center min-h-screen bg-gray-900">
+						<h2>Art (Digital)</h2>
 
-  <!-- Contact Form Container -->
-  <div class="container mx-auto">
-    <div class="max-w-md mx-auto my-10 bg-gray-800 p-5 rounded-md shadow-sm">
-      <div class="text-center">
-        <h1 class="my-3 text-3xl font-semibold text-gray-100">
-          Contact Me
-        </h1>
-        <p class="text-gray-400">
-          Ready for a commission? Fill out the form below ^_^
-        </p>
-      </div>
-  <a href="https://antryab.com/newcommission/" class="button primary fit">Commission Inquiry Form</a>
-</div>
-          <p class="text-base text-center text-gray-400" id="result"></p>
-        </form>
-      </div>
-    </div>
-  </div>
+						<div class="comm-gallery" id="comm-gallery-container">
+							<figure class="comm-gallery-item">
+								<img src="../images/fullcomm/comm1.png" alt="Complex full body with environment example" />
+								<figcaption>Complex Full Body w/ Environment</figcaption>
+							</figure>
+							<figure class="comm-gallery-item">
+								<img src="../images/fullcomm/comm2.jpeg" alt="Complex full body example" />
+								<figcaption>Complex Full Body</figcaption>
+							</figure>
+							<figure class="comm-gallery-item">
+								<img src="../images/fullcomm/comm3.png" alt="Flat headshot example" />
+								<figcaption>Flat Headshot</figcaption>
+							</figure>
+						</div>
 
-  <!-- Follow Me Section -->
-  <div class="my-10 text-center">
-    <h2 class="text-2xl text-gray-100 mb-4">Follow Me</h2>
-    <ul class="icons flex justify-center gap-4">
-      <li><a href="https://x.com/gamboiuwu" class="icon brands style2 fa-twitter text-gray-400 hover:text-white"><span class="label">Twitter</span></a></li>
-      <li><a href="https://instagram.com/gamboi.v" class="icon brands style2 fa-instagram text-gray-400 hover:text-white"><span class="label">Instagram</span></a></li>
-      <li><a href="mailto:gamboiuwu@nyfurs.org" class="icon solid style2 fa-envelope text-gray-400 hover:text-white"><span class="label">Email</span></a></li>
-      <li><a href="https://yuka.design/" class="icon solid style2 fa-globe text-gray-400 hover:text-white"><span class="label">Website</span></a></li>
-      <li><a href="https://events.nyfurs.org" class="icon solid style2 fa-paw text-gray-400 hover:text-white"><span class="label">NYFurs</span></a></li>
-      <li><a href="https://www.artstation.com/gamboiuwu" class="icon brands style2 fa-artstation text-gray-400 hover:text-white"><span class="label">ArtStation</span></a></li>
-    </ul>
-  </div>
+						<div class="table-wrapper">
+							<table>
+								<thead>
+									<tr>
+										<th>Art (Digital)</th>
+										<th>Sketch</th>
+										<th>Flat</th>
+										<th>Flat Shade</th>
+										<th>Complex</th>
+									</tr>
+								</thead>
+								<tbody>
+									<tr>
+										<td>Headshot (Bust)</td>
+										<td>$19</td>
+										<td>$48</td>
+										<td>$77</td>
+										<td>$96</td>
+									</tr>
+									<tr>
+										<td>Half Body</td>
+										<td>$37</td>
+										<td>$93</td>
+										<td>$149</td>
+										<td>$186</td>
+									</tr>
+									<tr>
+										<td>Full Body/Environment</td>
+										<td>$54</td>
+										<td>$134</td>
+										<td>$214</td>
+										<td>$268</td>
+									</tr>
+								</tbody>
+							</table>
+						</div>
 
-  <!-- Copyright -->
-  <ul class="text-gray-500 text-sm mb-4">
-    <li>&copy; Anthony Ryabchikov. All rights reserved</li>
-  </ul>
-</div>
+						<h3>Add-Ons</h3>
+						<ul>
+							<li>Physical Print (13x19in): +$10</li>
+							<li>NSFW: +$20</li>
+							<li>Rush: 48-hr: +$10, 24-hr: +$20, 12-hr: +$30</li>
+						</ul>
+
+						<hr class="section-divider">
+
+						<h2>Telegram Stickers</h2>
+
+						<div class="sticker-gallery" id="sticker-gallery-container">
+							<figure class="sticker-gallery-item"><img src="../images/stickers/sticker1.png" alt="Simple sticker example 1" /></figure>
+							<figure class="sticker-gallery-item"><img src="../images/stickers/sticker3.png" alt="Simple sticker example 2" /></figure>
+							<figure class="sticker-gallery-item"><img src="../images/stickers/sticker2.png" alt="Complex sticker example 1" /></figure>
+							<figure class="sticker-gallery-item"><img src="../images/stickers/sticker4.png" alt="Complex sticker example 2" /></figure>
+							<figure class="sticker-gallery-item"><img src="../images/stickers/sticker5.png" alt="Complex sticker example 3" /></figure>
+						</div>
+						<p class="sticker-group-label">Examples: Simple (left) &middot; Complex (right)</p>
+
+						<div class="table-wrapper">
+							<table>
+								<thead>
+									<tr>
+										<th></th>
+										<th>1 Pack</th>
+										<th>3 Pack</th>
+										<th>5 Pack</th>
+										<th>10 Pack</th>
+									</tr>
+								</thead>
+								<tbody>
+									<tr>
+										<td>Simple (flat)</td>
+										<td>$17</td>
+										<td>$45</td>
+										<td>$59</td>
+										<td>$101</td>
+									</tr>
+									<tr>
+										<td>Complex</td>
+										<td>$24</td>
+										<td>$65</td>
+										<td>$90</td>
+										<td>$144</td>
+									</tr>
+								</tbody>
+							</table>
+						</div>
+						<p>No additional upcharge for NSFW stickers.</p>
+
+						<hr class="section-divider">
+
+						<h2>Animation <span class="status-badge closed">Closed</span></h2>
+
+						<div class="table-wrapper">
+							<table>
+								<thead>
+									<tr>
+										<th></th>
+										<th>Sketch</th>
+										<th>Shaded</th>
+										<th>Complex</th>
+									</tr>
+								</thead>
+								<tbody>
+									<tr>
+										<td>Loop</td>
+										<td>$100</td>
+										<td>$200</td>
+										<td>$280</td>
+									</tr>
+									<tr>
+										<td>5 Seconds</td>
+										<td>$150</td>
+										<td>$320</td>
+										<td>$510</td>
+									</tr>
+								</tbody>
+							</table>
+						</div>
+						<ul>
+							<li>NSFW animation: +$100</li>
+							<li>Must be discussed prior to animation work</li>
+						</ul>
+
+						<p><strong>Contact:</strong> <a href="mailto:gamboiuwu@nyfurs.org">gamboiuwu@nyfurs.org</a> &middot; Discord / Telegram: <code>@gamboiuwu</code></p>
+						<p><em>Prices may be subject to change.</em></p>
+						<img src="../images/gamsig.png" alt="gamboiuwu signature" class="gam-sig" />
+
+					</section>
+
+					<hr class="section-divider">
+					<p style="text-align:center; margin-bottom:1em;">Ready to commission? Fill out the inquiry form to get started.</p>
+					<a href="https://antryab.com/newcommission/" class="button primary fit">Commission Inquiry Form</a>
+
+				</div>
+			</div>
+
+			<!-- Footer -->
+			<footer id="footer">
+				<div class="inner">
+					<section>
+						<h2 style="font-size:0.85em; text-transform:uppercase; letter-spacing:0.1em;">Follow Me</h2>
+						<ul class="icons">
+							<li><a href="https://x.com/gamboiuwu" class="icon brands style2 fa-twitter"><span class="label">Twitter</span></a></li>
+							<li><a href="https://instagram.com/gamboi.v" class="icon brands style2 fa-instagram"><span class="label">Instagram</span></a></li>
+							<li><a href="mailto:gamboiuwu@nyfurs.org" class="icon solid style2 fa-envelope"><span class="label">Email</span></a></li>
+							<li><a href="https://yuka.design/" class="icon solid style2 fa-globe"><span class="label">Website</span></a></li>
+							<li><a href="https://events.nyfurs.org" class="icon solid style2 fa-paw"><span class="label">NYFurs</span></a></li>
+							<li><a href="https://www.artstation.com/gamboiuwu" class="icon brands style2 fa-artstation"><span class="label">ArtStation</span></a></li>
+						</ul>
+					</section>
+					<ul class="copyright">
+						<li>&copy; Anthony Ryabchikov. All rights reserved.</li>
+					</ul>
+				</div>
+			</footer>
+
+		</div><!-- /#wrapper -->
 
 		<!-- Scripts -->
-			<script src="../assets/js/jquery.min.js"></script>
-			<script src="../assets/js/browser.min.js"></script>
-			<script src="../assets/js/breakpoints.min.js"></script>
-			<script src="../assets/js/util.js"></script>
-			<script src="../assets/js/main.js"></script>
-			<script src="../assets/js/mail.js"></script>
+		<script src="../assets/js/jquery.min.js"></script>
+		<script src="../assets/js/browser.min.js"></script>
+		<script src="../assets/js/breakpoints.min.js"></script>
+		<script src="../assets/js/util.js"></script>
+		<script src="../assets/js/main.js"></script>
+		<script src="../assets/js/commission-data.js"></script>
+		<script>
+			document.addEventListener('DOMContentLoaded', function () {
+				CommissionData.applyAll();
+				CommissionData.renderCommissions();
+				CommissionData.renderStickers();
+			});
+		</script>
 
 	</body>
 </html>
