@@ -15,7 +15,7 @@
 		<meta name="description" content="gamboiuwu's Commission Details">
 		<meta name="keywords" content="portfolio, artist, gamboiuwu, anthony, ryabchikov">
 		<meta name="author" content="Anthony Ryabchikov">
-		<meta name="theme-color" content="#8ac2ea">
+		<meta name="theme-color" content="#7ecaf6">
 		<meta property="og:title" content="gamboiuwu Commission Details">
 		<meta property="og:site_name" content="Anthony Ryabchikov | Designer, Artist, and Creator">
 		<meta property="og:description" content="My furry art commissions are currently open! I do full prints, telegram stickers and more.">
@@ -25,80 +25,406 @@
 		<meta property="og:image:alt" content="Preview of gamboiuwu's commission artwork">
 
 		<style>
-			/* Commission image gallery */
-			.comm-gallery {
-				display: flex; gap: 1.25em; justify-content: center;
-				flex-wrap: wrap; margin: 1.5em 0 2em;
-			}
-			.comm-gallery-item {
-				flex: 1 1 220px; max-width: calc(50% - 0.625em); text-align: center;
-			}
-			.comm-gallery-item img {
-				width: 100%; height: 220px; object-fit: cover;
-				border-radius: 6px; display: block;
-			}
-			.comm-gallery-item figcaption {
-				margin-top: 0.5em; font-size: 0.85em; font-weight: 700; color: #dedede;
-			}
+		/* ═══════════════════════════════════════════════
+		   COMMISSIONS PAGE — CUSTOM DESIGN
+		   Palette: pink #f2849e  ·  cyan #7ecaf6
+		═══════════════════════════════════════════════ */
 
-			/* Sticker gallery */
-			.sticker-gallery {
-				display: flex; gap: 0.75em; justify-content: center;
-				flex-wrap: wrap; margin: 1.5em 0 0.5em;
-			}
-			.sticker-gallery-item { flex: 1 1 120px; max-width: 160px; }
-			.sticker-gallery-item img {
-				width: 100%; height: 140px; object-fit: contain;
-				border-radius: 6px; display: block;
-			}
-			.sticker-group-label {
-				text-align: center; font-size: 0.85em; font-weight: 700;
-				color: #aaa; margin-bottom: 1.5em;
-			}
+		:root {
+			--pk:  #f2849e;
+			--cy:  #7ecaf6;
+			--bg2: #111113;
+			--bg3: #17171b;
+			--brd: rgba(255,255,255,0.06);
+			--brd-pk: rgba(242,132,158,0.22);
+			--brd-cy: rgba(126,202,246,0.20);
+		}
 
-			/* Status badges */
-			.status-badge {
-				display: inline-block; font-size: 0.6em; font-weight: 700;
-				text-transform: uppercase; letter-spacing: 0.08em;
-				padding: 0.25em 0.7em; border-radius: 999px;
-				vertical-align: middle; line-height: 1.4;
-			}
-			.status-badge.open  { background: #1a2e1a; color: #6ecf6e; border: 1px solid #3a5e3a; }
-			.status-badge.closed { background: #2a2a2a; color: #888; border: 1px solid #444; }
+		/* ── PAGE HEADING ─────────────────────────────── */
+		.page-heading {
+			display: flex;
+			align-items: flex-start;
+			justify-content: space-between;
+			gap: 1.5em;
+			padding-bottom: 1.5em;
+			border-bottom: 1px solid var(--brd);
+			margin-bottom: 1.75em;
+		}
+		.page-heading h1 {
+			margin: 0;
+			line-height: 1.05;
+			letter-spacing: -0.01em;
+		}
+		.page-heading-meta {
+			display: flex;
+			flex-direction: column;
+			align-items: flex-end;
+			gap: 0.55em;
+			padding-top: 0.25em;
+			flex-shrink: 0;
+		}
+		.heading-tagline {
+			font-size: 0.68em;
+			letter-spacing: 0.1em;
+			text-transform: uppercase;
+			color: #3a3a3a;
+			margin: 0;
+		}
 
-			/* Section dividers */
-			.section-divider { border: 0; border-top: 1px solid rgba(201,201,201,0.15); margin: 3em 0; }
+		/* ── STATUS BADGES ───────────────────────────── */
+		.status-badge {
+			display: inline-flex;
+			align-items: center;
+			gap: 0.5em;
+			font-size: 0.68em;
+			font-weight: 900;
+			text-transform: uppercase;
+			letter-spacing: 0.14em;
+			padding: 0.4em 0.95em;
+			border-radius: 3px;
+			line-height: 1;
+		}
+		.status-badge.open {
+			background: rgba(110,207,110,0.06);
+			color: #6ecf6e;
+			border: 1px solid rgba(110,207,110,0.25);
+		}
+		.status-badge.open::before {
+			content: '';
+			width: 5px; height: 5px;
+			background: #6ecf6e;
+			border-radius: 50%;
+			display: inline-block;
+			box-shadow: 0 0 7px #6ecf6e;
+			animation: dotpulse 2.6s ease-in-out infinite;
+		}
+		.status-badge.closed {
+			background: rgba(255,255,255,0.025);
+			color: #484848;
+			border: 1px solid rgba(255,255,255,0.07);
+		}
+		@keyframes dotpulse {
+			0%,100% { opacity:1; box-shadow: 0 0 7px #6ecf6e; }
+			50%      { opacity:.3; box-shadow: none; }
+		}
 
-			/* Bio section */
-			.bio-section p { margin-bottom: 0.75em; }
+		/* ── QUICK-NAV ───────────────────────────────── */
+		.quick-nav {
+			display: flex;
+			align-items: center;
+			gap: 0.4em;
+			margin: 1.25em 0 2em;
+			flex-wrap: wrap;
+		}
+		.quick-nav-label {
+			font-size: 0.65em;
+			letter-spacing: 0.12em;
+			text-transform: uppercase;
+			color: #383838;
+			margin-right: 0.3em;
+		}
+		.quick-nav a {
+			font-size: 0.68em;
+			font-weight: 900;
+			text-transform: uppercase;
+			letter-spacing: 0.1em;
+			color: #555;
+			text-decoration: none;
+			border: 1px solid var(--brd);
+			padding: 0.42em 0.9em 0.38em;
+			border-radius: 3px;
+			background: var(--bg3);
+			transition: color .18s, border-color .18s, background .18s;
+		}
+		.quick-nav a:hover {
+			color: var(--cy);
+			border-color: var(--brd-cy);
+			background: rgba(126,202,246,0.05);
+			text-decoration: none;
+		}
 
-			/* CTA button group */
-			.cta-group { display: flex; flex-direction: column; gap: 0.75em; margin: 1.5em 0; }
+		/* ── HERO IMAGE ──────────────────────────────── */
+		span.image.main {
+			display: block;
+			border: 1px solid var(--brd);
+			border-radius: 4px;
+			overflow: hidden;
+		}
+		span.image.main img { border-radius: 0; margin: 0; display: block; }
 
-			/* Artist signature */
-			.gam-sig { max-width: 180px; height: auto; opacity: 0.75; display: block; margin-top: 1.5em; }
+		/* ── BIO SECTION ─────────────────────────────── */
+		.bio-section {
+			margin: 1.75em 0 1.25em;
+			padding-left: 1.1em;
+			border-left: 2px solid var(--brd-pk);
+		}
+		.bio-section p {
+			margin-bottom: 0.8em;
+			color: #aaa;
+			line-height: 1.85;
+		}
+		.bio-section p:last-child { margin-bottom: 0; }
+		.bio-section .payment-line {
+			background: var(--bg3);
+			border: 1px solid var(--brd);
+			border-left: 2px solid var(--brd-cy);
+			border-radius: 0 4px 4px 0;
+			padding: 0.75em 1em;
+			margin-top: 0.25em;
+			font-size: 0.88em;
+			line-height: 1.75;
+			color: #888;
+		}
+		.bio-section .payment-line strong { color: #bbb; }
+
+		/* ── CTA GROUP ───────────────────────────────── */
+		.cta-group { display: flex; flex-direction: column; gap: 0.6em; margin: 1.5em 0; }
+		.button.primary:hover { box-shadow: 0 0 22px rgba(242,132,158,0.2); }
+
+		/* ── SECTION LABELS ──────────────────────────── */
+		.section-label {
+			display: block;
+			font-size: 0.6em;
+			font-weight: 900;
+			letter-spacing: 0.25em;
+			text-transform: uppercase;
+			color: #2e2e2e;
+			margin-bottom: 0.35em;
+		}
+		.section-starting {
+			font-size: 0.8em;
+			color: #484848;
+			margin: 0.15em 0 1.25em;
+			letter-spacing: 0.04em;
+		}
+		.section-starting strong {
+			color: var(--pk);
+			font-size: 1.1em;
+		}
+
+		/* ── SECTION HEADINGS (within prices) ────────── */
+		#commission-prices h2 {
+			border-left: 3px solid var(--pk);
+			padding-left: 0.6em;
+			margin-bottom: 0.15em;
+		}
+		#commission-prices h2 .status-badge {
+			font-size: 0.5em;
+			vertical-align: middle;
+			position: relative;
+			top: -0.1em;
+		}
+
+		/* ── COMMISSION GALLERY ──────────────────────── */
+		.comm-gallery {
+			display: flex;
+			gap: 0.85em;
+			flex-wrap: wrap;
+			margin: 1.25em 0 1.75em;
+		}
+		.comm-gallery-item {
+			flex: 1 1 260px;
+			max-width: calc(50% - 0.425em);
+			position: relative;
+			overflow: hidden;
+			border-radius: 4px;
+			border: 1px solid var(--brd);
+			background: var(--bg3);
+			cursor: default;
+		}
+		.comm-gallery-item img {
+			width: 100%; height: 300px;
+			object-fit: cover;
+			display: block;
+			transition: transform .45s ease;
+		}
+		.comm-gallery-item:hover img { transform: scale(1.05); }
+		.comm-gallery-item figcaption {
+			position: absolute;
+			bottom: 0; left: 0; right: 0;
+			padding: 2em 0.9em 0.75em;
+			background: linear-gradient(to top, rgba(4,4,6,.92) 0%, transparent 100%);
+			font-size: 0.7em;
+			font-weight: 900;
+			text-transform: uppercase;
+			letter-spacing: 0.1em;
+			color: #fff;
+		}
+
+		/* ── STICKER GALLERY ─────────────────────────── */
+		.sticker-gallery {
+			display: flex;
+			gap: 0.65em;
+			justify-content: center;
+			flex-wrap: wrap;
+			margin: 1.25em 0 0.5em;
+		}
+		.sticker-gallery-item {
+			flex: 1 1 110px;
+			max-width: 150px;
+			border: 1px solid var(--brd);
+			border-radius: 4px;
+			overflow: hidden;
+			background: var(--bg3);
+			transition: border-color .2s, transform .2s;
+		}
+		.sticker-gallery-item:hover {
+			border-color: var(--brd-cy);
+			transform: translateY(-3px);
+		}
+		.sticker-gallery-item img {
+			width: 100%; height: 128px;
+			object-fit: contain;
+			display: block;
+			padding: 0.3em;
+		}
+		.sticker-group-label {
+			text-align: center;
+			font-size: 0.65em;
+			letter-spacing: 0.12em;
+			text-transform: uppercase;
+			color: #383838;
+			margin: 0.5em 0 1.5em;
+		}
+
+		/* ── PRICING TABLES ──────────────────────────── */
+		.table-wrapper {
+			border: 1px solid var(--brd);
+			border-radius: 4px;
+			overflow: hidden;
+			margin-bottom: 1.5em;
+		}
+		.table-wrapper table { border: none; margin: 0; width: 100%; }
+		.table-wrapper table thead tr {
+			background: var(--bg3) !important;
+			border-bottom: 1px solid var(--brd-pk) !important;
+		}
+		.table-wrapper table thead th {
+			font-size: 0.7em;
+			letter-spacing: 0.12em;
+			text-transform: uppercase;
+			padding: 0.9em 1em;
+			color: var(--pk) !important;
+			background: transparent !important;
+			border: none !important;
+		}
+		.table-wrapper table thead th:first-child { color: #444 !important; }
+		.table-wrapper table tbody tr {
+			border-bottom: 1px solid var(--brd) !important;
+			transition: background .15s;
+		}
+		.table-wrapper table tbody tr:last-child { border-bottom: none !important; }
+		.table-wrapper table tbody tr:hover { background: rgba(255,255,255,.022) !important; }
+		.table-wrapper table tbody td {
+			padding: 0.85em 1em;
+			border: none !important;
+			background: transparent !important;
+		}
+		.table-wrapper table tbody td:not(:first-child) {
+			color: var(--cy) !important;
+			font-weight: 700;
+			font-variant-numeric: tabular-nums;
+		}
+		.table-wrapper table tbody td:first-child { color: #888 !important; }
+
+		/* ── ADD-ON CHIPS ────────────────────────────── */
+		.addons-list {
+			display: flex;
+			flex-wrap: wrap;
+			gap: 0.45em;
+			list-style: none;
+			padding: 0;
+			margin: 0.6em 0 1.5em;
+		}
+		.addons-list li {
+			background: var(--bg3);
+			border: 1px solid var(--brd);
+			border-radius: 3px;
+			font-size: 0.76em;
+			padding: 0.38em 0.78em;
+			color: #666;
+			letter-spacing: 0.03em;
+			transition: border-color .15s, color .15s;
+		}
+		.addons-list li:hover { border-color: var(--brd-pk); color: #aaa; }
+		.addons-list li strong { color: #bbb; }
+
+		/* ── SECTION DIVIDER ─────────────────────────── */
+		.section-divider {
+			border: 0;
+			height: 1px;
+			background: linear-gradient(to right,
+				transparent 0%,
+				var(--brd-pk) 35%,
+				var(--brd-cy) 65%,
+				transparent 100%);
+			margin: 2.75em 0;
+		}
+
+		/* ── CONTACT LINE ────────────────────────────── */
+		.contact-line {
+			font-size: 0.86em;
+			color: #555;
+			padding: 0.8em 1em;
+			background: var(--bg3);
+			border: 1px solid var(--brd);
+			border-radius: 4px;
+			margin-bottom: 0.6em;
+		}
+		.contact-line a { color: var(--cy); }
+		.contact-line a:hover { color: #a8dff8; }
+		.contact-line code {
+			background: rgba(126,202,246,.07);
+			border: 1px solid rgba(126,202,246,.14);
+			border-radius: 3px;
+			padding: 0.1em 0.45em;
+			font-size: .9em;
+			color: var(--cy);
+		}
+
+		/* ── ARTIST SIGNATURE ────────────────────────── */
+		.gam-sig {
+			max-width: 160px; height: auto;
+			opacity: .4; display: block;
+			margin-top: 1.75em;
+			filter: brightness(1.3);
+		}
+
+		/* ── BOTTOM CTA ──────────────────────────────── */
+		.bottom-cta-wrap {
+			text-align: center;
+			padding: 2.25em 0 0.5em;
+			margin-top: 2.5em;
+			border-top: 1px solid var(--brd);
+		}
+		.bottom-cta-text {
+			font-size: 0.78em;
+			letter-spacing: 0.12em;
+			text-transform: uppercase;
+			color: #3a3a3a;
+			margin-bottom: 1em;
+		}
+
+		/* ── RESPONSIVE ──────────────────────────────── */
+		@media (max-width: 736px) {
+			.page-heading { flex-direction: column; gap: 0.75em; }
+			.page-heading-meta { align-items: flex-start; }
+			.comm-gallery-item { max-width: 100%; }
+			.comm-gallery-item img { height: 220px; }
+		}
 		</style>
 	</head>
 	<body class="is-preload">
-		<!-- Wrapper -->
 		<div id="wrapper">
 
 			<!-- Header -->
 			<header id="header">
 				<div class="inner">
-
-					<!-- Logo -->
 					<a href="../index.html" class="logo">
-						<span class="symbol"><img src="../images/favicon.png" alt="" /></span><span class="title">RYABCHIKOV</span>
+						<span class="symbol"><img src="../images/favicon.png" alt="" /></span>
+						<span class="title">RYABCHIKOV</span>
 					</a>
-
-					<!-- Nav -->
-					<nav>
-						<ul>
-							<li><a href="#menu">Menu</a></li>
-						</ul>
-					</nav>
-
+					<nav><ul><li><a href="#menu">Menu</a></li></ul></nav>
 				</div>
 			</header>
 
@@ -115,184 +441,207 @@
 
 			<!-- Main -->
 			<div id="main">
-				<div class="inner">
+			<div class="inner">
 
-					<h1>gamboiuwu Commissions <span class="status-badge open">Open</span></h1>
+				<!-- ── Title + Status ── -->
+				<div class="page-heading">
+					<div class="page-heading-title">
+						<h1>gamboiuwu<br>Commissions</h1>
+					</div>
+					<div class="page-heading-meta">
+						<span class="status-badge open">Open</span>
+						<p class="heading-tagline">Digital · Stickers · Animation</p>
+					</div>
+				</div>
 
-					<span class="image main"><img src="../images/2089_Preview.jpeg" alt="Commission preview artwork" /></span>
+				<!-- ── Hero ── -->
+				<span class="image main"><img src="../images/2089_Preview.jpeg" alt="Commission preview artwork" /></span>
 
-					<div class="bio-section">
-						<p>I'm an artist working in traditional and digital media for about 5 years, specializing in pastel, charcoal, oil, and canvas work. Lately I've been open to digital commissions and would love to take on any furry-related art. I work in a wide range of styles — if you're looking for something specific, just ask!</p>
-						<p>My other works are on <a href="https://www.artstation.com/gamboiuwu">ArtStation</a> and throughout this site. Don't know what to commission? Reach out anyway — it's my job to come up with a unique idea for you. ^_^</p>
-						<p><strong>Payment:</strong> Venmo, Cashapp, PayPal. Invoice sent upon price agreement. Tips appreciated but not required. Commercial use requires a formal agreement.</p>
-						<p><small>Last Updated: Apr 2, 2026</small></p>
+				<!-- ── Bio ── -->
+				<div class="bio-section">
+					<p>I'm an artist working in traditional and digital media for about 5 years, specializing in pastel, charcoal, oil, and canvas work. Lately I've been open to digital commissions and would love to take on any furry-related art. I work in a wide range of styles — if you're looking for something specific, just ask!</p>
+					<p>My other works are on <a href="https://www.artstation.com/gamboiuwu">ArtStation</a> and throughout this site. Don't know what to commission? Reach out anyway — it's my job to come up with a unique idea for you. ^_^</p>
+					<p class="payment-line"><strong>Payment:</strong> Venmo, Cashapp, PayPal. Invoice sent upon price agreement. Tips appreciated but not required. Commercial use requires a formal agreement.</p>
+					<p><small>Last Updated: Apr 2, 2026</small></p>
+				</div>
+
+				<!-- ── CTAs ── -->
+				<div class="cta-group">
+					<a href="https://docs.google.com/document/d/1V-82sLqum65MKccV_CdIjF0BdJskLSzUujYtSdfL2R4/" class="button fit">Terms of Service</a>
+					<a href="https://antryab.com/newcommission/" class="button primary fit">Commission Inquiry Form</a>
+				</div>
+
+				<!-- ── Quick-Nav ── -->
+				<div class="quick-nav">
+					<span class="quick-nav-label">Jump to</span>
+					<a href="#digital">Art (Digital)</a>
+					<a href="#stickers">Stickers</a>
+					<a href="#animation">Animation</a>
+				</div>
+
+				<!-- ── Pricing Sections ── -->
+				<section id="commission-prices">
+
+					<!-- 01 — Art (Digital) -->
+					<span class="section-label">// 01 &mdash; Digital Art</span>
+					<h2 id="digital">Art (Digital)</h2>
+					<p class="section-starting">Starting from <strong>$19</strong></p>
+
+					<div class="comm-gallery" id="comm-gallery-container">
+						<figure class="comm-gallery-item">
+							<img src="../images/fullcomm/comm1.png" alt="Complex full body with environment example" />
+							<figcaption>Complex Full Body w/ Environment</figcaption>
+						</figure>
+						<figure class="comm-gallery-item">
+							<img src="../images/fullcomm/comm2.jpeg" alt="Complex full body example" />
+							<figcaption>Complex Full Body</figcaption>
+						</figure>
+						<figure class="comm-gallery-item">
+							<img src="../images/fullcomm/comm3.png" alt="Flat headshot example" />
+							<figcaption>Flat Headshot</figcaption>
+						</figure>
 					</div>
 
-					<div class="cta-group">
-						<a href="https://docs.google.com/document/d/1V-82sLqum65MKccV_CdIjF0BdJskLSzUujYtSdfL2R4/" class="button fit">Terms of Service</a>
-						<a href="https://antryab.com/newcommission/" class="button primary fit">Commission Inquiry Form</a>
+					<div class="table-wrapper">
+						<table>
+							<thead>
+								<tr>
+									<th>Art (Digital)</th>
+									<th>Sketch</th>
+									<th>Flat</th>
+									<th>Flat Shade</th>
+									<th>Complex</th>
+								</tr>
+							</thead>
+							<tbody>
+								<tr>
+									<td>Headshot (Bust)</td>
+									<td>$19</td><td>$48</td><td>$77</td><td>$96</td>
+								</tr>
+								<tr>
+									<td>Half Body</td>
+									<td>$37</td><td>$93</td><td>$149</td><td>$186</td>
+								</tr>
+								<tr>
+									<td>Full Body / Environment</td>
+									<td>$54</td><td>$134</td><td>$214</td><td>$268</td>
+								</tr>
+							</tbody>
+						</table>
 					</div>
 
-					<section id="commission-prices">
-
-						<h2>Art (Digital)</h2>
-
-						<div class="comm-gallery" id="comm-gallery-container">
-							<figure class="comm-gallery-item">
-								<img src="../images/fullcomm/comm1.png" alt="Complex full body with environment example" />
-								<figcaption>Complex Full Body w/ Environment</figcaption>
-							</figure>
-							<figure class="comm-gallery-item">
-								<img src="../images/fullcomm/comm2.jpeg" alt="Complex full body example" />
-								<figcaption>Complex Full Body</figcaption>
-							</figure>
-							<figure class="comm-gallery-item">
-								<img src="../images/fullcomm/comm3.png" alt="Flat headshot example" />
-								<figcaption>Flat Headshot</figcaption>
-							</figure>
-						</div>
-
-						<div class="table-wrapper">
-							<table>
-								<thead>
-									<tr>
-										<th>Art (Digital)</th>
-										<th>Sketch</th>
-										<th>Flat</th>
-										<th>Flat Shade</th>
-										<th>Complex</th>
-									</tr>
-								</thead>
-								<tbody>
-									<tr>
-										<td>Headshot (Bust)</td>
-										<td>$19</td>
-										<td>$48</td>
-										<td>$77</td>
-										<td>$96</td>
-									</tr>
-									<tr>
-										<td>Half Body</td>
-										<td>$37</td>
-										<td>$93</td>
-										<td>$149</td>
-										<td>$186</td>
-									</tr>
-									<tr>
-										<td>Full Body/Environment</td>
-										<td>$54</td>
-										<td>$134</td>
-										<td>$214</td>
-										<td>$268</td>
-									</tr>
-								</tbody>
-							</table>
-						</div>
-
-						<h3>Add-Ons</h3>
-						<ul>
-							<li>Physical Print (13x19in): +$10</li>
-							<li>NSFW: +$20</li>
-							<li>Rush: 48-hr: +$10, 24-hr: +$20, 12-hr: +$30</li>
-						</ul>
-
-						<hr class="section-divider">
-
-						<h2>Telegram Stickers</h2>
-
-						<div class="sticker-gallery" id="sticker-gallery-container">
-							<figure class="sticker-gallery-item"><img src="../images/stickers/sticker1.png" alt="Simple sticker example 1" /></figure>
-							<figure class="sticker-gallery-item"><img src="../images/stickers/sticker3.png" alt="Simple sticker example 2" /></figure>
-							<figure class="sticker-gallery-item"><img src="../images/stickers/sticker2.png" alt="Complex sticker example 1" /></figure>
-							<figure class="sticker-gallery-item"><img src="../images/stickers/sticker4.png" alt="Complex sticker example 2" /></figure>
-							<figure class="sticker-gallery-item"><img src="../images/stickers/sticker5.png" alt="Complex sticker example 3" /></figure>
-						</div>
-						<p class="sticker-group-label">Examples: Simple (left) &middot; Complex (right)</p>
-
-						<div class="table-wrapper">
-							<table>
-								<thead>
-									<tr>
-										<th></th>
-										<th>1 Pack</th>
-										<th>3 Pack</th>
-										<th>5 Pack</th>
-										<th>10 Pack</th>
-									</tr>
-								</thead>
-								<tbody>
-									<tr>
-										<td>Simple (flat)</td>
-										<td>$17</td>
-										<td>$45</td>
-										<td>$59</td>
-										<td>$101</td>
-									</tr>
-									<tr>
-										<td>Complex</td>
-										<td>$24</td>
-										<td>$65</td>
-										<td>$90</td>
-										<td>$144</td>
-									</tr>
-								</tbody>
-							</table>
-						</div>
-						<p>No additional upcharge for NSFW stickers.</p>
-
-						<hr class="section-divider">
-
-						<h2>Animation <span class="status-badge closed">Closed</span></h2>
-
-						<div class="table-wrapper">
-							<table>
-								<thead>
-									<tr>
-										<th></th>
-										<th>Sketch</th>
-										<th>Shaded</th>
-										<th>Complex</th>
-									</tr>
-								</thead>
-								<tbody>
-									<tr>
-										<td>Loop</td>
-										<td>$100</td>
-										<td>$200</td>
-										<td>$280</td>
-									</tr>
-									<tr>
-										<td>5 Seconds</td>
-										<td>$150</td>
-										<td>$320</td>
-										<td>$510</td>
-									</tr>
-								</tbody>
-							</table>
-						</div>
-						<ul>
-							<li>NSFW animation: +$100</li>
-							<li>Must be discussed prior to animation work</li>
-						</ul>
-
-						<p><strong>Contact:</strong> <a href="mailto:gamboiuwu@nyfurs.org">gamboiuwu@nyfurs.org</a> &middot; Discord / Telegram: <code>@gamboiuwu</code></p>
-						<p><em>Prices may be subject to change.</em></p>
-						<img src="../images/gamsig.png" alt="gamboiuwu signature" class="gam-sig" />
-
-					</section>
+					<h3>Add-Ons</h3>
+					<ul class="addons-list">
+						<li><strong>Physical Print</strong> 13&times;19in &nbsp;+$10</li>
+						<li><strong>NSFW</strong> &nbsp;+$20</li>
+						<li><strong>Rush 48hr</strong> &nbsp;+$10</li>
+						<li><strong>Rush 24hr</strong> &nbsp;+$20</li>
+						<li><strong>Rush 12hr</strong> &nbsp;+$30</li>
+					</ul>
 
 					<hr class="section-divider">
-					<p style="text-align:center; margin-bottom:1em;">Ready to commission? Fill out the inquiry form to get started.</p>
-					<a href="https://antryab.com/newcommission/" class="button primary fit">Commission Inquiry Form</a>
 
+					<!-- 02 — Telegram Stickers -->
+					<span class="section-label">// 02 &mdash; Stickers</span>
+					<h2 id="stickers">Telegram Stickers</h2>
+					<p class="section-starting">Starting from <strong>$17</strong></p>
+
+					<div class="sticker-gallery" id="sticker-gallery-container">
+						<figure class="sticker-gallery-item"><img src="../images/stickers/sticker1.png" alt="Simple sticker example 1" /></figure>
+						<figure class="sticker-gallery-item"><img src="../images/stickers/sticker3.png" alt="Simple sticker example 2" /></figure>
+						<figure class="sticker-gallery-item"><img src="../images/stickers/sticker2.png" alt="Complex sticker example 1" /></figure>
+						<figure class="sticker-gallery-item"><img src="../images/stickers/sticker4.png" alt="Complex sticker example 2" /></figure>
+						<figure class="sticker-gallery-item"><img src="../images/stickers/sticker5.png" alt="Complex sticker example 3" /></figure>
+					</div>
+					<p class="sticker-group-label">Examples &mdash; Simple (left) &middot; Complex (right)</p>
+
+					<div class="table-wrapper">
+						<table>
+							<thead>
+								<tr>
+									<th>Sticker Type</th>
+									<th>1 Pack</th>
+									<th>3 Pack</th>
+									<th>5 Pack</th>
+									<th>10 Pack</th>
+								</tr>
+							</thead>
+							<tbody>
+								<tr>
+									<td>Simple (flat)</td>
+									<td>$17</td><td>$45</td><td>$59</td><td>$101</td>
+								</tr>
+								<tr>
+									<td>Complex</td>
+									<td>$24</td><td>$65</td><td>$90</td><td>$144</td>
+								</tr>
+							</tbody>
+						</table>
+					</div>
+
+					<ul class="addons-list">
+						<li>No additional upcharge for NSFW stickers</li>
+					</ul>
+
+					<hr class="section-divider">
+
+					<!-- 03 — Animation -->
+					<span class="section-label">// 03 &mdash; Animation</span>
+					<h2 id="animation">Animation <span class="status-badge closed">Closed</span></h2>
+
+					<div class="table-wrapper">
+						<table>
+							<thead>
+								<tr>
+									<th>Animation</th>
+									<th>Sketch</th>
+									<th>Shaded</th>
+									<th>Complex</th>
+								</tr>
+							</thead>
+							<tbody>
+								<tr>
+									<td>Loop</td>
+									<td>$100</td><td>$200</td><td>$280</td>
+								</tr>
+								<tr>
+									<td>5 Seconds</td>
+									<td>$150</td><td>$320</td><td>$510</td>
+								</tr>
+							</tbody>
+						</table>
+					</div>
+
+					<ul class="addons-list">
+						<li><strong>NSFW Animation</strong> &nbsp;+$100</li>
+						<li>Must be discussed prior to animation work</li>
+					</ul>
+
+					<!-- Contact + signature -->
+					<p class="contact-line">
+						<strong>Contact:</strong>
+						<a href="mailto:gamboiuwu@nyfurs.org">gamboiuwu@nyfurs.org</a>
+						&middot; Discord / Telegram: <code>@gamboiuwu</code>
+					</p>
+					<p><em style="font-size:0.82em; color:#3a3a3a;">Prices may be subject to change.</em></p>
+					<img src="../images/gamsig.png" alt="gamboiuwu signature" class="gam-sig" />
+
+				</section>
+
+				<!-- ── Bottom CTA ── -->
+				<div class="bottom-cta-wrap">
+					<p class="bottom-cta-text">Ready to commission? Fill out the inquiry form to get started.</p>
+					<a href="https://antryab.com/newcommission/" class="button primary fit">Commission Inquiry Form</a>
 				</div>
+
 			</div>
+			</div><!-- /#main -->
 
 			<!-- Footer -->
 			<footer id="footer">
 				<div class="inner">
 					<section>
-						<h2 style="font-size:0.85em; text-transform:uppercase; letter-spacing:0.1em;">Follow Me</h2>
+						<h2 style="font-size:0.85em;text-transform:uppercase;letter-spacing:0.1em;">Follow Me</h2>
 						<ul class="icons">
 							<li><a href="https://x.com/gamboiuwu" class="icon brands style2 fa-twitter"><span class="label">Twitter</span></a></li>
 							<li><a href="https://instagram.com/gamboi.v" class="icon brands style2 fa-instagram"><span class="label">Instagram</span></a></li>
@@ -310,7 +659,6 @@
 
 		</div><!-- /#wrapper -->
 
-		<!-- Scripts -->
 		<script src="../assets/js/jquery.min.js"></script>
 		<script src="../assets/js/browser.min.js"></script>
 		<script src="../assets/js/breakpoints.min.js"></script>
