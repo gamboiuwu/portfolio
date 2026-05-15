@@ -124,14 +124,8 @@
 		transition: border-color 0.25s;
 	}
 	.featured-card:hover { border-color: rgba(26,25,23,0.32); }
-	.featured-card-link {
-		display: flex;
-		width: 100%;
-		min-height: 260px;
-		text-decoration: none !important;
-		color: inherit !important;
-		align-items: stretch;
-	}
+	/* Stretched-link: .featured-cta::after covers the whole card */
+	.featured-card { position: relative; }
 	.featured-img {
 		width: 42%;
 		flex-shrink: 0;
@@ -192,6 +186,14 @@
 		align-self: flex-start;
 		margin-top: 0.5em;
 		transition: color 0.2s, border-color 0.2s;
+		/* Stretched link — ::after covers the whole card */
+		position: static;
+	}
+	.featured-cta::after {
+		content: '';
+		position: absolute;
+		inset: 0;
+		z-index: 1;
 	}
 	.featured-card:hover .featured-cta { border-bottom-color: var(--ink); }
 
