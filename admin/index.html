@@ -76,7 +76,15 @@
 			font-size: 0.75em; font-weight: 700; letter-spacing: 0.06em;
 			padding: 0.42em 0.7em; transition: background 0.15s, color 0.15s;
 		}
-		.upload-img-btn:hover { background: rgba(126,202,246,0.14); color: #a8dff8; }
+		.upload-img-btn:hover,
+		.featured-cover-btn:hover { background: rgba(126,202,246,0.14); color: #a8dff8; }
+		.featured-cover-btn {
+			flex-shrink: 0; white-space: nowrap;
+			background: rgba(126,202,246,0.06); border: 1px solid rgba(126,202,246,0.2);
+			border-radius: 4px; color: #7ecaf6; cursor: pointer;
+			font-size: 0.75em; font-weight: 700; letter-spacing: 0.06em;
+			padding: 0.42em 0.7em; transition: background 0.15s, color 0.15s;
+		}
 		.art-field {
 			width: 100%; background: rgba(255,255,255,0.04);
 			border: 1px solid rgba(201,201,201,0.15); border-radius: 4px;
@@ -665,7 +673,7 @@
 	document.addEventListener('click', function(e) {
 		var t = e.target;
 
-		if (t.classList.contains('upload-img-btn')) {
+		if (t.classList.contains('upload-img-btn') && t.dataset.section) {
 			triggerImgUpload(t.dataset.section, +t.dataset.index);
 			return;
 		}
@@ -768,7 +776,7 @@
 				+ '<div style="flex:1;display:flex;flex-direction:column;gap:0.4em;min-width:0">'
 				+   '<div class="art-src-row">'
 				+     '<input type="text" class="art-field featured-field" data-fld="src" data-idx="' + i + '" value="' + esc(item.src || '') + '" placeholder="Cover image URL or upload →" />'
-				+     '<button class="upload-img-btn featured-cover-btn" data-idx="' + i + '">↑ Cover</button>'
+				+     '<button class="featured-cover-btn" data-idx="' + i + '">↑ Cover</button>'
 				+   '</div>'
 				+   '<input type="text" class="art-field featured-field" data-fld="title" data-idx="' + i + '" value="' + esc(item.title || '') + '" placeholder="Title (e.g. To Prove You Are Everything)" />'
 				+   '<input type="text" class="art-field featured-field" data-fld="tagline" data-idx="' + i + '" value="' + esc(item.tagline || '') + '" placeholder="Tagline (e.g. Senior Project · 2026)" />'
