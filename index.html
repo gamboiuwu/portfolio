@@ -124,6 +124,12 @@
 		transition: border-color 0.25s;
 	}
 	.featured-card:hover { border-color: rgba(26,25,23,0.32); }
+	.featured-card-link {
+		display: flex;
+		width: 100%;
+		text-decoration: none !important;
+		color: inherit !important;
+	}
 	.featured-img {
 		width: 42%;
 		flex-shrink: 0;
@@ -170,7 +176,7 @@
 		margin: 0 !important;
 		max-width: 52ch;
 	}
-	.featured-link {
+	.featured-cta {
 		display: inline-block;
 		font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif;
 		font-size: 0.65em;
@@ -185,7 +191,7 @@
 		margin-top: 0.5em;
 		transition: color 0.2s, border-color 0.2s;
 	}
-	.featured-link:hover { color: var(--mid) !important; border-bottom-color: transparent; }
+	.featured-card:hover .featured-cta { border-bottom-color: var(--ink); }
 
 	/* ── BIO BLOCK ───────────────────────────────── */
 	.bio-block {

@@ -96,6 +96,14 @@
 		.art-field-textarea::placeholder { color: #444; }
 		.featured-visibility-row { display: flex; align-items: center; gap: 0.5em; font-size: 0.82em; color: #888; }
 		.featured-visibility-row input[type="checkbox"] { width: auto; margin: 0; }
+		.feat-gallery-section { margin-top: 0.75em; border-top: 1px solid rgba(201,201,201,0.1); padding-top: 0.75em; }
+		.feat-gallery-label { font-size: 0.7em; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #666; margin-bottom: 0.5em; }
+		.feat-gallery-thumbs { display: flex; flex-wrap: wrap; gap: 0.5em; margin-bottom: 0.6em; }
+		.feat-gal-item { position: relative; }
+		.feat-gal-item img { width: 72px; height: 60px; object-fit: cover; border-radius: 3px; display: block; }
+		.feat-gal-item .feat-gal-cap { width: 72px; font-size: 0.68em; margin-top: 0.2em; background: rgba(255,255,255,0.04); border: 1px solid rgba(201,201,201,0.12); border-radius: 3px; color: #bbb; padding: 0.2em 0.3em; }
+		.feat-gal-del-btn { position: absolute; top: 2px; right: 2px; background: rgba(0,0,0,0.7); border: none; border-radius: 2px; color: #f88; cursor: pointer; font-size: 0.75em; line-height: 1; padding: 1px 4px; }
+		.feat-gal-add-btn { font-size: 0.72em; padding: 0.3em 0.7em; }
 		.art-field-select {
 			background: rgba(255,255,255,0.04); border: 1px solid rgba(201,201,201,0.15);
 			border-radius: 4px; color: #dedede; font-family: inherit; font-size: 0.82em;
@@ -706,20 +714,26 @@
 	featuredFileInput.accept = 'image/*';
 	featuredFileInput.style.display = 'none';
 	document.body.appendChild(featuredFileInput);
-	var featuredPending = null;
+	var featuredPending = null; /* { idx, isGallery } */
 
 	featuredFileInput.addEventListener('change', function () {
 		var file = this.files[0];
 		if (!file || featuredPending == null) return;
-		var idx = featuredPending;
+		var pending = featuredPending;
+		featuredPending = null;
 		var reader = new FileReader();
 		reader.onload = function (e) {
-			currentData.featured[idx].src = e.target.result;
+			var item = currentData.featured[pending.idx];
+			if (pending.isGallery) {
+				if (!item.images) item.images = [];
+				item.images.push({ src: e.target.result, caption: '' });
+			} else {
+				item.src = e.target.result;
+			}
 			renderFeaturedTab();
 			toast('Image uploaded — hit Save All to keep it.');
 		};
 		reader.readAsDataURL(file);
-		featuredPending = null;
 	});
 
 	function renderFeaturedTab() {
@@ -734,22 +748,38 @@
 			div.style.gap = '0.6em';
 
 			var thumbHtml = item.src
-				? '<img class="art-thumb" src="' + esc(item.src) + '" alt="" style="width:80px;height:60px;object-fit:cover;border-radius:3px;flex-shrink:0" onerror="this.outerHTML=\'<div class=art-thumb-placeholder style=width:80px;height:60px>No preview</div>\'" />'
+				? '<img class="art-thumb" src="' + esc(item.src) + '" alt="" style="width:80px;height:60px;object-fit:cover;border-radius:3px;flex-shrink:0" onerror="this.style.display=\'none\'" />'
 				: '<div class="art-thumb-placeholder" style="width:80px;height:60px">No image</div>';
+
+			/* Gallery images thumbnails */
+			var galThumbs = '';
+			(item.images || []).forEach(function (img, j) {
+				galThumbs +=
+					'<div class="feat-gal-item">'
+					+ '<img src="' + esc(img.src) + '" />'
+					+ '<input type="text" class="feat-gal-cap art-field featured-gal-cap" data-idx="' + i + '" data-gidx="' + j + '" value="' + esc(img.caption || '') + '" placeholder="Caption…" />'
+					+ '<button class="feat-gal-del-btn feat-gal-del" data-idx="' + i + '" data-gidx="' + j + '">×</button>'
+					+ '</div>';
+			});
 
 			div.innerHTML =
 				'<div style="display:flex;gap:0.85em;align-items:flex-start">'
 				+ thumbHtml
 				+ '<div style="flex:1;display:flex;flex-direction:column;gap:0.4em;min-width:0">'
 				+   '<div class="art-src-row">'
-				+     '<input type="text" class="art-field featured-field" data-fld="src" data-idx="' + i + '" value="' + esc(item.src || '') + '" placeholder="Image URL or upload →" />'
-				+     '<button class="upload-img-btn featured-upload-btn" data-idx="' + i + '">&#8593; Upload</button>'
+				+     '<input type="text" class="art-field featured-field" data-fld="src" data-idx="' + i + '" value="' + esc(item.src || '') + '" placeholder="Cover image URL or upload →" />'
+				+     '<button class="upload-img-btn featured-cover-btn" data-idx="' + i + '">↑ Cover</button>'
 				+   '</div>'
 				+   '<input type="text" class="art-field featured-field" data-fld="title" data-idx="' + i + '" value="' + esc(item.title || '') + '" placeholder="Title (e.g. To Prove You Are Everything)" />'
 				+   '<input type="text" class="art-field featured-field" data-fld="tagline" data-idx="' + i + '" value="' + esc(item.tagline || '') + '" placeholder="Tagline (e.g. Senior Project · 2026)" />'
-				+   '<textarea class="art-field-textarea featured-field" data-fld="statement" data-idx="' + i + '" placeholder="Statement / description…">' + esc(item.statement || '') + '</textarea>'
-				+   '<input type="text" class="art-field featured-field" data-fld="link" data-idx="' + i + '" value="' + esc(item.link || '') + '" placeholder="Link URL (optional)" />'
+				+   '<textarea class="art-field-textarea featured-field" data-fld="statement" data-idx="' + i + '" placeholder="Artist statement / description…">' + esc(item.statement || '') + '</textarea>'
+				+   '<input type="text" class="art-field featured-field" data-fld="link" data-idx="' + i + '" value="' + esc(item.link || '') + '" placeholder="External link URL (optional)" />'
 				+   '<label class="featured-visibility-row"><input type="checkbox" class="featured-visible-cb" data-idx="' + i + '"' + (item.visible !== false ? ' checked' : '') + ' /> Visible on homepage</label>'
+				+   '<div class="feat-gallery-section">'
+				+     '<div class="feat-gallery-label">Gallery Images (shown on detail page)</div>'
+				+     '<div class="feat-gallery-thumbs" id="feat-gal-thumbs-' + i + '">' + galThumbs + '</div>'
+				+     '<button class="button small feat-gal-add-btn feat-gal-add" data-idx="' + i + '">+ Add Image</button>'
+				+   '</div>'
 				+ '</div>'
 				+ '<div class="art-actions">'
 				+   '<button class="icon-btn move-up feat-up" data-idx="' + i + '"' + (i === 0 ? ' disabled' : '') + '>↑</button>'
@@ -765,6 +795,14 @@
 	/* Featured field edits */
 	document.addEventListener('input', function (e) {
 		var t = e.target;
+		/* Gallery image captions */
+		if (t.classList.contains('featured-gal-cap')) {
+			var idx = +t.dataset.idx, gidx = +t.dataset.gidx;
+			if (currentData.featured[idx] && currentData.featured[idx].images && currentData.featured[idx].images[gidx]) {
+				currentData.featured[idx].images[gidx].caption = t.value;
+			}
+			return;
+		}
 		if (!t.classList.contains('featured-field')) return;
 		var idx = +t.dataset.idx, fld = t.dataset.fld;
 		if (!currentData.featured) currentData.featured = [];
@@ -785,10 +823,25 @@
 
 	document.addEventListener('click', function (e) {
 		var t = e.target;
-		if (t.classList.contains('featured-upload-btn')) {
-			featuredPending = +t.dataset.idx;
+		/* Cover image upload */
+		if (t.classList.contains('featured-cover-btn')) {
+			featuredPending = { idx: +t.dataset.idx, isGallery: false };
 			featuredFileInput.value = '';
 			featuredFileInput.click();
+			return;
+		}
+		/* Gallery image upload */
+		if (t.classList.contains('feat-gal-add')) {
+			featuredPending = { idx: +t.dataset.idx, isGallery: true };
+			featuredFileInput.value = '';
+			featuredFileInput.click();
+			return;
+		}
+		/* Gallery image delete */
+		if (t.classList.contains('feat-gal-del')) {
+			var idx = +t.dataset.idx, gidx = +t.dataset.gidx;
+			currentData.featured[idx].images.splice(gidx, 1);
+			renderFeaturedTab();
 			return;
 		}
 		if (t.classList.contains('feat-up')) {

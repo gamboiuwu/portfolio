@@ -33,6 +33,7 @@ window.CommissionData = (function () {
           statement: 'An interdisciplinary studio art senior thesis exploring identity, self-expression, and the tension between what is seen and what is felt.',
           src: '',
           link: '',
+          images: [],
           visible: true
         }
       ]
@@ -147,22 +148,25 @@ window.CommissionData = (function () {
   function renderFeatured() {
     var el = document.getElementById('featured-container');
     if (!el) return;
-    var items = (CD.get().featured || []).filter(function(it){ return it.visible !== false; });
+    var allItems = CD.get().featured || [];
+    var items = allItems.filter(function(it){ return it.visible !== false; });
     if (!items.length) { el.innerHTML = ''; return; }
     el.innerHTML = items.map(function (it) {
+      /* find the real index so the detail page can look it up */
+      var realIdx = allItems.indexOf(it);
+      var detailHref = 'featured/?i=' + realIdx;
       var imgStyle  = it.src ? ' style="background-image:url(\'' + it.src.replace(/'/g, "\\'") + '\')"' : '';
       var imgClass  = it.src ? 'featured-img' : 'featured-img featured-img-empty';
-      var linkHtml  = it.link
-        ? '<a href="' + esc(it.link) + '" class="featured-link" target="_blank" rel="noopener">View Work &rarr;</a>'
-        : '';
       return '<article class="featured-card">' +
-        '<div class="' + imgClass + '"' + imgStyle + '></div>' +
-        '<div class="featured-body">' +
-          (it.tagline   ? '<span class="featured-tagline">' + esc(it.tagline) + '</span>'       : '') +
-          '<h3 class="featured-title">' + esc(it.title) + '</h3>' +
-          (it.statement ? '<p class="featured-statement">' + esc(it.statement) + '</p>'          : '') +
-          linkHtml +
-        '</div>' +
+        '<a href="' + detailHref + '" class="featured-card-link" aria-label="View ' + esc(it.title) + '">' +
+          '<div class="' + imgClass + '"' + imgStyle + '></div>' +
+          '<div class="featured-body">' +
+            (it.tagline   ? '<span class="featured-tagline">' + esc(it.tagline) + '</span>'  : '') +
+            '<h3 class="featured-title">' + esc(it.title) + '</h3>' +
+            (it.statement ? '<p class="featured-statement">' + esc(it.statement) + '</p>'    : '') +
+            '<span class="featured-cta">Read More &rarr;</span>' +
+          '</div>' +
+        '</a>' +
       '</article>';
     }).join('');
   }

@@ -1,0 +1,469 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+	<meta charset="utf-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+	<title>Featured Work — gamboiuwu</title>
+	<meta name="robots" content="noindex, follow" />
+	<link rel="icon" type="image/png" href="../images/favicon.png" />
+	<link rel="stylesheet" href="../assets/css/main.css" />
+	<noscript><link rel="stylesheet" href="../assets/css/noscript.css" /></noscript>
+
+	<link rel="preconnect" href="https://fonts.googleapis.com" />
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+	<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&display=swap" rel="stylesheet" />
+
+	<style>
+	/* ══════════════════════════════════════════════════
+	   FEATURED DETAIL PAGE — MUSEUM AESTHETIC
+	══════════════════════════════════════════════════ */
+
+	:root {
+		--paper:    #f8f6f3;
+		--paper2:   #edeae5;
+		--ink:      #1a1917;
+		--mid:      #78756f;
+		--lite:     #aaa79f;
+		--rule:     rgba(26,25,23,0.1);
+		--rule-mid: rgba(26,25,23,0.2);
+	}
+
+	html, body {
+		background-color: var(--paper) !important;
+		color: var(--ink) !important;
+	}
+	#wrapper { background: var(--paper) !important; }
+	#header {
+		background: var(--paper) !important;
+		border-bottom: 1px solid var(--rule) !important;
+		box-shadow: none !important;
+	}
+	#header .logo .title {
+		color: var(--ink) !important;
+		font-family: 'Cormorant Garamond', Georgia, serif !important;
+		font-weight: 400 !important;
+		letter-spacing: 0.22em !important;
+		font-size: 0.85em !important;
+	}
+	#header .logo .symbol img { filter: invert(0.88) sepia(0.1) !important; }
+	#header nav a {
+		background: transparent !important;
+		color: var(--ink) !important;
+		border: 1px solid var(--rule-mid) !important;
+		border-radius: 0 !important;
+		font-size: 0.7em !important;
+		letter-spacing: 0.12em !important;
+	}
+	#header nav a:hover {
+		background: var(--paper2) !important;
+		color: var(--ink) !important;
+	}
+
+	h1, h2, h3, h4, h5, h6 {
+		color: var(--ink) !important;
+		font-family: 'Cormorant Garamond', Georgia, serif !important;
+	}
+	p { color: var(--mid) !important; }
+	a { color: var(--ink); }
+	a:hover { color: var(--mid); text-decoration: none; }
+
+	#main > .inner { padding-top: 3em; max-width: 860px; }
+
+	/* ── BACK LINK ───────────────────────────────── */
+	.back-link {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.4em;
+		font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif;
+		font-size: 0.7em;
+		font-weight: 400;
+		letter-spacing: 0.12em;
+		text-transform: uppercase;
+		color: var(--lite) !important;
+		text-decoration: none !important;
+		margin-bottom: 3em;
+		transition: color 0.2s;
+	}
+	.back-link:hover { color: var(--ink) !important; }
+	.back-link::before { content: '←'; font-family: inherit; }
+
+	/* ── HERO IMAGE ──────────────────────────────── */
+	.feat-hero-wrap {
+		width: 100%;
+		margin-bottom: 3em;
+		background: var(--paper2);
+		border: 1px solid var(--rule);
+		overflow: hidden;
+	}
+	.feat-hero-wrap img {
+		width: 100%;
+		max-height: 520px;
+		object-fit: cover;
+		display: block;
+	}
+	.feat-hero-empty {
+		height: 200px;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		color: var(--lite);
+		font-family: -apple-system, sans-serif;
+		font-size: 0.75em;
+		letter-spacing: 0.1em;
+		text-transform: uppercase;
+	}
+
+	/* ── META ────────────────────────────────────── */
+	.feat-meta {
+		margin-bottom: 2.5em;
+	}
+	.feat-tagline {
+		font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif;
+		font-size: 0.65em;
+		font-weight: 400;
+		letter-spacing: 0.2em;
+		text-transform: uppercase;
+		color: var(--lite);
+		margin-bottom: 0.5em;
+	}
+	.feat-title {
+		font-family: 'Cormorant Garamond', Georgia, serif !important;
+		font-size: 3em !important;
+		font-weight: 300 !important;
+		line-height: 1.1 !important;
+		color: var(--ink) !important;
+		margin: 0 0 0.15em !important;
+		border-left: none !important;
+		padding-left: 0 !important;
+	}
+	hr.feat-rule {
+		border: 0;
+		border-top: 1px solid var(--rule-mid);
+		margin: 2.5em 0;
+	}
+
+	/* ── STATEMENT ───────────────────────────────── */
+	.feat-statement {
+		font-family: 'Cormorant Garamond', Georgia, serif;
+		font-size: 1.18em;
+		line-height: 1.9;
+		color: var(--mid) !important;
+		max-width: 70ch;
+		margin-bottom: 2.5em;
+	}
+
+	/* ── EXTERNAL LINK ───────────────────────────── */
+	.feat-ext-link {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.5em;
+		font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif;
+		font-size: 0.7em;
+		font-weight: 400;
+		letter-spacing: 0.14em;
+		text-transform: uppercase;
+		color: var(--ink) !important;
+		text-decoration: none !important;
+		border-bottom: 1px solid var(--rule-mid);
+		padding-bottom: 0.15em;
+		margin-bottom: 3em;
+		transition: color 0.2s, border-color 0.2s;
+	}
+	.feat-ext-link:hover { color: var(--mid) !important; border-bottom-color: transparent; }
+
+	/* ── GALLERY GRID ────────────────────────────── */
+	.feat-gallery-heading {
+		font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif;
+		font-size: 0.65em;
+		font-weight: 400;
+		letter-spacing: 0.2em;
+		text-transform: uppercase;
+		color: var(--lite);
+		margin-bottom: 1.5em;
+	}
+	.feat-gallery-grid {
+		display: grid;
+		grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+		gap: 1.25em;
+		margin-bottom: 4em;
+	}
+	.feat-gallery-figure {
+		margin: 0;
+		cursor: pointer;
+	}
+	.feat-gallery-figure img {
+		width: 100%;
+		aspect-ratio: 4/3;
+		object-fit: cover;
+		display: block;
+		border: 1px solid var(--rule);
+		transition: opacity 0.2s;
+	}
+	.feat-gallery-figure:hover img { opacity: 0.85; }
+	.feat-gallery-figure figcaption {
+		font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif;
+		font-size: 0.7em;
+		color: var(--lite);
+		margin-top: 0.5em;
+		letter-spacing: 0.03em;
+	}
+
+	/* ── LIGHTBOX ────────────────────────────────── */
+	.feat-lightbox {
+		display: none;
+		position: fixed; inset: 0; z-index: 9999;
+		background: rgba(26,25,23,0.92);
+		align-items: center;
+		justify-content: center;
+		padding: 2em;
+	}
+	.feat-lightbox.open { display: flex; }
+	.feat-lb-inner {
+		position: relative;
+		max-width: 90vw;
+		max-height: 90vh;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 1em;
+	}
+	.feat-lb-inner img {
+		max-width: 90vw;
+		max-height: 80vh;
+		object-fit: contain;
+		display: block;
+	}
+	.feat-lb-caption {
+		font-family: 'Cormorant Garamond', Georgia, serif;
+		font-style: italic;
+		font-size: 0.9em;
+		color: rgba(248,246,243,0.6);
+		text-align: center;
+	}
+	.feat-lb-close {
+		position: fixed; top: 1.25em; right: 1.5em;
+		background: none; border: none; color: rgba(248,246,243,0.5);
+		cursor: pointer; font-size: 1.5em; line-height: 1; padding: 0;
+		transition: color 0.2s;
+	}
+	.feat-lb-close:hover { color: #f8f6f3; }
+	.feat-lb-prev, .feat-lb-next {
+		position: fixed; top: 50%; transform: translateY(-50%);
+		background: none; border: none; color: rgba(248,246,243,0.4);
+		cursor: pointer; font-size: 2em; padding: 0.25em 0.75em;
+		transition: color 0.2s;
+	}
+	.feat-lb-prev { left: 0.5em; }
+	.feat-lb-next { right: 0.5em; }
+	.feat-lb-prev:hover, .feat-lb-next:hover { color: #f8f6f3; }
+
+	/* ── FOOTER ──────────────────────────────────── */
+	#footer {
+		background: var(--ink) !important;
+		border-top: none !important;
+	}
+	#footer * { color: rgba(248,246,243,0.55) !important; }
+	#footer .copyright li { color: rgba(248,246,243,0.3) !important; font-size: 0.75em; }
+
+	/* ── NOT FOUND ───────────────────────────────── */
+	.feat-not-found {
+		text-align: center;
+		padding: 6em 0;
+		color: var(--lite);
+	}
+	.feat-not-found h2 { color: var(--ink) !important; margin-bottom: 0.5em; }
+
+	@media screen and (max-width: 736px) {
+		.feat-title { font-size: 2em !important; }
+		.feat-gallery-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
+		.feat-lb-prev, .feat-lb-next { font-size: 1.4em; padding: 0.25em 0.4em; }
+	}
+	</style>
+</head>
+
+<body class="is-preload">
+<div id="wrapper">
+
+	<!-- Header -->
+	<header id="header">
+		<div class="inner">
+			<a href="../index.html" class="logo">
+				<span class="symbol"><img src="../images/favicon.png" alt="" /></span><span class="title">RYABCHIKOV</span>
+			</a>
+			<nav>
+				<ul>
+					<li><a href="#menu">Menu</a></li>
+				</ul>
+			</nav>
+		</div>
+	</header>
+
+	<!-- Menu -->
+	<nav id="menu">
+		<h2>Menu</h2>
+		<ul>
+			<li><a href="../index.html">Home</a></li>
+			<li><a href="../commissions/">Commissions</a></li>
+			<li><a href="../index.html#contact">Contact</a></li>
+		</ul>
+	</nav>
+
+	<!-- Main -->
+	<div id="main">
+		<div class="inner">
+			<div id="feat-content">
+				<!-- Rendered by JS -->
+				<p style="color:var(--lite);font-size:0.85em;">Loading…</p>
+			</div>
+		</div>
+	</div>
+
+	<!-- Footer -->
+	<footer id="footer">
+		<div class="inner">
+			<ul class="copyright">
+				<li>&copy; Anthony Ryabchikov. All rights reserved.</li>
+			</ul>
+		</div>
+	</footer>
+
+</div><!-- /#wrapper -->
+
+<!-- Lightbox overlay -->
+<div class="feat-lightbox" id="feat-lightbox" role="dialog" aria-modal="true">
+	<button class="feat-lb-close" id="lb-close" aria-label="Close">&times;</button>
+	<button class="feat-lb-prev" id="lb-prev" aria-label="Previous">&#8249;</button>
+	<div class="feat-lb-inner">
+		<img id="lb-img" src="" alt="" />
+		<p class="feat-lb-caption" id="lb-cap"></p>
+	</div>
+	<button class="feat-lb-next" id="lb-next" aria-label="Next">&#8250;</button>
+</div>
+
+<!-- Scripts -->
+<script src="../assets/js/jquery.min.js"></script>
+<script src="../assets/js/browser.min.js"></script>
+<script src="../assets/js/breakpoints.min.js"></script>
+<script src="../assets/js/util.js"></script>
+<script src="../assets/js/main.js"></script>
+<script src="../assets/js/commission-data.js"></script>
+<script>
+(function () {
+	'use strict';
+
+	/* ── Read ?i= param ── */
+	var params = new URLSearchParams(window.location.search);
+	var idx    = parseInt(params.get('i'), 10);
+	var data   = window.CommissionData.get();
+	var items  = data.featured || [];
+	var item   = (!isNaN(idx) && idx >= 0 && idx < items.length) ? items[idx] : null;
+
+	var container = document.getElementById('feat-content');
+
+	if (!item) {
+		container.innerHTML =
+			'<div class="feat-not-found">' +
+				'<h2>Work not found</h2>' +
+				'<p>This featured work doesn\'t exist or may have been removed.</p>' +
+				'<a href="../" class="back-link">Back to Portfolio</a>' +
+			'</div>';
+		return;
+	}
+
+	/* ── Build HTML ── */
+	function esc(s) {
+		return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+	}
+
+	var heroHtml = item.src
+		? '<div class="feat-hero-wrap"><img src="' + esc(item.src) + '" alt="' + esc(item.title) + '" /></div>'
+		: '<div class="feat-hero-wrap"><div class="feat-hero-empty">No image</div></div>';
+
+	var galleryImages = item.images || [];
+	var galleryHtml = '';
+	if (galleryImages.length) {
+		galleryHtml =
+			'<p class="feat-gallery-heading">Gallery</p>' +
+			'<div class="feat-gallery-grid" id="feat-gallery">' +
+			galleryImages.map(function (img, j) {
+				return '<figure class="feat-gallery-figure" data-gidx="' + j + '">' +
+					'<img src="' + esc(img.src) + '" alt="' + esc(img.caption || '') + '" loading="lazy" />' +
+					(img.caption ? '<figcaption>' + esc(img.caption) + '</figcaption>' : '') +
+					'</figure>';
+			}).join('') +
+			'</div>';
+	}
+
+	var extLinkHtml = item.link
+		? '<a href="' + esc(item.link) + '" class="feat-ext-link" target="_blank" rel="noopener">View External Work ↗</a>'
+		: '';
+
+	/* Update page title */
+	if (item.title) document.title = item.title + ' — gamboiuwu';
+
+	container.innerHTML =
+		'<a href="../" class="back-link">Back to Portfolio</a>' +
+		heroHtml +
+		'<div class="feat-meta">' +
+			(item.tagline ? '<p class="feat-tagline">' + esc(item.tagline) + '</p>' : '') +
+			'<h1 class="feat-title">' + esc(item.title) + '</h1>' +
+		'</div>' +
+		'<hr class="feat-rule" />' +
+		(item.statement ? '<p class="feat-statement">' + esc(item.statement) + '</p>' : '') +
+		extLinkHtml +
+		galleryHtml;
+
+	/* ── Lightbox ── */
+	if (!galleryImages.length) return;
+
+	var lightbox  = document.getElementById('feat-lightbox');
+	var lbImg     = document.getElementById('lb-img');
+	var lbCap     = document.getElementById('lb-cap');
+	var lbClose   = document.getElementById('lb-close');
+	var lbPrev    = document.getElementById('lb-prev');
+	var lbNext    = document.getElementById('lb-next');
+	var lbCurrent = 0;
+
+	function openLightbox(j) {
+		lbCurrent = j;
+		lbImg.src      = galleryImages[j].src;
+		lbCap.textContent = galleryImages[j].caption || '';
+		lightbox.classList.add('open');
+		document.body.style.overflow = 'hidden';
+		lbPrev.style.display = galleryImages.length > 1 ? '' : 'none';
+		lbNext.style.display = galleryImages.length > 1 ? '' : 'none';
+	}
+
+	function closeLightbox() {
+		lightbox.classList.remove('open');
+		document.body.style.overflow = '';
+	}
+
+	function showAdj(dir) {
+		lbCurrent = (lbCurrent + dir + galleryImages.length) % galleryImages.length;
+		lbImg.src      = galleryImages[lbCurrent].src;
+		lbCap.textContent = galleryImages[lbCurrent].caption || '';
+	}
+
+	document.getElementById('feat-gallery').addEventListener('click', function (e) {
+		var fig = e.target.closest('.feat-gallery-figure');
+		if (fig) openLightbox(+fig.dataset.gidx);
+	});
+
+	lbClose.addEventListener('click', closeLightbox);
+	lightbox.addEventListener('click', function (e) {
+		if (e.target === lightbox) closeLightbox();
+	});
+	lbPrev.addEventListener('click', function () { showAdj(-1); });
+	lbNext.addEventListener('click', function () { showAdj(1); });
+
+	document.addEventListener('keydown', function (e) {
+		if (!lightbox.classList.contains('open')) return;
+		if (e.key === 'Escape') closeLightbox();
+		if (e.key === 'ArrowLeft')  showAdj(-1);
+		if (e.key === 'ArrowRight') showAdj(1);
+	});
+}());
+</script>
+</body>
+</html>
