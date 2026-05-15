@@ -157,16 +157,16 @@ window.CommissionData = (function () {
       var detailHref = 'featured/?i=' + realIdx;
       var imgStyle  = it.src ? ' style="background-image:url(\'' + it.src.replace(/'/g, "\\'") + '\')"' : '';
       var imgClass  = it.src ? 'featured-img' : 'featured-img featured-img-empty';
+      /* Stretched-link pattern: card keeps its flex layout intact;
+         the <a> inside .featured-body gets a ::after that covers the whole card */
       return '<article class="featured-card">' +
-        '<a href="' + detailHref + '" class="featured-card-link" aria-label="View ' + esc(it.title) + '">' +
-          '<div class="' + imgClass + '"' + imgStyle + '></div>' +
-          '<div class="featured-body">' +
-            (it.tagline   ? '<span class="featured-tagline">' + esc(it.tagline) + '</span>'  : '') +
-            '<h3 class="featured-title">' + esc(it.title) + '</h3>' +
-            (it.statement ? '<p class="featured-statement">' + esc(it.statement) + '</p>'    : '') +
-            '<span class="featured-cta">Read More &rarr;</span>' +
-          '</div>' +
-        '</a>' +
+        '<div class="' + imgClass + '"' + imgStyle + '></div>' +
+        '<div class="featured-body">' +
+          (it.tagline   ? '<span class="featured-tagline">' + esc(it.tagline) + '</span>'  : '') +
+          '<h3 class="featured-title">' + esc(it.title) + '</h3>' +
+          (it.statement ? '<p class="featured-statement">' + esc(it.statement) + '</p>'    : '') +
+          '<a href="' + detailHref + '" class="featured-cta">Read More &rarr;</a>' +
+        '</div>' +
       '</article>';
     }).join('');
   }
