@@ -25,6 +25,16 @@ window.CommissionData = (function () {
         { src: '../images/stickers/sticker2.png', alt: 'Complex sticker 1', category: 'Complex' },
         { src: '../images/stickers/sticker4.png', alt: 'Complex sticker 2', category: 'Complex' },
         { src: '../images/stickers/sticker5.png', alt: 'Complex sticker 3', category: 'Complex' }
+      ],
+      featured: [
+        {
+          title: 'To Prove You Are Everything',
+          tagline: 'Senior Project · 2026',
+          statement: 'An interdisciplinary studio art senior thesis exploring identity, self-expression, and the tension between what is seen and what is felt.',
+          src: '',
+          link: '',
+          visible: true
+        }
       ]
     },
     fonts:  { heading: '', body: '', custom: [] },
@@ -134,6 +144,29 @@ window.CommissionData = (function () {
     }).join('');
   }
 
+  function renderFeatured() {
+    var el = document.getElementById('featured-container');
+    if (!el) return;
+    var items = (CD.get().featured || []).filter(function(it){ return it.visible !== false; });
+    if (!items.length) { el.innerHTML = ''; return; }
+    el.innerHTML = items.map(function (it) {
+      var imgStyle  = it.src ? ' style="background-image:url(\'' + it.src.replace(/'/g, "\\'") + '\')"' : '';
+      var imgClass  = it.src ? 'featured-img' : 'featured-img featured-img-empty';
+      var linkHtml  = it.link
+        ? '<a href="' + esc(it.link) + '" class="featured-link" target="_blank" rel="noopener">View Work &rarr;</a>'
+        : '';
+      return '<article class="featured-card">' +
+        '<div class="' + imgClass + '"' + imgStyle + '></div>' +
+        '<div class="featured-body">' +
+          (it.tagline   ? '<span class="featured-tagline">' + esc(it.tagline) + '</span>'       : '') +
+          '<h3 class="featured-title">' + esc(it.title) + '</h3>' +
+          (it.statement ? '<p class="featured-statement">' + esc(it.statement) + '</p>'          : '') +
+          linkHtml +
+        '</div>' +
+      '</article>';
+    }).join('');
+  }
+
   var CD = {
     /* Data */
     get:         function ()  { return read(KEYS.data,   DEFAULTS.data);   },
@@ -150,6 +183,7 @@ window.CommissionData = (function () {
     applyAll:       applyAll,
     renderCommissions: renderCommissions,
     renderStickers:    renderStickers,
+    renderFeatured:    renderFeatured,
     esc:     esc,
     DEFAULTS: DEFAULTS
   };

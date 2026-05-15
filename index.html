@@ -161,6 +161,92 @@
 		background: var(--pk);
 		color: #0d0d0f !important;
 	}
+
+	/* ── FEATURED WORKS ─────────────────────────── */
+	.featured-section {
+		margin-bottom: 2.25em;
+		padding-bottom: 2.25em;
+		border-bottom: 1px solid var(--brd);
+	}
+	.featured-card {
+		display: flex;
+		border: 1px solid var(--brd-pk);
+		border-radius: 4px;
+		overflow: hidden;
+		background: #17171b;
+		margin-bottom: 0.85em;
+		min-height: 240px;
+		transition: border-color 0.2s;
+	}
+	.featured-card:hover { border-color: rgba(242,132,158,0.38); }
+	.featured-img {
+		width: 44%;
+		flex-shrink: 0;
+		background-size: cover;
+		background-position: center;
+		position: relative;
+	}
+	.featured-img::after {
+		content: '';
+		position: absolute; inset: 0;
+		background: linear-gradient(to right, transparent 50%, #17171b 100%);
+	}
+	.featured-img-empty {
+		background: #111113;
+		border-right: 1px solid var(--brd);
+	}
+	.featured-body {
+		flex: 1;
+		padding: 1.75em 2em;
+		display: flex;
+		flex-direction: column;
+		justify-content: center;
+		gap: 0.55em;
+	}
+	.featured-tagline {
+		font-size: 0.62em;
+		font-weight: 700;
+		letter-spacing: 0.2em;
+		text-transform: uppercase;
+		color: var(--cy);
+		opacity: 0.65;
+	}
+	.featured-title {
+		font-size: 1.28em;
+		line-height: 1.15;
+		margin: 0 !important;
+		color: #f0f0f0;
+		border-left: 3px solid var(--pk);
+		padding-left: 0.5em;
+	}
+	.featured-statement {
+		font-size: 0.83em;
+		color: #757575;
+		line-height: 1.85;
+		margin: 0 !important;
+		max-width: 52ch;
+	}
+	.featured-link {
+		display: inline-block;
+		font-size: 0.7em;
+		font-weight: 900;
+		letter-spacing: 0.12em;
+		text-transform: uppercase;
+		color: var(--cy) !important;
+		text-decoration: none !important;
+		border-bottom: 1px solid var(--brd-cy);
+		padding-bottom: 0.15em;
+		align-self: flex-start;
+		margin-top: 0.35em;
+		transition: border-color 0.15s, color 0.15s;
+	}
+	.featured-link:hover { color: #a8dff8 !important; border-bottom-color: var(--cy); }
+	@media (max-width: 736px) {
+		.featured-card { flex-direction: column; }
+		.featured-img { width: 100%; min-height: 180px; }
+		.featured-img::after { background: linear-gradient(to bottom, transparent 50%, #17171b 100%); }
+		.featured-body { padding: 1.25em 1.25em; }
+	}
 	</style>
 </head>
 
@@ -196,6 +282,14 @@
 		<!-- Main -->
 		<div id="main">
 			<div class="inner">
+
+				<!-- Featured Works -->
+				<div class="featured-section">
+					<span class="section-label">// FEATURED WORKS</span>
+					<div id="featured-container">
+						<!-- rendered by CommissionData.renderFeatured() -->
+					</div>
+				</div>
 
 				<!-- Bio -->
 				<div class="bio-block">
@@ -316,6 +410,13 @@
 	<script src="assets/js/breakpoints.min.js"></script>
 	<script src="assets/js/util.js"></script>
 	<script src="assets/js/main.js"></script>
+	<script src="assets/js/commission-data.js"></script>
+	<script>
+		document.addEventListener('DOMContentLoaded', function () {
+			CommissionData.applyAll();
+			CommissionData.renderFeatured();
+		});
+	</script>
 
 </body>
 </html>
