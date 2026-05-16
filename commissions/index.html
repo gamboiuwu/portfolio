@@ -1392,6 +1392,47 @@
       return;
     }
 
+    // ── Notifications (fire-and-forget, never block the UI) ──────────
+    var addonsStr  = inquiry.addons.length ? inquiry.addons.join(', ') : 'none';
+    var notifyBody = [
+      'From: '    + inquiry.name + ' <' + inquiry.email + '>',
+      'Type: '    + inquiry.commissionType,
+      'Add-ons: ' + addonsStr,
+      'Payment: ' + inquiry.payment,
+      inquiry.characterDesc ? 'Character: ' + inquiry.characterDesc.slice(0, 200) : '',
+      inquiry.poseIdeas     ? 'Pose/palette: ' + inquiry.poseIdeas.slice(0, 200)  : '',
+      inquiry.notes         ? 'Notes: ' + inquiry.notes.slice(0, 200)             : ''
+    ].filter(Boolean).join('\n');
+
+    // ntfy.sh push notification → install ntfy app and subscribe to this topic
+    var NTFY_TOPIC = 'gam-comm-r7x2p4k9';
+    fetch('https://ntfy.sh/' + NTFY_TOPIC, {
+      method: 'POST',
+      headers: {
+        'Title':    'New commission inquiry: ' + inquiry.commissionType.slice(0, 60),
+        'Tags':     'art_palette,inbox_tray',
+        'Priority': '3'
+      },
+      body: notifyBody
+    }).catch(function(){});  // silent on failure
+
+    // Web3Forms email → get your free key at web3forms.com and paste it below
+    var WEB3FORMS_KEY = 'YOUR_WEB3FORMS_ACCESS_KEY';
+    if (WEB3FORMS_KEY !== 'YOUR_WEB3FORMS_ACCESS_KEY') {
+      fetch('https://api.web3forms.com/submit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+        body: JSON.stringify({
+          access_key: WEB3FORMS_KEY,
+          subject:    'New commission inquiry from ' + inquiry.name,
+          from_name:  inquiry.name,
+          email:      inquiry.email,
+          message:    notifyBody
+        })
+      }).catch(function(){});  // silent on failure
+    }
+    // ────────────────────────────────────────────────────────────────
+
     // Show success
     steps.forEach(function (s) { s.hidden = true; });
     success.hidden = false;
