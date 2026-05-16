@@ -52,12 +52,22 @@
 		--rule-mid: rgba(44,41,38,0.2);
 	}
 
+	/* ── SPACING SYSTEM ─────────────────────────── */
+	/* Uniform section rhythm: 3em gap everywhere */
+	--section-gap: 3em;
+
 	/* ── LIGHT MODE OVERRIDE ─────────────────────── */
 	html, body {
 		background-color: var(--paper) !important;
 		color: var(--ink) !important;
 	}
 	#wrapper { background: var(--paper) !important; }
+	/* Give the main content area breathing room from the header */
+	#main > .inner {
+		padding-top: 3.5em !important;
+		padding-left:  3em !important;
+		padding-right: 3em !important;
+	}
 	#header {
 		background: var(--paper) !important;
 		border-bottom: 1px solid var(--rule) !important;
@@ -109,8 +119,8 @@
 
 	/* ── FEATURED SECTION ────────────────────────── */
 	.featured-section {
-		margin-bottom: 3.5em;
-		padding-bottom: 3.5em;
+		margin-bottom: var(--section-gap, 3em);
+		padding-bottom: var(--section-gap, 3em);
 		border-bottom: 1px solid var(--rule);
 	}
 	.featured-card {
@@ -199,9 +209,9 @@
 
 	/* ── BIO BLOCK ───────────────────────────────── */
 	.bio-block {
-		padding-bottom: 3em;
+		padding-bottom: var(--section-gap, 3em);
 		border-bottom: 1px solid var(--rule);
-		margin-bottom: 3em;
+		margin-bottom: var(--section-gap, 3em);
 	}
 	.hero-name {
 		border-left: none !important;
@@ -229,7 +239,7 @@
 	}
 
 	/* ── SELECTED WORKS ──────────────────────────── */
-	.works-intro { margin-bottom: 2em; }
+	.works-intro { margin-bottom: var(--section-gap, 3em); }
 	.works-heading {
 		border-left: none !important;
 		padding-left: 0 !important;
