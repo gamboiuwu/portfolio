@@ -47,7 +47,17 @@ window.CommissionData = (function () {
   function read(key, def) {
     try {
       var v = localStorage.getItem(key);
-      return v ? JSON.parse(v) : clone(def);
+      if (!v) return clone(def);
+      var stored = JSON.parse(v);
+      /* Shallow-merge: stored values win, but any key missing from the
+         stored object (e.g. "featured" added after first save) falls
+         back to the default value so callers never see undefined. */
+      if (stored && typeof stored === 'object' && !Array.isArray(stored)) {
+        var merged = clone(def);
+        Object.keys(stored).forEach(function (k) { merged[k] = stored[k]; });
+        return merged;
+      }
+      return stored;
     } catch (e) {
       return clone(def);
     }
