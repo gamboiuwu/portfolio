@@ -7,9 +7,10 @@ window.CommissionData = (function () {
   'use strict';
 
   var KEYS = {
-    data:   '_gam_data_v1',
-    fonts:  '_gam_fonts_v1',
-    styles: '_gam_styles_v1'
+    data:     '_gam_data_v1',
+    fonts:    '_gam_fonts_v1',
+    styles:   '_gam_styles_v1',
+    inquiries: '_gam_inquiries_v1'
   };
 
   var DEFAULTS = {
@@ -192,6 +193,28 @@ window.CommissionData = (function () {
     /* Styles */
     getStyles:   function ()  { return read(KEYS.styles, DEFAULTS.styles); },
     saveStyles:  function (s) { write(KEYS.styles, s);                      },
+    /* Inquiries */
+    getInquiries: function () {
+      try {
+        var v = localStorage.getItem(KEYS.inquiries);
+        return v ? JSON.parse(v) : [];
+      } catch(e) { return []; }
+    },
+    saveInquiry: function (inq) {
+      var list = CD.getInquiries();
+      list.unshift(inq);           // newest first
+      localStorage.setItem(KEYS.inquiries, JSON.stringify(list));
+    },
+    deleteInquiry: function (id) {
+      var list = CD.getInquiries().filter(function(i){ return i.id !== id; });
+      localStorage.setItem(KEYS.inquiries, JSON.stringify(list));
+    },
+    markInquiryRead: function (id) {
+      var list = CD.getInquiries().map(function(i){
+        return i.id === id ? Object.assign({}, i, {read: true}) : i;
+      });
+      localStorage.setItem(KEYS.inquiries, JSON.stringify(list));
+    },
     /* Utilities */
     loadGoogleFont: loadGoogleFont,
     applyAll:       applyAll,

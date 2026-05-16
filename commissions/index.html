@@ -596,6 +596,181 @@
 			#lb-prev { left: 0.5em; } #lb-next { right: 0.5em; }
 			.lb-arrow { font-size: 1.2em; padding: 0.4em 0.5em; }
 		}
+
+		/* ══════════════════════════════════════════════════
+		   COMMISSION INQUIRY FORM
+		══════════════════════════════════════════════════ */
+		#commission-form {
+		  margin-top: 4em;
+		  padding-top: 4em;
+		  border-top: 1px solid var(--rule);
+		}
+		.cif-header { margin-bottom: 2.5em; }
+		.cif-title {
+		  font-size: 2.2em !important;
+		  font-weight: 300 !important;
+		  margin: 0.15em 0 0.3em !important;
+		  border-left: none !important;
+		  padding-left: 0 !important;
+		}
+		.cif-subtitle { color: var(--mid); font-size: 0.9em; line-height: 1.8; max-width: 60ch; margin: 0; }
+
+		/* Progress pills */
+		.cif-progress {
+		  display: flex; align-items: center; gap: 0;
+		  margin-bottom: 3em;
+		}
+		.cif-step-pill {
+		  display: flex; align-items: center; gap: 0.5em;
+		  font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif;
+		  font-size: 0.68em; font-weight: 400; letter-spacing: 0.12em; text-transform: uppercase;
+		  color: var(--lite); transition: color 0.3s;
+		}
+		.cif-step-pill span {
+		  width: 22px; height: 22px; border-radius: 50%;
+		  border: 1px solid var(--rule-mid);
+		  display: flex; align-items: center; justify-content: center;
+		  font-size: 0.95em; color: var(--lite);
+		  transition: background 0.3s, border-color 0.3s, color 0.3s;
+		  flex-shrink: 0;
+		}
+		.cif-step-pill.active { color: var(--ink); }
+		.cif-step-pill.active span { background: var(--ink); border-color: var(--ink); color: var(--paper); }
+		.cif-step-pill.done span { background: var(--mid); border-color: var(--mid); color: var(--paper); }
+		.cif-step-divider {
+		  flex: 1; height: 1px; background: var(--rule); margin: 0 0.75em;
+		}
+
+		/* Steps */
+		.cif-step { animation: cifFadeIn 0.3s ease; }
+		@keyframes cifFadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+		/* Fields */
+		.cif-field { margin-bottom: 2em; }
+		.cif-row { display: flex; gap: 1.5em; }
+		.cif-field-half { flex: 1; min-width: 0; }
+		.cif-label {
+		  display: block; margin-bottom: 0.35em;
+		  font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif;
+		  font-size: 0.72em; font-weight: 400; letter-spacing: 0.1em; text-transform: uppercase;
+		  color: var(--ink);
+		}
+		.cif-req { color: var(--mid); }
+		.cif-opt { color: var(--lite); font-weight: 400; }
+		.cif-hint { font-size: 0.82em; color: var(--lite); margin: 0 0 0.65em; line-height: 1.7; }
+		.cif-field-err { font-size: 0.78em; color: #b85c5c; margin-top: 0.35em; }
+
+		.cif-input {
+		  width: 100%; background: transparent;
+		  border: none; border-bottom: 1px solid var(--rule-mid);
+		  border-radius: 0; padding: 0.6em 0;
+		  font-family: 'Cormorant Garamond', Georgia, serif;
+		  font-size: 1em; color: var(--ink);
+		  outline: none; transition: border-color 0.2s;
+		  box-sizing: border-box;
+		}
+		.cif-input:focus { border-bottom-color: var(--ink); }
+		.cif-input::placeholder { color: var(--lite); }
+		.cif-input.error { border-bottom-color: #b85c5c; }
+		.cif-textarea { resize: vertical; line-height: 1.7; }
+
+		/* Checkboxes + radios */
+		.cif-checkgroup, .cif-radiogroup {
+		  display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+		  gap: 0.5em 1.5em;
+		}
+		.cif-check, .cif-radio {
+		  display: flex; align-items: flex-start; gap: 0.65em;
+		  cursor: pointer; padding: 0.55em 0.75em;
+		  border: 1px solid var(--rule);
+		  transition: background 0.15s, border-color 0.15s;
+		  font-size: 0.88em; color: var(--mid);
+		}
+		.cif-check:hover, .cif-radio:hover { background: var(--paper2); border-color: var(--rule-mid); }
+		.cif-check input, .cif-radio input { flex-shrink: 0; margin-top: 0.1em; accent-color: var(--ink); }
+		.cif-check input:checked ~ span, .cif-radio input:checked ~ span { color: var(--ink); }
+		.cif-tos-check {
+		  grid-template-columns: auto 1fr; border: none; padding: 0;
+		  font-size: 0.88em; color: var(--mid); align-items: flex-start;
+		}
+		.cif-tos-check a { color: var(--ink); border-bottom: 1px solid var(--rule-mid); }
+
+		/* Upload zone */
+		.cif-upload-zone {
+		  display: block; cursor: pointer;
+		  border: 1px dashed var(--rule-mid);
+		  padding: 2em; text-align: center;
+		  transition: border-color 0.2s, background 0.2s;
+		}
+		.cif-upload-zone:hover, .cif-upload-zone.drag-over {
+		  border-color: var(--ink); background: var(--paper2);
+		}
+		.cif-upload-zone input[type="file"] { display: none; }
+		.cif-upload-icon { font-size: 1.8em; display: block; color: var(--lite); margin-bottom: 0.3em; }
+		.cif-upload-label { display: block; font-size: 0.82em; color: var(--mid); margin-bottom: 0.25em; }
+		.cif-upload-sub { display: block; font-size: 0.72em; color: var(--lite); }
+		.cif-ref-previews { display: flex; flex-wrap: wrap; gap: 0.6em; margin-top: 0.75em; }
+		.cif-ref-thumb {
+		  position: relative; width: 72px; height: 72px;
+		}
+		.cif-ref-thumb img { width: 72px; height: 72px; object-fit: cover; display: block; }
+		.cif-ref-rm {
+		  position: absolute; top: 2px; right: 2px;
+		  background: rgba(44,41,38,0.75); color: #f0ede8;
+		  border: none; border-radius: 0; cursor: pointer;
+		  font-size: 0.65em; padding: 1px 5px; line-height: 1.4;
+		}
+
+		/* Nav */
+		.cif-nav { display: flex; justify-content: flex-end; margin-top: 2.5em; padding-top: 2em; border-top: 1px solid var(--rule); }
+		.cif-nav-split { justify-content: space-between; }
+		.cif-btn-next, .cif-btn-submit {
+		  background: var(--ink); color: var(--paper);
+		  border: 1px solid var(--ink); border-radius: 0;
+		  font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif;
+		  font-size: 0.72em; font-weight: 400; letter-spacing: 0.12em; text-transform: uppercase;
+		  padding: 0.75em 2em; cursor: pointer;
+		  transition: background 0.2s, color 0.2s;
+		}
+		.cif-btn-next:hover, .cif-btn-submit:hover { background: var(--mid); border-color: var(--mid); }
+		.cif-btn-back {
+		  background: transparent; color: var(--lite);
+		  border: 1px solid var(--rule); border-radius: 0;
+		  font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif;
+		  font-size: 0.72em; font-weight: 400; letter-spacing: 0.12em; text-transform: uppercase;
+		  padding: 0.75em 1.5em; cursor: pointer;
+		  transition: color 0.2s, border-color 0.2s;
+		}
+		.cif-btn-back:hover { color: var(--ink); border-color: var(--rule-mid); }
+
+		/* Success */
+		.cif-success-inner {
+		  text-align: center; padding: 4em 2em;
+		  border: 1px solid var(--rule);
+		  background: var(--paper2);
+		}
+		.cif-success-icon {
+		  font-size: 2em; width: 52px; height: 52px;
+		  border: 1px solid var(--rule-mid); border-radius: 50%;
+		  display: flex; align-items: center; justify-content: center;
+		  margin: 0 auto 1em; color: var(--mid);
+		}
+		.cif-success-title { font-size: 1.8em !important; font-weight: 300 !important; margin-bottom: 0.5em !important; border-left: none !important; padding-left: 0 !important; }
+		.cif-success-msg { color: var(--mid); max-width: 50ch; margin: 0 auto 1.5em; }
+		.cif-btn-another {
+		  background: transparent; color: var(--mid);
+		  border: 1px solid var(--rule-mid); border-radius: 0;
+		  font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif;
+		  font-size: 0.72em; letter-spacing: 0.1em; text-transform: uppercase;
+		  padding: 0.6em 1.5em; cursor: pointer;
+		  transition: color 0.2s, border-color 0.2s;
+		}
+		.cif-btn-another:hover { color: var(--ink); border-color: var(--ink); }
+
+		@media (max-width: 600px) {
+		  .cif-row { flex-direction: column; gap: 0; }
+		  .cif-checkgroup, .cif-radiogroup { grid-template-columns: 1fr; }
+		}
 		</style>
 	</head>
 	<body class="is-preload">
@@ -812,11 +987,148 @@
 
 				</section>
 
-				<!-- ── Bottom CTA ── -->
+				<!-- ── Commission Form CTA ── -->
 				<div class="bottom-cta-wrap">
-					<p class="bottom-cta-text">Ready to commission? Fill out the inquiry form to get started.</p>
-					<a href="https://antryab.com/newcommission/" class="button primary fit">Commission Inquiry Form</a>
+				  <p class="bottom-cta-text">Ready to commission? Fill out the inquiry form below.</p>
+				  <a href="#commission-form" class="button primary fit">Start Your Inquiry &darr;</a>
 				</div>
+
+<!-- ══════════════════════════════════════════════════
+     COMMISSION INQUIRY FORM
+══════════════════════════════════════════════════ -->
+<section id="commission-form">
+  <div class="cif-header">
+    <span class="section-label">Commission Inquiry</span>
+    <h2 class="cif-title">Start Your Commission</h2>
+    <p class="cif-subtitle">Fill out the form below — I'll get back to you within 48 hours with a quote and next steps.</p>
+  </div>
+
+  <!-- Step progress -->
+  <div class="cif-progress" aria-label="Form progress">
+    <div class="cif-step-pill active" data-step="1"><span>1</span> Commission</div>
+    <div class="cif-step-divider"></div>
+    <div class="cif-step-pill" data-step="2"><span>2</span> Character</div>
+    <div class="cif-step-divider"></div>
+    <div class="cif-step-pill" data-step="3"><span>3</span> Contact</div>
+  </div>
+
+  <form id="cif-form" novalidate>
+
+    <!-- ── STEP 1: Commission Type ── -->
+    <div class="cif-step" data-step="1">
+      <div class="cif-field">
+        <label class="cif-label" for="cif-type">What type of commission would you like? <span class="cif-req">*</span></label>
+        <p class="cif-hint">e.g. "Complex Full Body", "Telegram Sticker Pack 10pk", "5-second Animation loop". Custom requests welcome.</p>
+        <input type="text" id="cif-type" class="cif-input" placeholder="Describe your commission…" required />
+      </div>
+
+      <div class="cif-field">
+        <label class="cif-label">Add-Ons <span class="cif-opt">(optional)</span></label>
+        <p class="cif-hint">Select any extras. Pricing is shown on the page above.</p>
+        <div class="cif-checkgroup">
+          <label class="cif-check"><input type="checkbox" name="addon" value="Simple Environment" /><span>Simple Environment</span></label>
+          <label class="cif-check"><input type="checkbox" name="addon" value="Complex Environment" /><span>Complex Environment</span></label>
+          <label class="cif-check"><input type="checkbox" name="addon" value="Physical Print 8.5×11in" /><span>Physical Print <em>8.5 × 11 in</em></span></label>
+          <label class="cif-check"><input type="checkbox" name="addon" value="Physical Print 13×19in" /><span>Physical Print <em>13 × 19 in</em></span></label>
+          <label class="cif-check"><input type="checkbox" name="addon" value="48-hr Rush" /><span>48-hr Rush</span></label>
+          <label class="cif-check"><input type="checkbox" name="addon" value="24-hr Rush" /><span>24-hr Rush</span></label>
+          <label class="cif-check"><input type="checkbox" name="addon" value="12-hr Rush" /><span>12-hr Rush</span></label>
+        </div>
+      </div>
+
+      <div class="cif-field">
+        <label class="cif-label">Method of Payment <span class="cif-req">*</span></label>
+        <div class="cif-radiogroup">
+          <label class="cif-radio"><input type="radio" name="payment" value="Venmo" required /><span>Venmo</span></label>
+          <label class="cif-radio"><input type="radio" name="payment" value="Cashapp" /><span>Cashapp</span></label>
+          <label class="cif-radio"><input type="radio" name="payment" value="PayPal (Friends & Family)" /><span>PayPal <em>Friends &amp; Family</em></span></label>
+          <label class="cif-radio"><input type="radio" name="payment" value="Cash (in-person)" /><span>Cash <em>— must be in-person</em></span></label>
+        </div>
+      </div>
+
+      <div class="cif-nav">
+        <button type="button" class="cif-btn-next" data-validate="type,payment">Next &rarr;</button>
+      </div>
+    </div>
+
+    <!-- ── STEP 2: Character + References ── -->
+    <div class="cif-step" data-step="2" hidden>
+      <div class="cif-field">
+        <label class="cif-label" for="cif-char">Describe your character <span class="cif-opt">(optional)</span></label>
+        <p class="cif-hint">Personality, appearance, Pinterest boards, reference links — anything relevant. Leave blank if there's no character.</p>
+        <textarea id="cif-char" class="cif-input cif-textarea" rows="5" placeholder="My character is a blue wolf with…"></textarea>
+      </div>
+
+      <div class="cif-field">
+        <label class="cif-label" for="cif-pose">Pose, expression, or palette ideas <span class="cif-opt">(optional)</span></label>
+        <p class="cif-hint">Any specific vibe, mood, or composition you have in mind. Leave blank and I'll come up with something unique for you.</p>
+        <textarea id="cif-pose" class="cif-input cif-textarea" rows="3" placeholder="Sitting on a rooftop at dusk, looking contemplative…"></textarea>
+      </div>
+
+      <div class="cif-field">
+        <label class="cif-label">Reference images <span class="cif-opt">(optional — up to 10 files, max 5 MB each)</span></label>
+        <p class="cif-hint">Upload .png or .jpeg reference sheets, character art, or mood boards.</p>
+        <label class="cif-upload-zone" id="cif-upload-zone">
+          <input type="file" id="cif-refs" accept="image/png,image/jpeg" multiple />
+          <div class="cif-upload-inner">
+            <span class="cif-upload-icon">&#8679;</span>
+            <span class="cif-upload-label">Click to upload or drag &amp; drop</span>
+            <span class="cif-upload-sub">.png / .jpeg · max 5 MB each · up to 10 files</span>
+          </div>
+        </label>
+        <div id="cif-ref-previews" class="cif-ref-previews"></div>
+      </div>
+
+      <div class="cif-nav cif-nav-split">
+        <button type="button" class="cif-btn-back">&larr; Back</button>
+        <button type="button" class="cif-btn-next">Next &rarr;</button>
+      </div>
+    </div>
+
+    <!-- ── STEP 3: Contact + ToS ── -->
+    <div class="cif-step" data-step="3" hidden>
+      <div class="cif-row">
+        <div class="cif-field cif-field-half">
+          <label class="cif-label" for="cif-name">Full name or username <span class="cif-req">*</span></label>
+          <input type="text" id="cif-name" class="cif-input" placeholder="gamboiuwu" required />
+        </div>
+        <div class="cif-field cif-field-half">
+          <label class="cif-label" for="cif-email">Email <span class="cif-req">*</span></label>
+          <input type="email" id="cif-email" class="cif-input" placeholder="you@example.com" required />
+        </div>
+      </div>
+
+      <div class="cif-field">
+        <label class="cif-label" for="cif-notes">Anything else? <span class="cif-opt">(optional)</span></label>
+        <textarea id="cif-notes" class="cif-input cif-textarea" rows="3" placeholder="Deadline, budget, special requests…"></textarea>
+      </div>
+
+      <div class="cif-field">
+        <label class="cif-check cif-tos-check">
+          <input type="checkbox" id="cif-tos" required />
+          <span>I have read and agree to <a href="https://docs.google.com/document/d/1dLJjRgqe5RgfY28Wjio14iabm6QxNBJOGIFzpEPPblQ/edit?usp=sharing" target="_blank" rel="noopener">Anthony's Terms of Service</a>.</span>
+        </label>
+        <p id="cif-tos-err" class="cif-field-err" hidden>Please agree to the Terms of Service to continue.</p>
+      </div>
+
+      <div class="cif-nav cif-nav-split">
+        <button type="button" class="cif-btn-back">&larr; Back</button>
+        <button type="submit" class="cif-btn-submit">Submit Inquiry &rarr;</button>
+      </div>
+    </div>
+
+    <!-- ── SUCCESS STATE ── -->
+    <div class="cif-step cif-success" data-step="success" hidden>
+      <div class="cif-success-inner">
+        <div class="cif-success-icon">&#10003;</div>
+        <h3 class="cif-success-title">Inquiry received!</h3>
+        <p class="cif-success-msg">Thanks — I'll review your request and get back to you at your email within 48 hours with a quote and next steps.</p>
+        <button type="button" class="cif-btn-another">Submit another inquiry</button>
+      </div>
+    </div>
+
+  </form>
+</section>
 
 			</div>
 			</div><!-- /#main -->
@@ -938,6 +1250,169 @@
 			});
 		}());
 		</script>
+
+	<script>
+/* ── Commission Inquiry Form ── */
+(function () {
+  'use strict';
+
+  var form    = document.getElementById('cif-form');
+  var steps   = Array.from(form.querySelectorAll('.cif-step:not(.cif-success)'));
+  var success = form.querySelector('.cif-success');
+  var pills   = Array.from(document.querySelectorAll('.cif-step-pill'));
+  var current = 0;
+  var refFiles = []; // { name, dataUrl }
+
+  function showStep(idx) {
+    steps.forEach(function (s, i) {
+      s.hidden = (i !== idx);
+    });
+    success.hidden = true;
+    pills.forEach(function (p, i) {
+      p.classList.toggle('active', i === idx);
+      p.classList.toggle('done',   i < idx);
+    });
+    current = idx;
+    document.getElementById('commission-form').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  function validate(fields) {
+    var ok = true;
+    if (fields.indexOf('type') !== -1) {
+      var t = document.getElementById('cif-type');
+      t.classList.toggle('error', !t.value.trim());
+      if (!t.value.trim()) ok = false;
+    }
+    if (fields.indexOf('payment') !== -1) {
+      var chosen = form.querySelector('input[name="payment"]:checked');
+      if (!chosen) { ok = false; }
+    }
+    if (fields.indexOf('contact') !== -1) {
+      var n = document.getElementById('cif-name');
+      var e = document.getElementById('cif-email');
+      n.classList.toggle('error', !n.value.trim());
+      if (!n.value.trim()) ok = false;
+      var emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e.value.trim());
+      e.classList.toggle('error', !emailOk);
+      if (!emailOk) ok = false;
+      var tos = document.getElementById('cif-tos');
+      var tosErr = document.getElementById('cif-tos-err');
+      tosErr.hidden = tos.checked;
+      if (!tos.checked) ok = false;
+    }
+    return ok;
+  }
+
+  // Next buttons
+  form.addEventListener('click', function (e) {
+    var t = e.target;
+
+    if (t.classList.contains('cif-btn-next')) {
+      var toValidate = (t.dataset.validate || '').split(',').filter(Boolean);
+      if (validate(toValidate)) showStep(current + 1);
+      return;
+    }
+
+    if (t.classList.contains('cif-btn-back')) {
+      showStep(current - 1);
+      return;
+    }
+
+    if (t.classList.contains('cif-btn-another')) {
+      form.reset();
+      refFiles = [];
+      document.getElementById('cif-ref-previews').innerHTML = '';
+      steps.forEach(function (s) { s.hidden = true; });
+      success.hidden = true;
+      showStep(0);
+      return;
+    }
+
+    // Remove thumbnail
+    if (t.classList.contains('cif-ref-rm')) {
+      var idx = +t.dataset.idx;
+      refFiles.splice(idx, 1);
+      renderPreviews();
+    }
+  });
+
+  // Submit
+  form.addEventListener('submit', function (e) {
+    e.preventDefault();
+    if (!validate(['contact'])) return;
+
+    var addons = Array.from(form.querySelectorAll('input[name="addon"]:checked')).map(function(c){ return c.value; });
+    var payment = form.querySelector('input[name="payment"]:checked');
+
+    var inquiry = {
+      id:            Date.now(),
+      submittedAt:   new Date().toISOString(),
+      read:          false,
+      name:          document.getElementById('cif-name').value.trim(),
+      email:         document.getElementById('cif-email').value.trim(),
+      commissionType: document.getElementById('cif-type').value.trim(),
+      addons:        addons,
+      payment:       payment ? payment.value : '',
+      characterDesc: document.getElementById('cif-char').value.trim(),
+      poseIdeas:     document.getElementById('cif-pose').value.trim(),
+      notes:         document.getElementById('cif-notes').value.trim(),
+      refs:          refFiles.map(function(f){ return { name: f.name, dataUrl: f.dataUrl }; }),
+      tosAgreed:     true
+    };
+
+    CommissionData.saveInquiry(inquiry);
+
+    // Show success
+    steps.forEach(function (s) { s.hidden = true; });
+    success.hidden = false;
+    pills.forEach(function(p){ p.classList.remove('active'); p.classList.add('done'); });
+    document.getElementById('commission-form').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+
+  // File upload
+  var refInput = document.getElementById('cif-refs');
+  var zone     = document.getElementById('cif-upload-zone');
+
+  refInput.addEventListener('change', function () {
+    handleFiles(Array.from(this.files));
+    this.value = '';
+  });
+
+  zone.addEventListener('dragover', function (e) { e.preventDefault(); zone.classList.add('drag-over'); });
+  zone.addEventListener('dragleave', function ()  { zone.classList.remove('drag-over'); });
+  zone.addEventListener('drop', function (e) {
+    e.preventDefault();
+    zone.classList.remove('drag-over');
+    handleFiles(Array.from(e.dataTransfer.files));
+  });
+
+  function handleFiles(files) {
+    files.forEach(function (f) {
+      if (refFiles.length >= 10) return;
+      if (!f.type.match(/^image\/(png|jpeg)$/)) return;
+      if (f.size > 5 * 1024 * 1024) return;
+      var reader = new FileReader();
+      reader.onload = function (ev) {
+        refFiles.push({ name: f.name, dataUrl: ev.target.result });
+        renderPreviews();
+      };
+      reader.readAsDataURL(f);
+    });
+  }
+
+  function renderPreviews() {
+    var wrap = document.getElementById('cif-ref-previews');
+    wrap.innerHTML = refFiles.map(function (f, i) {
+      return '<div class="cif-ref-thumb">' +
+        '<img src="' + f.dataUrl + '" alt="' + f.name + '" />' +
+        '<button type="button" class="cif-ref-rm" data-idx="' + i + '" title="Remove">&times;</button>' +
+        '</div>';
+    }).join('');
+  }
+
+  showStep(0);
+}());
+</script>
 
 	</body>
 </html>

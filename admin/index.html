@@ -223,6 +223,55 @@
 			.art-thumb, .art-thumb-placeholder { width: 44px; height: 44px; }
 			.admin-tab { padding: 0.7em 0.9em; font-size: 0.68em; }
 		}
+
+		/* ---- Inquiries ---- */
+		.inq-badge {
+		  display: inline-flex; align-items: center; justify-content: center;
+		  background: #f2849e; color: #fff; border-radius: 999px;
+		  font-size: 0.72em; font-weight: 700; min-width: 1.5em; height: 1.5em;
+		  padding: 0 0.35em; margin-left: 0.35em; vertical-align: middle;
+		}
+		.inq-card {
+		  background: rgba(255,255,255,0.025);
+		  border: 1px solid rgba(201,201,201,0.1);
+		  border-radius: 8px; padding: 1.5em; margin-bottom: 1.25em;
+		  transition: border-color 0.2s;
+		}
+		.inq-card.unread { border-left: 3px solid #f2849e; }
+		.inq-card-head {
+		  display: flex; align-items: flex-start; justify-content: space-between;
+		  gap: 1em; flex-wrap: wrap; margin-bottom: 1em;
+		}
+		.inq-card-name { font-size: 1em; color: #dedede; font-weight: 600; margin: 0; }
+		.inq-card-email { font-size: 0.8em; color: #777; margin: 0.15em 0 0; }
+		.inq-card-meta { font-size: 0.72em; color: #555; text-align: right; line-height: 1.5; }
+		.inq-section { margin-bottom: 0.85em; }
+		.inq-key {
+		  font-size: 0.62em; font-weight: 700; text-transform: uppercase;
+		  letter-spacing: 0.12em; color: #666; margin-bottom: 0.25em;
+		}
+		.inq-val { font-size: 0.82em; color: #aaa; line-height: 1.65; white-space: pre-wrap; }
+		.inq-tag {
+		  display: inline-block; font-size: 0.68em; border: 1px solid rgba(201,201,201,0.15);
+		  padding: 0.2em 0.55em; border-radius: 3px; color: #888; margin: 0.1em 0.2em 0.1em 0;
+		}
+		.inq-refs { display: flex; flex-wrap: wrap; gap: 0.5em; margin-top: 0.5em; }
+		.inq-ref-thumb {
+		  width: 80px; height: 80px; object-fit: cover; cursor: zoom-in;
+		  border: 1px solid rgba(201,201,201,0.1); display: block;
+		}
+		.inq-actions { display: flex; gap: 0.5em; margin-top: 1.25em; flex-wrap: wrap; }
+		.inq-lb {
+		  position: fixed; inset: 0; background: rgba(0,0,0,0.9);
+		  display: flex; align-items: center; justify-content: center;
+		  z-index: 9998; cursor: zoom-out;
+		}
+		.inq-lb img { max-width: 90vw; max-height: 90vh; object-fit: contain; }
+		.inq-lb-close {
+		  position: absolute; top: 1em; right: 1.25em;
+		  background: none; border: none; color: #fff; font-size: 2em;
+		  cursor: pointer; line-height: 1;
+		}
 	</style>
 </head>
 <body class="is-preload">
@@ -288,6 +337,7 @@
 				<button class="admin-tab" data-tab="styles">Styles</button>
 				<button class="admin-tab" data-tab="featured">Featured</button>
 				<button class="admin-tab" data-tab="security">Security</button>
+				<button class="admin-tab" data-tab="inquiries">Inquiries <span id="inq-badge" class="inq-badge" style="display:none"></span></button>
 			</div>
 
 			<!-- ============ GALLERY TAB ============ -->
@@ -417,6 +467,14 @@
 					</ul>
 				</div>
 
+			</div>
+
+			<!-- ============ INQUIRIES TAB ============ -->
+			<div id="tab-inquiries" class="tab-content">
+				<div id="inq-empty" class="admin-card" style="text-align:center;padding:3em 1em;">
+					<p style="color:#555;margin:0">No inquiries yet. They will appear here once someone submits the form on the commissions page.</p>
+				</div>
+				<div id="inq-list"></div>
 			</div>
 
 			<!-- ============ SECURITY TAB ============ -->
@@ -1189,6 +1247,80 @@
 	}
 
 }());
+
+/* ── Inquiries Tab ── */
+function renderInquiries() {
+  var list = CommissionData.getInquiries();
+  var el = document.getElementById('inq-list');
+  var empty = document.getElementById('inq-empty');
+  var badge = document.getElementById('inq-badge');
+  if (!el) return;
+
+  var unread = list.filter(function(i){ return !i.read; }).length;
+  badge.textContent = unread;
+  badge.style.display = unread ? 'inline-flex' : 'none';
+
+  if (!list.length) { el.innerHTML = ''; empty.style.display = ''; return; }
+  empty.style.display = 'none';
+
+  function fmtDate(iso) {
+    try { return new Date(iso).toLocaleString(); } catch(e){ return iso; }
+  }
+
+  el.innerHTML = list.map(function (inq) {
+    var addons = (inq.addons || []).map(function(a){ return '<span class="inq-tag">' + a + '</span>'; }).join('');
+    var refs = (inq.refs || []).map(function(r, i){
+      return '<img class="inq-ref-thumb" src="' + r.dataUrl + '" alt="' + (r.name||'ref') + '" data-inq-img="' + inq.id + '-' + i + '" />';
+    }).join('');
+    return '<div class="inq-card' + (inq.read ? '' : ' unread') + '" id="inq-' + inq.id + '">' +
+      '<div class="inq-card-head">' +
+        '<div><p class="inq-card-name">' + (inq.name||'—') + '</p>' +
+        '<p class="inq-card-email">' + (inq.email||'') + '</p></div>' +
+        '<div class="inq-card-meta">' + fmtDate(inq.submittedAt) + (inq.read ? '<br><span style="color:#4a7c4e">✓ Read</span>' : '') + '</div>' +
+      '</div>' +
+      '<div class="inq-section"><div class="inq-key">Commission Type</div><div class="inq-val">' + (inq.commissionType||'—') + '</div></div>' +
+      (inq.payment ? '<div class="inq-section"><div class="inq-key">Payment</div><div class="inq-val">' + inq.payment + '</div></div>' : '') +
+      (addons ? '<div class="inq-section"><div class="inq-key">Add-Ons</div><div class="inq-val">' + addons + '</div></div>' : '') +
+      (inq.characterDesc ? '<div class="inq-section"><div class="inq-key">Character</div><div class="inq-val">' + inq.characterDesc + '</div></div>' : '') +
+      (inq.poseIdeas ? '<div class="inq-section"><div class="inq-key">Pose / Palette</div><div class="inq-val">' + inq.poseIdeas + '</div></div>' : '') +
+      (inq.notes ? '<div class="inq-section"><div class="inq-key">Notes</div><div class="inq-val">' + inq.notes + '</div></div>' : '') +
+      (refs ? '<div class="inq-section"><div class="inq-key">Reference Images</div><div class="inq-refs">' + refs + '</div></div>' : '') +
+      '<div class="inq-actions">' +
+        (!inq.read ? '<button class="button small inq-mark-read" data-id="' + inq.id + '">Mark as Read</button>' : '') +
+        '<a href="mailto:' + (inq.email||'') + '" class="button small">Reply via Email</a>' +
+        '<button class="button small inq-delete" data-id="' + inq.id + '" style="color:#e07070;border-color:rgba(192,96,96,0.3)">Delete</button>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+}
+
+document.addEventListener('click', function(e){
+  var t = e.target;
+  if (t.classList.contains('inq-mark-read')) {
+    CommissionData.markInquiryRead(+t.dataset.id);
+    renderInquiries();
+  }
+  if (t.classList.contains('inq-delete')) {
+    if (confirm('Delete this inquiry? This cannot be undone.')) {
+      CommissionData.deleteInquiry(+t.dataset.id);
+      renderInquiries();
+    }
+  }
+  if (t.classList.contains('inq-ref-thumb')) {
+    var lb = document.createElement('div');
+    lb.className = 'inq-lb';
+    lb.innerHTML = '<button class="inq-lb-close">&times;</button><img src="' + t.src + '" alt="" />';
+    lb.addEventListener('click', function(){ document.body.removeChild(lb); });
+    document.body.appendChild(lb);
+  }
+});
+
+// Hook into tab switching to render when Inquiries tab is opened
+document.addEventListener('click', function(e){
+  if (e.target.dataset && e.target.dataset.tab === 'inquiries') {
+    renderInquiries();
+  }
+});
 </script>
 
 </body>
