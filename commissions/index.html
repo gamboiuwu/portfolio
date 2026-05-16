@@ -1263,7 +1263,7 @@
   var current = 0;
   var refFiles = []; // { name, dataUrl }
 
-  function showStep(idx) {
+  function showStep(idx, noScroll) {
     steps.forEach(function (s, i) {
       s.hidden = (i !== idx);
     });
@@ -1273,28 +1273,53 @@
       p.classList.toggle('done',   i < idx);
     });
     current = idx;
-    document.getElementById('commission-form').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    if (!noScroll) {
+      document.getElementById('commission-form').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }
+
+  function setErr(el, msg) {
+    var id = el.id + '-err';
+    var errEl = document.getElementById(id);
+    if (!errEl) {
+      errEl = document.createElement('p');
+      errEl.id = id;
+      errEl.className = 'cif-field-err';
+      el.parentNode.appendChild(errEl);
+    }
+    errEl.textContent = msg;
+    errEl.hidden = !msg;
+    el.classList.toggle('error', !!msg);
   }
 
   function validate(fields) {
     var ok = true;
     if (fields.indexOf('type') !== -1) {
       var t = document.getElementById('cif-type');
-      t.classList.toggle('error', !t.value.trim());
-      if (!t.value.trim()) ok = false;
+      var tOk = !!t.value.trim();
+      setErr(t, tOk ? '' : 'Please describe what you would like.');
+      if (!tOk) ok = false;
     }
     if (fields.indexOf('payment') !== -1) {
       var chosen = form.querySelector('input[name="payment"]:checked');
-      if (!chosen) { ok = false; }
+      var payErr = document.getElementById('cif-payment-err');
+      if (!payErr) {
+        payErr = document.createElement('p');
+        payErr.id = 'cif-payment-err';
+        payErr.className = 'cif-field-err';
+        form.querySelector('.cif-radiogroup').after(payErr);
+      }
+      payErr.textContent = chosen ? '' : 'Please select a payment method.';
+      payErr.hidden = !!chosen;
+      if (!chosen) ok = false;
     }
     if (fields.indexOf('contact') !== -1) {
       var n = document.getElementById('cif-name');
       var e = document.getElementById('cif-email');
-      n.classList.toggle('error', !n.value.trim());
-      if (!n.value.trim()) ok = false;
+      setErr(n, n.value.trim() ? '' : 'Please enter your name or username.');
       var emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e.value.trim());
-      e.classList.toggle('error', !emailOk);
-      if (!emailOk) ok = false;
+      setErr(e, emailOk ? '' : 'Please enter a valid email address.');
+      if (!n.value.trim() || !emailOk) ok = false;
       var tos = document.getElementById('cif-tos');
       var tosErr = document.getElementById('cif-tos-err');
       tosErr.hidden = tos.checked;
@@ -1360,7 +1385,12 @@
       tosAgreed:     true
     };
 
-    CommissionData.saveInquiry(inquiry);
+    try {
+      CommissionData.saveInquiry(inquiry);
+    } catch (err) {
+      alert('Unable to save inquiry — your browser storage may be full. Please email gamboiuwu@nyfurs.org directly.');
+      return;
+    }
 
     // Show success
     steps.forEach(function (s) { s.hidden = true; });
@@ -1410,7 +1440,7 @@
     }).join('');
   }
 
-  showStep(0);
+  showStep(0, true); // true = don't auto-scroll on page init
 }());
 </script>
 
