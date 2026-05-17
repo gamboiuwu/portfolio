@@ -226,16 +226,25 @@ window.CommissionData = (function () {
 
   /* ---- Price table helpers ---- */
 
-  function buildPriceTable(cols, rows, firstHeader) {
-    var html = '<div class="table-wrapper"><table><thead><tr><th>' + esc(firstHeader) + '</th>';
-    cols.forEach(function(c){ html += '<th>' + esc(c) + '</th>'; });
-    html += '</tr></thead><tbody>';
-    rows.forEach(function(r) {
-      html += '<tr><td>' + esc(r.label) + '</td>';
-      (r.prices || []).forEach(function(p){ html += '<td>$' + p + '</td>'; });
-      html += '</tr>';
+  function buildPriceCards(cols, rows, sectionLabel) {
+    /* Each column becomes a card; last column gets "featured" treatment */
+    var html = '<div class="price-cards">';
+    cols.forEach(function(col, ci) {
+      var isFeatured = (ci === cols.length - 1);
+      html += '<div class="price-card' + (isFeatured ? ' featured' : '') + '">';
+      if (isFeatured) html += '<div class="price-card-badge">Most Detail</div>';
+      html += '<div class="price-card-header">' + esc(col) + '</div>';
+      html += '<ul class="price-card-items">';
+      rows.forEach(function(r) {
+        var price = (r.prices || [])[ci];
+        html += '<li>'
+          + '<span class="pci-label">' + esc(r.label) + '</span>'
+          + '<span class="pci-price">$' + (price != null ? price : '—') + '</span>'
+          + '</li>';
+      });
+      html += '</ul></div>';
     });
-    html += '</tbody></table></div>';
+    html += '</div>';
     return html;
   }
 
@@ -258,7 +267,7 @@ window.CommissionData = (function () {
     function applySection(secKey, tableId, addonsId, startingId, badgeId, firstHeader) {
       var s = pr[secKey];
       var tableEl = document.getElementById(tableId);
-      if (tableEl) tableEl.innerHTML = buildPriceTable(s.cols, s.rows, firstHeader);
+      if (tableEl) tableEl.innerHTML = buildPriceCards(s.cols, s.rows, firstHeader);
       var addonsEl = document.getElementById(addonsId);
       if (addonsEl) addonsEl.innerHTML = buildPriceAddons(s.addons);
       if (startingId) {
