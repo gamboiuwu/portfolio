@@ -879,7 +879,7 @@
 						<h1>gamboiuwu<br>Commissions</h1>
 					</div>
 					<div class="page-heading-meta">
-						<span class="status-badge open">Open</span>
+						<span class="status-badge open" id="overall-status-badge">Open</span>
 						<p class="heading-tagline">Digital · Stickers · Animation</p>
 					</div>
 				</div>
@@ -915,7 +915,7 @@
 					<!-- 01 — Art (Digital) -->
 					<span class="section-label">Digital Art</span>
 					<h2 id="digital">Art (Digital)</h2>
-					<p class="section-starting">Starting from <strong>$19</strong></p>
+					<p class="section-starting" id="digital-starting">Starting from <strong>$19</strong></p>
 
 					<div class="comm-gallery" id="comm-gallery-container">
 						<figure class="comm-gallery-item">
@@ -932,49 +932,15 @@
 						</figure>
 					</div>
 
-					<div class="table-wrapper">
-						<table>
-							<thead>
-								<tr>
-									<th>Art (Digital)</th>
-									<th>Sketch</th>
-									<th>Flat</th>
-									<th>Flat Shade</th>
-									<th>Complex</th>
-								</tr>
-							</thead>
-							<tbody>
-								<tr>
-									<td>Headshot (Bust)</td>
-									<td>$19</td><td>$48</td><td>$77</td><td>$96</td>
-								</tr>
-								<tr>
-									<td>Half Body</td>
-									<td>$37</td><td>$93</td><td>$149</td><td>$186</td>
-								</tr>
-								<tr>
-									<td>Full Body / Environment</td>
-									<td>$54</td><td>$134</td><td>$214</td><td>$268</td>
-								</tr>
-							</tbody>
-						</table>
-					</div>
-
-					<h3>Add-Ons</h3>
-					<ul class="addons-list">
-						<li><strong>Physical Print</strong> 13&times;19in &nbsp;+$10</li>
-						<li><strong>NSFW</strong> &nbsp;+$20</li>
-						<li><strong>Rush 48hr</strong> &nbsp;+$10</li>
-						<li><strong>Rush 24hr</strong> &nbsp;+$20</li>
-						<li><strong>Rush 12hr</strong> &nbsp;+$30</li>
-					</ul>
+					<div id="digital-table-wrap"></div>
+					<div id="digital-addons-wrap"></div>
 
 					<hr class="section-divider">
 
 					<!-- 02 — Telegram Stickers -->
 					<span class="section-label">Telegram Stickers</span>
 					<h2 id="stickers">Telegram Stickers</h2>
-					<p class="section-starting">Starting from <strong>$17</strong></p>
+					<p class="section-starting" id="sticker-starting">Starting from <strong>$17</strong></p>
 
 					<div class="sticker-gallery" id="sticker-gallery-container">
 						<figure class="sticker-gallery-item"><img src="../images/stickers/sticker1.png" alt="Simple sticker example 1" /></figure>
@@ -985,67 +951,17 @@
 					</div>
 					<p class="sticker-group-label">Examples &mdash; Simple (left) &middot; Complex (right)</p>
 
-					<div class="table-wrapper">
-						<table>
-							<thead>
-								<tr>
-									<th>Sticker Type</th>
-									<th>1 Pack</th>
-									<th>3 Pack</th>
-									<th>5 Pack</th>
-									<th>10 Pack</th>
-								</tr>
-							</thead>
-							<tbody>
-								<tr>
-									<td>Simple (flat)</td>
-									<td>$17</td><td>$45</td><td>$59</td><td>$101</td>
-								</tr>
-								<tr>
-									<td>Complex</td>
-									<td>$24</td><td>$65</td><td>$90</td><td>$144</td>
-								</tr>
-							</tbody>
-						</table>
-					</div>
-
-					<ul class="addons-list">
-						<li>No additional upcharge for NSFW stickers</li>
-					</ul>
+					<div id="sticker-table-wrap"></div>
+					<div id="sticker-addons-wrap"></div>
 
 					<hr class="section-divider">
 
 					<!-- 03 — Animation -->
 					<span class="section-label">Animation</span>
-					<h2 id="animation">Animation <span class="status-badge closed">Closed</span></h2>
+					<h2 id="animation">Animation <span class="status-badge closed" id="animation-status-badge">Closed</span></h2>
 
-					<div class="table-wrapper">
-						<table>
-							<thead>
-								<tr>
-									<th>Animation</th>
-									<th>Sketch</th>
-									<th>Shaded</th>
-									<th>Complex</th>
-								</tr>
-							</thead>
-							<tbody>
-								<tr>
-									<td>Loop</td>
-									<td>$100</td><td>$200</td><td>$280</td>
-								</tr>
-								<tr>
-									<td>5 Seconds</td>
-									<td>$150</td><td>$320</td><td>$510</td>
-								</tr>
-							</tbody>
-						</table>
-					</div>
-
-					<ul class="addons-list">
-						<li><strong>NSFW Animation</strong> &nbsp;+$100</li>
-						<li>Must be discussed prior to animation work</li>
-					</ul>
+					<div id="animation-table-wrap"></div>
+					<div id="animation-addons-wrap"></div>
 
 					<!-- Contact + signature -->
 					<p class="contact-line">
@@ -1250,6 +1166,8 @@
 				CommissionData.applyAll();
 				CommissionData.renderCommissions();
 				CommissionData.renderStickers();
+				CommissionData.renderFeatured();
+				CommissionData.renderPriceTables();
 			});
 		</script>
 		<script>
