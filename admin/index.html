@@ -224,6 +224,76 @@
 			.admin-tab { padding: 0.7em 0.9em; font-size: 0.68em; }
 		}
 
+		/* ---- Pricing editor ---- */
+		.price-cols-wrap {
+		  display: flex; flex-wrap: wrap; gap: 0.4em; align-items: center;
+		  margin-bottom: 0.75em; padding-bottom: 0.75em;
+		  border-bottom: 1px solid rgba(201,201,201,0.1);
+		}
+		.price-col-item {
+		  display: flex; align-items: center; gap: 0.25em;
+		}
+		.price-col-input {
+		  width: 90px; background: rgba(255,255,255,0.04);
+		  border: 1px solid rgba(201,201,201,0.15); border-radius: 4px;
+		  color: #dedede; font-family: inherit; font-size: 0.78em;
+		  padding: 0.35em 0.5em;
+		}
+		.price-col-del {
+		  background: none; border: none; color: #c06060;
+		  cursor: pointer; font-size: 0.9em; padding: 0 0.2em; line-height: 1;
+		}
+		.price-col-add {
+		  background: rgba(255,255,255,0.03); border: 1px dashed rgba(201,201,201,0.2);
+		  border-radius: 4px; color: #666; cursor: pointer;
+		  font-size: 0.72em; padding: 0.35em 0.6em;
+		  transition: color 0.15s, border-color 0.15s;
+		}
+		.price-col-add:hover { color: #aaa; border-color: rgba(201,201,201,0.4); }
+		.price-row-item {
+		  display: flex; align-items: center; gap: 0.4em;
+		  margin-bottom: 0.4em;
+		}
+		.price-row-label {
+		  flex: 1; min-width: 0; background: rgba(255,255,255,0.04);
+		  border: 1px solid rgba(201,201,201,0.15); border-radius: 4px;
+		  color: #dedede; font-family: inherit; font-size: 0.82em;
+		  padding: 0.4em 0.55em;
+		}
+		.price-cell {
+		  width: 62px; background: rgba(255,255,255,0.04);
+		  border: 1px solid rgba(201,201,201,0.15); border-radius: 4px;
+		  color: #c9a87c; font-family: inherit; font-size: 0.82em;
+		  padding: 0.4em 0.45em; text-align: right;
+		}
+		.price-row-del {
+		  background: none; border: none; color: #c06060;
+		  cursor: pointer; font-size: 1em; line-height: 1; flex-shrink: 0;
+		}
+		.price-addon-label {
+		  font-size: 0.7em; font-weight: 900; letter-spacing: 0.12em;
+		  text-transform: uppercase; color: #555; margin: 1em 0 0.5em;
+		}
+		.price-addon-item {
+		  display: flex; align-items: center; gap: 0.4em; margin-bottom: 0.4em;
+		}
+		.price-addon-name {
+		  flex: 1; min-width: 0; background: rgba(255,255,255,0.04);
+		  border: 1px solid rgba(201,201,201,0.15); border-radius: 4px;
+		  color: #dedede; font-family: inherit; font-size: 0.82em;
+		  padding: 0.4em 0.55em;
+		}
+		.price-addon-price {
+		  width: 72px; background: rgba(255,255,255,0.04);
+		  border: 1px solid rgba(201,201,201,0.15); border-radius: 4px;
+		  color: #c9a87c; font-family: inherit; font-size: 0.82em;
+		  padding: 0.4em 0.45em; text-align: right;
+		}
+		.price-addon-del {
+		  background: none; border: none; color: #c06060;
+		  cursor: pointer; font-size: 1em; line-height: 1; flex-shrink: 0;
+		}
+
 		/* ---- Inquiries ---- */
 		.inq-badge {
 		  display: inline-flex; align-items: center; justify-content: center;
@@ -336,6 +406,7 @@
 				<button class="admin-tab" data-tab="fonts">Fonts</button>
 				<button class="admin-tab" data-tab="styles">Styles</button>
 				<button class="admin-tab" data-tab="featured">Featured</button>
+				<button class="admin-tab" data-tab="pricing">Pricing</button>
 				<button class="admin-tab" data-tab="security">Security</button>
 				<button class="admin-tab" data-tab="inquiries">Inquiries <span id="inq-badge" class="inq-badge" style="display:none"></span></button>
 			</div>
@@ -469,6 +540,88 @@
 
 			</div>
 
+			<!-- ============ PRICING TAB ============ -->
+			<div id="tab-pricing" class="tab-content">
+
+			  <p class="section-note" style="margin-bottom:2em">
+			    Changes here update the live commission page immediately after <strong>Save All</strong>.
+			    Add-on prices should include the sign, e.g. <code>+$10</code>. Leave the price blank for notes without a price.
+			  </p>
+
+			  <!-- DIGITAL ART -->
+			  <div class="admin-card">
+			    <h3>Art (Digital)</h3>
+			    <div class="field-row" style="margin-bottom:1.25em">
+			      <span class="field-label">Status</span>
+			      <select id="price-digital-status" class="field-input" style="max-width:140px">
+			        <option value="open">Open</option>
+			        <option value="closed">Closed</option>
+			      </select>
+			    </div>
+			    <div class="price-section-editor" data-section="digital">
+			      <div class="price-cols-wrap"></div>
+			      <div class="price-rows-wrap"></div>
+			      <ul class="actions" style="margin:0.5em 0 1.5em">
+			        <li><button class="button small price-add-row" data-section="digital">+ Add Row</button></li>
+			      </ul>
+			      <div class="price-addon-label">Add-Ons</div>
+			      <div class="price-addons-wrap"></div>
+			      <ul class="actions" style="margin:0.5em 0">
+			        <li><button class="button small price-add-addon" data-section="digital">+ Add Add-On</button></li>
+			      </ul>
+			    </div>
+			  </div>
+
+			  <!-- STICKERS -->
+			  <div class="admin-card">
+			    <h3>Telegram Stickers</h3>
+			    <div class="field-row" style="margin-bottom:1.25em">
+			      <span class="field-label">Status</span>
+			      <select id="price-stickers-status" class="field-input" style="max-width:140px">
+			        <option value="open">Open</option>
+			        <option value="closed">Closed</option>
+			      </select>
+			    </div>
+			    <div class="price-section-editor" data-section="stickers">
+			      <div class="price-cols-wrap"></div>
+			      <div class="price-rows-wrap"></div>
+			      <ul class="actions" style="margin:0.5em 0 1.5em">
+			        <li><button class="button small price-add-row" data-section="stickers">+ Add Row</button></li>
+			      </ul>
+			      <div class="price-addon-label">Add-Ons / Notes</div>
+			      <div class="price-addons-wrap"></div>
+			      <ul class="actions" style="margin:0.5em 0">
+			        <li><button class="button small price-add-addon" data-section="stickers">+ Add Add-On</button></li>
+			      </ul>
+			    </div>
+			  </div>
+
+			  <!-- ANIMATION -->
+			  <div class="admin-card">
+			    <h3>Animation</h3>
+			    <div class="field-row" style="margin-bottom:1.25em">
+			      <span class="field-label">Status</span>
+			      <select id="price-animation-status" class="field-input" style="max-width:140px">
+			        <option value="open">Open</option>
+			        <option value="closed">Closed</option>
+			      </select>
+			    </div>
+			    <div class="price-section-editor" data-section="animation">
+			      <div class="price-cols-wrap"></div>
+			      <div class="price-rows-wrap"></div>
+			      <ul class="actions" style="margin:0.5em 0 1.5em">
+			        <li><button class="button small price-add-row" data-section="animation">+ Add Row</button></li>
+			      </ul>
+			      <div class="price-addon-label">Add-Ons / Notes</div>
+			      <div class="price-addons-wrap"></div>
+			      <ul class="actions" style="margin:0.5em 0">
+			        <li><button class="button small price-add-addon" data-section="animation">+ Add Add-On</button></li>
+			      </ul>
+			    </div>
+			  </div>
+
+			</div>
+
 			<!-- ============ INQUIRIES TAB ============ -->
 			<div id="tab-inquiries" class="tab-content">
 				<div id="inq-empty" class="admin-card" style="text-align:center;padding:3em 1em;">
@@ -564,7 +717,7 @@
 	var attempts   = 0;
 	var lockedOut  = false;
 	var pendingFont = '';   // Google Font name previewed but not yet applied
-	var currentData, currentFonts, currentStyles;
+	var currentData, currentFonts, currentStyles, currentPrices;
 
 	/* ── DOM refs ── */
 	var loginEl   = document.getElementById('admin-login');
@@ -635,10 +788,12 @@
 		currentData   = CommissionData.get();
 		currentFonts  = CommissionData.getFonts();
 		currentStyles = CommissionData.getStyles();
+		currentPrices = CommissionData.getPrices();
 		renderGalleryTab();
 		renderFeaturedTab();
 		refreshFontsList();
 		refreshStylesTab();
+		renderPricingTab();
 	}
 
 	/* ================================================================
@@ -1191,7 +1346,167 @@
 		CommissionData.save(currentData);
 		CommissionData.saveFonts(currentFonts);
 		CommissionData.saveStyles(currentStyles);
+		CommissionData.savePrices(currentPrices);
 		toast('All changes saved!');
+	});
+
+	/* ================================================================
+	   PRICING TAB
+	================================================================ */
+
+	function renderPricingTab() {
+	  ['digital', 'stickers', 'animation'].forEach(renderPriceSection);
+	  // Set status dropdowns
+	  ['digital','stickers','animation'].forEach(function(sec) {
+	    var sel = document.getElementById('price-' + sec + '-status');
+	    if (sel) sel.value = currentPrices[sec].status || 'open';
+	  });
+	}
+
+	function renderPriceSection(sec) {
+	  var editor = document.querySelector('.price-section-editor[data-section="' + sec + '"]');
+	  if (!editor) return;
+	  var s = currentPrices[sec];
+
+	  /* ── Column headers ── */
+	  var colsWrap = editor.querySelector('.price-cols-wrap');
+	  colsWrap.innerHTML = '<span style="font-size:0.72em;color:#555;text-transform:uppercase;letter-spacing:0.1em;font-weight:700;margin-right:0.25em">Columns:</span>';
+	  (s.cols || []).forEach(function(col, ci) {
+	    var item = document.createElement('div');
+	    item.className = 'price-col-item';
+	    item.innerHTML =
+	      '<input class="price-col-input" data-sec="' + sec + '" data-ci="' + ci + '" value="' + esc(col) + '" placeholder="Column ' + (ci+1) + '" />' +
+	      '<button class="price-col-del" data-sec="' + sec + '" data-ci="' + ci + '" title="Remove column">&times;</button>';
+	    colsWrap.appendChild(item);
+	  });
+	  var addColBtn = document.createElement('button');
+	  addColBtn.className = 'price-col-add';
+	  addColBtn.dataset.sec = sec;
+	  addColBtn.textContent = '+ Column';
+	  colsWrap.appendChild(addColBtn);
+
+	  /* ── Rows ── */
+	  var rowsWrap = editor.querySelector('.price-rows-wrap');
+	  rowsWrap.innerHTML = '';
+	  (s.rows || []).forEach(function(row, ri) {
+	    var item = document.createElement('div');
+	    item.className = 'price-row-item';
+	    var html = '<input class="price-row-label" data-sec="' + sec + '" data-ri="' + ri + '" value="' + esc(row.label || '') + '" placeholder="Row label" />';
+	    (s.cols || []).forEach(function(_, ci) {
+	      html += '<input class="price-cell" type="number" min="0" data-sec="' + sec + '" data-ri="' + ri + '" data-ci="' + ci + '" value="' + ((row.prices || [])[ci] || 0) + '" />';
+	    });
+	    html += '<button class="price-row-del" data-sec="' + sec + '" data-ri="' + ri + '" title="Remove row">&times;</button>';
+	    item.innerHTML = html;
+	    rowsWrap.appendChild(item);
+	  });
+
+	  /* ── Add-Ons ── */
+	  var addonsWrap = editor.querySelector('.price-addons-wrap');
+	  addonsWrap.innerHTML = '';
+	  (s.addons || []).forEach(function(addon, ai) {
+	    var item = document.createElement('div');
+	    item.className = 'price-addon-item';
+	    item.innerHTML =
+	      '<input class="price-addon-name" data-sec="' + sec + '" data-ai="' + ai + '" value="' + esc(addon.label || '') + '" placeholder="Add-on name" />' +
+	      '<input class="price-addon-price" data-sec="' + sec + '" data-ai="' + ai + '" value="' + esc(addon.price || '') + '" placeholder="+$0" />' +
+	      '<button class="price-addon-del" data-sec="' + sec + '" data-ai="' + ai + '" title="Remove">&times;</button>';
+	    addonsWrap.appendChild(item);
+	  });
+	}
+
+	/* Pricing status dropdowns */
+	['digital','stickers','animation'].forEach(function(sec) {
+	  var sel = document.getElementById('price-' + sec + '-status');
+	  if (!sel) return;
+	  sel.addEventListener('change', function() {
+	    currentPrices[sec].status = this.value;
+	  });
+	});
+
+	/* Event delegation for pricing editor — input */
+	document.addEventListener('input', function(e) {
+	  var t = e.target;
+	  var sec = t.dataset.sec;
+	  if (!sec || !currentPrices || !currentPrices[sec]) return;
+	  var s = currentPrices[sec];
+
+	  /* Column name edit */
+	  if (t.classList.contains('price-col-input')) {
+	    s.cols[+t.dataset.ci] = t.value;
+	    return;
+	  }
+	  /* Row label edit */
+	  if (t.classList.contains('price-row-label')) {
+	    s.rows[+t.dataset.ri].label = t.value;
+	    return;
+	  }
+	  /* Price cell edit */
+	  if (t.classList.contains('price-cell')) {
+	    var ri = +t.dataset.ri, ci = +t.dataset.ci;
+	    if (!s.rows[ri].prices) s.rows[ri].prices = [];
+	    s.rows[ri].prices[ci] = +t.value || 0;
+	    return;
+	  }
+	  /* Add-on label */
+	  if (t.classList.contains('price-addon-name')) {
+	    s.addons[+t.dataset.ai].label = t.value;
+	    return;
+	  }
+	  /* Add-on price string */
+	  if (t.classList.contains('price-addon-price')) {
+	    s.addons[+t.dataset.ai].price = t.value;
+	    return;
+	  }
+	});
+
+	/* Event delegation for pricing editor — click */
+	document.addEventListener('click', function(e) {
+	  var t = e.target;
+	  var sec = t.dataset.sec;
+	  if (!sec || !currentPrices || !currentPrices[sec]) return;
+	  var s = currentPrices[sec];
+
+	  /* Delete column */
+	  if (t.classList.contains('price-col-del')) {
+	    var ci = +t.dataset.ci;
+	    s.cols.splice(ci, 1);
+	    s.rows.forEach(function(r){ if (r.prices) r.prices.splice(ci, 1); });
+	    renderPriceSection(sec);
+	    return;
+	  }
+	  /* Add column */
+	  if (t.classList.contains('price-col-add')) {
+	    s.cols.push('New Column');
+	    s.rows.forEach(function(r){ if (r.prices) r.prices.push(0); });
+	    renderPriceSection(sec);
+	    return;
+	  }
+	  /* Delete row */
+	  if (t.classList.contains('price-row-del')) {
+	    if (!confirm('Remove this row?')) return;
+	    s.rows.splice(+t.dataset.ri, 1);
+	    renderPriceSection(sec);
+	    return;
+	  }
+	  /* Add row */
+	  if (t.classList.contains('price-add-row')) {
+	    s.rows.push({ label: '', prices: s.cols.map(function(){ return 0; }) });
+	    renderPriceSection(sec);
+	    return;
+	  }
+	  /* Delete add-on */
+	  if (t.classList.contains('price-addon-del')) {
+	    s.addons.splice(+t.dataset.ai, 1);
+	    renderPriceSection(sec);
+	    return;
+	  }
+	  /* Add add-on */
+	  if (t.classList.contains('price-add-addon')) {
+	    if (!s.addons) s.addons = [];
+	    s.addons.push({ label: '', price: '' });
+	    renderPriceSection(sec);
+	    return;
+	  }
 	});
 
 	/* ================================================================

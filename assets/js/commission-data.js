@@ -10,7 +10,8 @@ window.CommissionData = (function () {
     data:     '_gam_data_v1',
     fonts:    '_gam_fonts_v1',
     styles:   '_gam_styles_v1',
-    inquiries: '_gam_inquiries_v1'
+    inquiries: '_gam_inquiries_v1',
+    prices:   '_gam_prices_v1'
   };
 
   var DEFAULTS = {
@@ -40,7 +41,48 @@ window.CommissionData = (function () {
       ]
     },
     fonts:  { heading: '', body: '', custom: [] },
-    styles: { accentColor: '', customCSS: '' }
+    styles: { accentColor: '', customCSS: '' },
+    prices: {
+      digital: {
+        status: 'open',
+        cols: ['Sketch', 'Flat', 'Flat Shade', 'Complex'],
+        rows: [
+          { label: 'Headshot (Bust)',         prices: [19, 48, 77, 96]    },
+          { label: 'Half Body',               prices: [37, 93, 149, 186]  },
+          { label: 'Full Body / Environment', prices: [54, 134, 214, 268] }
+        ],
+        addons: [
+          { label: 'Physical Print 13×19in', price: '+$10' },
+          { label: 'NSFW',       price: '+$20' },
+          { label: 'Rush 48hr',  price: '+$10' },
+          { label: 'Rush 24hr',  price: '+$20' },
+          { label: 'Rush 12hr',  price: '+$30' }
+        ]
+      },
+      stickers: {
+        status: 'open',
+        cols: ['1 Pack', '3 Pack', '5 Pack', '10 Pack'],
+        rows: [
+          { label: 'Simple (flat)', prices: [17, 45, 59, 101] },
+          { label: 'Complex',       prices: [24, 65, 90, 144] }
+        ],
+        addons: [
+          { label: 'No additional upcharge for NSFW stickers', price: '' }
+        ]
+      },
+      animation: {
+        status: 'closed',
+        cols: ['Sketch', 'Shaded', 'Complex'],
+        rows: [
+          { label: 'Loop',      prices: [100, 200, 280] },
+          { label: '5 Seconds', prices: [150, 320, 510] }
+        ],
+        addons: [
+          { label: 'NSFW Animation', price: '+$100' },
+          { label: 'Must be discussed prior to animation work', price: '' }
+        ]
+      }
+    }
   };
 
   function clone(obj) { return JSON.parse(JSON.stringify(obj)); }
@@ -182,6 +224,72 @@ window.CommissionData = (function () {
     }).join('');
   }
 
+  /* ---- Price table helpers ---- */
+
+  function buildPriceTable(cols, rows, firstHeader) {
+    var html = '<div class="table-wrapper"><table><thead><tr><th>' + esc(firstHeader) + '</th>';
+    cols.forEach(function(c){ html += '<th>' + esc(c) + '</th>'; });
+    html += '</tr></thead><tbody>';
+    rows.forEach(function(r) {
+      html += '<tr><td>' + esc(r.label) + '</td>';
+      (r.prices || []).forEach(function(p){ html += '<td>$' + p + '</td>'; });
+      html += '</tr>';
+    });
+    html += '</tbody></table></div>';
+    return html;
+  }
+
+  function buildPriceAddons(addons) {
+    if (!addons || !addons.length) return '';
+    var html = '<ul class="addons-list">';
+    addons.forEach(function(a) {
+      if (a.price) {
+        html += '<li><strong>' + esc(a.label) + '</strong>  ' + esc(a.price) + '</li>';
+      } else {
+        html += '<li>' + esc(a.label) + '</li>';
+      }
+    });
+    return html + '</ul>';
+  }
+
+  function renderPriceTables() {
+    var pr = CD.getPrices();
+
+    function applySection(secKey, tableId, addonsId, startingId, badgeId, firstHeader) {
+      var s = pr[secKey];
+      var tableEl = document.getElementById(tableId);
+      if (tableEl) tableEl.innerHTML = buildPriceTable(s.cols, s.rows, firstHeader);
+      var addonsEl = document.getElementById(addonsId);
+      if (addonsEl) addonsEl.innerHTML = buildPriceAddons(s.addons);
+      if (startingId) {
+        var startEl = document.getElementById(startingId);
+        if (startEl) {
+          var min = Infinity;
+          (s.rows || []).forEach(function(r){ if ((r.prices || [])[0] < min) min = r.prices[0]; });
+          startEl.innerHTML = 'Starting from <strong>$' + (isFinite(min) ? min : '—') + '</strong>';
+        }
+      }
+      if (badgeId) {
+        var badgeEl = document.getElementById(badgeId);
+        if (badgeEl) {
+          badgeEl.className = 'status-badge ' + (s.status === 'open' ? 'open' : 'closed');
+          badgeEl.textContent = s.status === 'open' ? 'Open' : 'Closed';
+        }
+      }
+    }
+
+    applySection('digital',   'digital-table-wrap',   'digital-addons-wrap',   'digital-starting',  null,                    'Art (Digital)');
+    applySection('stickers',  'sticker-table-wrap',   'sticker-addons-wrap',   'sticker-starting',  null,                    'Sticker Type');
+    applySection('animation', 'animation-table-wrap', 'animation-addons-wrap', null,                'animation-status-badge','Animation');
+
+    var overallBadge = document.getElementById('overall-status-badge');
+    if (overallBadge) {
+      var anyOpen = ['digital','stickers','animation'].some(function(k){ return pr[k].status === 'open'; });
+      overallBadge.className = 'status-badge ' + (anyOpen ? 'open' : 'closed');
+      overallBadge.textContent = anyOpen ? 'Open' : 'Closed';
+    }
+  }
+
   var CD = {
     /* Data */
     get:         function ()  { return read(KEYS.data,   DEFAULTS.data);   },
@@ -215,6 +323,21 @@ window.CommissionData = (function () {
       });
       localStorage.setItem(KEYS.inquiries, JSON.stringify(list));
     },
+    /* Prices */
+    getPrices:  function()  {
+      try {
+        var v = localStorage.getItem(KEYS.prices);
+        if (!v) return clone(DEFAULTS.prices);
+        var stored = JSON.parse(v);
+        var merged = clone(DEFAULTS.prices);
+        ['digital','stickers','animation'].forEach(function(k){
+          if (stored && stored[k]) merged[k] = stored[k];
+        });
+        return merged;
+      } catch(e) { return clone(DEFAULTS.prices); }
+    },
+    savePrices: function(p) { write(KEYS.prices, p); },
+    renderPriceTables: renderPriceTables,
     /* Utilities */
     loadGoogleFont: loadGoogleFont,
     applyAll:       applyAll,
