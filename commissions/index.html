@@ -842,6 +842,130 @@
 		  .cif-row { flex-direction: column; gap: 0; }
 		  .cif-checkgroup, .cif-radiogroup { grid-template-columns: 1fr; }
 		}
+
+		/* ── Price Cards ───────────────────────────────── */
+		.price-cards {
+		  display: grid;
+		  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+		  gap: 0.65em;
+		  margin: 1.25em 0 1.75em;
+		}
+		.price-card {
+		  background: rgba(44,41,38,0.035);
+		  border: 1px solid var(--rule-mid);
+		  border-radius: 8px;
+		  overflow: hidden;
+		  transition: border-color 0.2s;
+		}
+		.price-card:hover { border-color: rgba(44,41,38,0.3); }
+		.price-card.featured {
+		  background: var(--ink);
+		  border-color: var(--ink);
+		  color: var(--paper);
+		}
+		.price-card-badge {
+		  background: rgba(255,255,255,0.12);
+		  font-size: 0.58em; font-weight: 700;
+		  text-align: center; padding: 0.4em 0.75em;
+		  text-transform: uppercase; letter-spacing: 0.14em;
+		  color: rgba(240,237,232,0.75);
+		}
+		.price-card-header {
+		  font-size: 0.72em; font-weight: 900;
+		  text-transform: uppercase; letter-spacing: 0.13em;
+		  padding: 0.9em 1em 0.7em;
+		  border-bottom: 1px solid var(--rule-mid);
+		  color: var(--ink);
+		}
+		.price-card.featured .price-card-header {
+		  color: var(--paper);
+		  border-bottom-color: rgba(240,237,232,0.15);
+		}
+		.price-card-items {
+		  list-style: none; padding: 0; margin: 0;
+		}
+		.price-card-items li {
+		  display: flex; justify-content: space-between;
+		  align-items: baseline; gap: 0.4em;
+		  padding: 0.6em 1em;
+		  border-bottom: 1px solid var(--rule);
+		  font-size: 0.82em;
+		}
+		.price-card.featured .price-card-items li {
+		  border-bottom-color: rgba(240,237,232,0.08);
+		}
+		.price-card-items li:last-child { border-bottom: none; }
+		.pci-label {
+		  color: var(--mid); flex: 1; min-width: 0;
+		  line-height: 1.35; font-size: 0.88em;
+		}
+		.price-card.featured .pci-label { color: rgba(240,237,232,0.7); }
+		.pci-price {
+		  font-weight: 700; white-space: nowrap;
+		  font-variant-numeric: tabular-nums;
+		  color: var(--ink);
+		}
+		.price-card.featured .pci-price { color: var(--paper); }
+		@media (max-width: 600px) {
+		  .price-cards { grid-template-columns: repeat(2, 1fr); }
+		}
+
+		/* ── Type Picker ───────────────────────────────── */
+		.cif-type-tabs {
+		  display: flex; gap: 0.4em; margin-bottom: 1.25em; flex-wrap: wrap;
+		}
+		.cif-type-tab {
+		  background: transparent;
+		  border: 1px solid var(--rule-mid);
+		  border-radius: 4px; color: var(--mid);
+		  cursor: pointer; font-family: inherit; font-size: 0.8em;
+		  font-weight: 700; letter-spacing: 0.06em;
+		  padding: 0.45em 1em;
+		  transition: all 0.15s;
+		}
+		.cif-type-tab:hover { border-color: var(--ink); color: var(--ink); }
+		.cif-type-tab.active {
+		  background: var(--ink); border-color: var(--ink); color: var(--paper);
+		}
+		.cif-type-tab.closed-tab { opacity: 0.45; cursor: not-allowed; }
+		.cif-picker-row {
+		  display: flex; gap: 1.5em; flex-wrap: wrap;
+		}
+		.cif-picker-col { flex: 1; min-width: 140px; }
+		.cif-picker-heading {
+		  font-size: 0.72em; font-weight: 700; text-transform: uppercase;
+		  letter-spacing: 0.1em; color: var(--lite); margin: 0 0 0.6em;
+		}
+		.cif-radiogroup-col { flex-direction: column; gap: 0.35em; }
+
+		/* ── Estimate Panel ────────────────────────────── */
+		.cif-estimate {
+		  background: rgba(44,41,38,0.04);
+		  border: 1px solid var(--rule-mid);
+		  border-radius: 8px;
+		  padding: 1.1em 1.25em 0.9em;
+		  margin: 1.25em 0;
+		}
+		.cif-estimate-title {
+		  font-size: 0.68em; font-weight: 900; text-transform: uppercase;
+		  letter-spacing: 0.14em; color: var(--lite); margin-bottom: 0.85em;
+		}
+		.cif-estimate-line {
+		  display: flex; justify-content: space-between; align-items: baseline;
+		  font-size: 0.88em; color: var(--mid); margin-bottom: 0.35em; gap: 1em;
+		}
+		.cif-estimate-line .est-amount { font-weight: 700; white-space: nowrap; color: var(--ink); }
+		.cif-estimate-divider {
+		  border: 0; border-top: 1px solid var(--rule-mid); margin: 0.75em 0 0.65em;
+		}
+		.cif-estimate-total {
+		  display: flex; justify-content: space-between; align-items: baseline;
+		  font-size: 0.92em; color: var(--ink);
+		}
+		.cif-estimate-total strong { font-size: 1.15em; }
+		.cif-estimate-note {
+		  font-size: 0.75em; color: var(--lite); margin: 0.5em 0 0;
+		}
 		</style>
 	</head>
 	<body class="is-preload">
@@ -1003,24 +1127,42 @@
 
     <!-- ── STEP 1: Commission Type ── -->
     <div class="cif-step" data-step="1">
+      <!-- Commission type picker -->
       <div class="cif-field">
-        <label class="cif-label" for="cif-type">What type of commission would you like? <span class="cif-req">*</span></label>
-        <p class="cif-hint">e.g. "Complex Full Body", "Telegram Sticker Pack 10pk", "5-second Animation loop". Custom requests welcome.</p>
-        <input type="text" id="cif-type" class="cif-input" placeholder="Describe your commission…" required />
+        <label class="cif-label">Commission type <span class="cif-req">*</span></label>
+        <div class="cif-type-tabs" id="cif-type-tabs">
+          <button type="button" class="cif-type-tab active" data-section="digital">Digital Art</button>
+          <button type="button" class="cif-type-tab" data-section="stickers">Stickers</button>
+          <button type="button" class="cif-type-tab" data-section="animation">Animation</button>
+        </div>
+        <div class="cif-picker-row">
+          <div class="cif-picker-col">
+            <p class="cif-picker-heading">Type</p>
+            <div class="cif-radiogroup cif-radiogroup-col" id="cif-row-picker"></div>
+          </div>
+          <div class="cif-picker-col">
+            <p class="cif-picker-heading">Quality</p>
+            <div class="cif-radiogroup" id="cif-tier-picker"></div>
+          </div>
+        </div>
+        <!-- Hidden input stores the constructed commission string for validation/submission -->
+        <input type="hidden" id="cif-type" />
+        <p id="cif-type-err" class="cif-field-err" hidden>Please select a commission type and quality level.</p>
       </div>
 
-      <div class="cif-field">
+      <!-- Add-Ons (rendered dynamically from price data) -->
+      <div class="cif-field" id="cif-addons-field">
         <label class="cif-label">Add-Ons <span class="cif-opt">(optional)</span></label>
-        <p class="cif-hint">Select any extras. Pricing is shown on the page above.</p>
-        <div class="cif-checkgroup">
-          <label class="cif-check"><input type="checkbox" name="addon" value="Simple Environment" /><span>Simple Environment</span></label>
-          <label class="cif-check"><input type="checkbox" name="addon" value="Complex Environment" /><span>Complex Environment</span></label>
-          <label class="cif-check"><input type="checkbox" name="addon" value="Physical Print 8.5×11in" /><span>Physical Print <em>8.5 × 11 in</em></span></label>
-          <label class="cif-check"><input type="checkbox" name="addon" value="Physical Print 13×19in" /><span>Physical Print <em>13 × 19 in</em></span></label>
-          <label class="cif-check"><input type="checkbox" name="addon" value="48-hr Rush" /><span>48-hr Rush</span></label>
-          <label class="cif-check"><input type="checkbox" name="addon" value="24-hr Rush" /><span>24-hr Rush</span></label>
-          <label class="cif-check"><input type="checkbox" name="addon" value="12-hr Rush" /><span>12-hr Rush</span></label>
-        </div>
+        <div class="cif-checkgroup" id="cif-addon-group"></div>
+      </div>
+
+      <!-- Estimate panel -->
+      <div class="cif-estimate" id="cif-estimate" hidden>
+        <div class="cif-estimate-title">Estimated Cost</div>
+        <div id="cif-estimate-lines"></div>
+        <div class="cif-estimate-divider"></div>
+        <div class="cif-estimate-total">Estimate &nbsp;<strong id="cif-estimate-total">—</strong></div>
+        <p class="cif-estimate-note">Final price confirmed by quote after inquiry.</p>
       </div>
 
       <div class="cif-field">
@@ -1028,7 +1170,7 @@
         <div class="cif-radiogroup">
           <label class="cif-radio"><input type="radio" name="payment" value="Venmo" required /><span>Venmo</span></label>
           <label class="cif-radio"><input type="radio" name="payment" value="Cashapp" /><span>Cashapp</span></label>
-          <label class="cif-radio"><input type="radio" name="payment" value="PayPal (Friends & Family)" /><span>PayPal <em>Friends &amp; Family</em></span></label>
+          <label class="cif-radio"><input type="radio" name="payment" value="PayPal (Friends &amp; Family)" /><span>PayPal <em>Friends &amp; Family</em></span></label>
           <label class="cif-radio"><input type="radio" name="payment" value="Cash (in-person)" /><span>Cash <em>— must be in-person</em></span></label>
         </div>
       </div>
@@ -1253,6 +1395,157 @@
   var current = 0;
   var refFiles = []; // { name, dataUrl }
 
+  /* ── Price-picker state ── */
+  var priceData    = CommissionData.getPrices();
+  var pickerSection = 'digital';
+  var pickerRow     = -1;  // index into priceData[section].rows
+  var pickerCol     = -1;  // index into priceData[section].cols
+
+  function buildPicker() {
+    /* Row radio group */
+    var rowWrap  = document.getElementById('cif-row-picker');
+    var tierWrap = document.getElementById('cif-tier-picker');
+    var sec = priceData[pickerSection];
+    if (!rowWrap || !tierWrap || !sec) return;
+
+    rowWrap.innerHTML = (sec.rows || []).map(function(r, i) {
+      return '<label class="cif-radio">'
+        + '<input type="radio" name="cif-row" value="' + i + '"' + (pickerRow === i ? ' checked' : '') + '/>'
+        + '<span>' + escHtml(r.label) + '</span></label>';
+    }).join('');
+
+    tierWrap.innerHTML = (sec.cols || []).map(function(c, i) {
+      return '<label class="cif-radio">'
+        + '<input type="radio" name="cif-tier" value="' + i + '"' + (pickerCol === i ? ' checked' : '') + '/>'
+        + '<span>' + escHtml(c) + '</span></label>';
+    }).join('');
+
+    /* Wire up change listeners on freshly-created radios */
+    rowWrap.querySelectorAll('input[name="cif-row"]').forEach(function(inp) {
+      inp.addEventListener('change', function() {
+        pickerRow = +this.value;
+        syncTypeInput();
+        updateEstimate();
+        buildAddonList();
+      });
+    });
+    tierWrap.querySelectorAll('input[name="cif-tier"]').forEach(function(inp) {
+      inp.addEventListener('change', function() {
+        pickerCol = +this.value;
+        syncTypeInput();
+        updateEstimate();
+      });
+    });
+
+    buildAddonList();
+    syncTypeInput();
+    updateEstimate();
+  }
+
+  function syncTypeInput() {
+    var hidden = document.getElementById('cif-type');
+    if (!hidden) return;
+    var sec = priceData[pickerSection];
+    if (pickerRow >= 0 && pickerCol >= 0 && sec) {
+      var rowLabel  = (sec.rows[pickerRow] || {}).label || '';
+      var colLabel  = (sec.cols[pickerCol]) || '';
+      hidden.value  = colLabel + ' ' + rowLabel;
+    } else {
+      hidden.value = '';
+    }
+  }
+
+  function buildAddonList() {
+    var wrap = document.getElementById('cif-addon-group');
+    if (!wrap) return;
+    var sec = priceData[pickerSection];
+    var addons = (sec && sec.addons || []).filter(function(a) {
+      return a.price && /\$\d/.test(a.price);
+    });
+    if (!addons.length) {
+      wrap.innerHTML = '<p style="font-size:0.85em;color:var(--lite);margin:0">No add-ons available for this commission type.</p>';
+      updateEstimate();
+      return;
+    }
+    wrap.innerHTML = addons.map(function(a) {
+      return '<label class="cif-check">'
+        + '<input type="checkbox" name="addon" value="' + escHtml(a.label) + '" data-price="' + escHtml(a.price) + '" />'
+        + '<span>' + escHtml(a.label) + ' <em>' + escHtml(a.price) + '</em></span></label>';
+    }).join('');
+
+    wrap.querySelectorAll('input[name="addon"]').forEach(function(inp) {
+      inp.addEventListener('change', updateEstimate);
+    });
+    updateEstimate();
+  }
+
+  function parsePrice(str) {
+    var m = String(str).match(/\d+/);
+    return m ? +m[0] : 0;
+  }
+
+  function updateEstimate() {
+    var panel = document.getElementById('cif-estimate');
+    var linesEl = document.getElementById('cif-estimate-lines');
+    var totalEl = document.getElementById('cif-estimate-total');
+    if (!panel) return;
+
+    var sec = priceData[pickerSection];
+    var hasBase = pickerRow >= 0 && pickerCol >= 0 && sec;
+    if (!hasBase) { panel.hidden = true; return; }
+
+    var basePrice = ((sec.rows[pickerRow] || {}).prices || [])[pickerCol] || 0;
+    var rowLabel  = (sec.rows[pickerRow] || {}).label || '';
+    var colLabel  = sec.cols[pickerCol] || '';
+    var total = basePrice;
+    var lines = [];
+
+    lines.push({ label: colLabel + ' ' + rowLabel, amount: '$' + basePrice });
+
+    document.querySelectorAll('input[name="addon"]:checked').forEach(function(cb) {
+      var ap = parsePrice(cb.dataset.price);
+      total += ap;
+      lines.push({ label: cb.value, amount: cb.dataset.price });
+    });
+
+    linesEl.innerHTML = lines.map(function(l) {
+      return '<div class="cif-estimate-line"><span>' + escHtml(l.label) + '</span><span class="est-amount">' + escHtml(l.amount) + '</span></div>';
+    }).join('');
+
+    totalEl.textContent = '~$' + total;
+    panel.hidden = false;
+  }
+
+  function escHtml(s) {
+    return String(s == null ? '' : s)
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  /* Tab switching */
+  document.getElementById('cif-type-tabs').addEventListener('click', function(e) {
+    var tab = e.target.closest('.cif-type-tab');
+    if (!tab || tab.classList.contains('closed-tab')) return;
+    document.querySelectorAll('.cif-type-tab').forEach(function(t){ t.classList.remove('active'); });
+    tab.classList.add('active');
+    pickerSection = tab.dataset.section;
+    pickerRow = -1;
+    pickerCol = -1;
+    buildPicker();
+  });
+
+  /* Mark closed sections */
+  (function() {
+    document.querySelectorAll('.cif-type-tab').forEach(function(tab) {
+      var sec = priceData[tab.dataset.section];
+      if (sec && sec.status === 'closed') {
+        tab.classList.add('closed-tab');
+        tab.title = 'Currently closed';
+      }
+    });
+  })();
+
+  buildPicker();
+
   function showStep(idx, noScroll) {
     steps.forEach(function (s, i) {
       s.hidden = (i !== idx);
@@ -1287,7 +1580,8 @@
     if (fields.indexOf('type') !== -1) {
       var t = document.getElementById('cif-type');
       var tOk = !!t.value.trim();
-      setErr(t, tOk ? '' : 'Please describe what you would like.');
+      var typeErr = document.getElementById('cif-type-err');
+      if (typeErr) typeErr.hidden = tOk;
       if (!tOk) ok = false;
     }
     if (fields.indexOf('payment') !== -1) {
