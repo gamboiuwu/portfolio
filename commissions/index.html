@@ -680,20 +680,91 @@
 		  gap: 0.5em 1.5em;
 		}
 		.cif-check, .cif-radio {
-		  display: flex; align-items: flex-start; gap: 0.65em;
-		  cursor: pointer; padding: 0.55em 0.75em;
-		  border: 1px solid var(--rule);
-		  transition: background 0.15s, border-color 0.15s;
+		  display: flex; align-items: center; gap: 0.65em;
+		  cursor: pointer; padding: 0.6em 0.85em;
+		  border: 1px solid var(--rule-mid);
+		  transition: background 0.15s, border-color 0.15s, color 0.15s;
 		  font-size: 0.88em; color: var(--mid);
+		  user-select: none;
 		}
-		.cif-check:hover, .cif-radio:hover { background: var(--paper2); border-color: var(--rule-mid); }
-		.cif-check input, .cif-radio input { flex-shrink: 0; margin-top: 0.1em; accent-color: var(--ink); }
-		.cif-check input:checked ~ span, .cif-radio input:checked ~ span { color: var(--ink); }
+		/* Hide the native input — we style the label itself */
+		.cif-check input, .cif-radio input {
+		  position: absolute; opacity: 0; width: 0; height: 0; pointer-events: none;
+		}
+		/* Custom tick/dot indicator */
+		.cif-check span, .cif-radio span {
+		  display: flex; align-items: center; gap: 0.6em;
+		}
+		.cif-check span::before {
+		  content: '';
+		  flex-shrink: 0;
+		  width: 14px; height: 14px;
+		  border: 1.5px solid var(--rule-mid);
+		  border-radius: 2px;
+		  background: transparent;
+		  transition: background 0.15s, border-color 0.15s;
+		  display: inline-block;
+		}
+		.cif-radio span::before {
+		  content: '';
+		  flex-shrink: 0;
+		  width: 14px; height: 14px;
+		  border: 1.5px solid var(--rule-mid);
+		  border-radius: 50%;
+		  background: transparent;
+		  transition: background 0.15s, border-color 0.15s;
+		  display: inline-block;
+		}
+		/* Hover */
+		.cif-check:hover, .cif-radio:hover {
+		  background: var(--paper2); border-color: var(--mid);
+		}
+		/* Selected — strong dark fill */
+		.cif-check:has(input:checked) {
+		  background: var(--ink); border-color: var(--ink); color: var(--paper);
+		}
+		.cif-check:has(input:checked) span::before {
+		  background: var(--paper); border-color: var(--paper);
+		  /* checkmark via box-shadow */
+		  box-shadow: inset 0 0 0 2px var(--ink);
+		  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 14 14' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M2.5 7l3 3 6-6' stroke='%232c2926' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+		  background-size: 10px; background-repeat: no-repeat; background-position: center;
+		  background-color: var(--paper);
+		}
+		.cif-radio:has(input:checked) {
+		  background: var(--ink); border-color: var(--ink); color: var(--paper);
+		}
+		.cif-radio:has(input:checked) span::before {
+		  background: var(--paper); border-color: var(--paper);
+		  box-shadow: inset 0 0 0 3px var(--ink);
+		}
+
+		/* ToS — styled card with visible checkbox */
 		.cif-tos-check {
-		  grid-template-columns: auto 1fr; border: none; padding: 0;
-		  font-size: 0.88em; color: var(--mid); align-items: flex-start;
+		  display: flex; align-items: flex-start; gap: 0.85em;
+		  border: 1px solid var(--rule-mid); padding: 0.85em 1em;
+		  cursor: pointer; font-size: 0.88em; color: var(--mid);
+		  transition: background 0.15s, border-color 0.15s;
+		  margin-top: 0.25em;
 		}
-		.cif-tos-check a { color: var(--ink); border-bottom: 1px solid var(--rule-mid); }
+		.cif-tos-check:hover { background: var(--paper2); border-color: var(--mid); }
+		.cif-tos-check input { position: absolute; opacity: 0; width: 0; height: 0; pointer-events: none; }
+		.cif-tos-box {
+		  flex-shrink: 0; width: 18px; height: 18px; margin-top: 0.1em;
+		  border: 1.5px solid var(--rule-mid); border-radius: 2px;
+		  background: transparent; transition: background 0.15s, border-color 0.15s;
+		  display: flex; align-items: center; justify-content: center;
+		}
+		.cif-tos-check:has(input:checked) {
+		  background: var(--ink); border-color: var(--ink); color: var(--paper);
+		}
+		.cif-tos-check:has(input:checked) .cif-tos-box {
+		  background: var(--paper); border-color: var(--paper);
+		  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 14 14' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M2.5 7l3 3 6-6' stroke='%232c2926' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+		  background-size: 12px; background-repeat: no-repeat; background-position: center;
+		}
+		.cif-tos-check a { color: inherit; border-bottom: 1px solid currentColor; opacity: 0.8; }
+		.cif-tos-check a:hover { opacity: 1; }
 
 		/* Upload zone */
 		.cif-upload-zone {
@@ -1106,6 +1177,7 @@
       <div class="cif-field">
         <label class="cif-check cif-tos-check">
           <input type="checkbox" id="cif-tos" required />
+          <div class="cif-tos-box"></div>
           <span>I have read and agree to <a href="https://docs.google.com/document/d/1dLJjRgqe5RgfY28Wjio14iabm6QxNBJOGIFzpEPPblQ/edit?usp=sharing" target="_blank" rel="noopener">Anthony's Terms of Service</a>.</span>
         </label>
         <p id="cif-tos-err" class="cif-field-err" hidden>Please agree to the Terms of Service to continue.</p>
@@ -1385,12 +1457,7 @@
       tosAgreed:     true
     };
 
-    try {
-      CommissionData.saveInquiry(inquiry);
-    } catch (err) {
-      alert('Unable to save inquiry — your browser storage may be full. Please email gamboiuwu@nyfurs.org directly.');
-      return;
-    }
+    try { CommissionData.saveInquiry(inquiry); } catch (err) { /* silent — notifications still fire */ }
 
     // ── Notifications (fire-and-forget, never block the UI) ──────────
     var addonsStr  = inquiry.addons.length ? inquiry.addons.join(', ') : 'none';
