@@ -1302,14 +1302,14 @@
 		<script src="../assets/js/breakpoints.min.js"></script>
 		<script src="../assets/js/util.js"></script>
 		<script src="../assets/js/main.js"></script>
-		<script src="../assets/js/commission-data.js"></script>
+		<script src="../assets/js/commission-data.js?v=20260517"></script>
 		<script>
 			document.addEventListener('DOMContentLoaded', function () {
 				CommissionData.applyAll();
 				CommissionData.renderCommissions();
 				CommissionData.renderStickers();
 				CommissionData.renderFeatured();
-				CommissionData.renderPriceTables();
+				if (CommissionData.renderPriceTables) CommissionData.renderPriceTables();
 			});
 		</script>
 		<script>
@@ -1396,7 +1396,7 @@
   var refFiles = []; // { name, dataUrl }
 
   /* ── Price-picker state ── */
-  var priceData    = CommissionData.getPrices();
+  var priceData    = (typeof CommissionData.getPrices === 'function') ? CommissionData.getPrices() : { digital:{status:'open',cols:[],rows:[],addons:[]}, stickers:{status:'open',cols:[],rows:[],addons:[]}, animation:{status:'closed',cols:[],rows:[],addons:[]} };
   var pickerSection = 'digital';
   var pickerRow     = -1;  // index into priceData[section].rows
   var pickerCol     = -1;  // index into priceData[section].cols
