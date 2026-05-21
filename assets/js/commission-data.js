@@ -11,7 +11,8 @@ window.CommissionData = (function () {
     fonts:    '_gam_fonts_v1',
     styles:   '_gam_styles_v1',
     inquiries: '_gam_inquiries_v1',
-    prices:   '_gam_prices_v1'
+    prices:   '_gam_prices_v1',
+    feedback: '_gam_feedback_v1'
   };
 
   var DEFAULTS = {
@@ -347,6 +348,33 @@ window.CommissionData = (function () {
     },
     savePrices: function(p) { write(KEYS.prices, p); },
     renderPriceTables: renderPriceTables,
+    /* Feedback */
+    getFeedback: function() {
+      try {
+        var v = localStorage.getItem(KEYS.feedback);
+        return v ? JSON.parse(v) : [];
+      } catch(e) { return []; }
+    },
+    addFeedback: function(item) {
+      var list = CD.getFeedback();
+      item.id        = Date.now();
+      item.createdAt = new Date().toISOString();
+      item.status    = item.status || 'pending';
+      item.aiNotes   = item.aiNotes || '';
+      list.unshift(item);
+      localStorage.setItem(KEYS.feedback, JSON.stringify(list));
+      return item;
+    },
+    deleteFeedback: function(id) {
+      var list = CD.getFeedback().filter(function(f){ return f.id !== id; });
+      localStorage.setItem(KEYS.feedback, JSON.stringify(list));
+    },
+    updateFeedback: function(id, changes) {
+      var list = CD.getFeedback().map(function(f){
+        return f.id === id ? Object.assign({}, f, changes) : f;
+      });
+      localStorage.setItem(KEYS.feedback, JSON.stringify(list));
+    },
     /* Utilities */
     loadGoogleFont: loadGoogleFont,
     applyAll:       applyAll,

@@ -342,6 +342,105 @@
 		  background: none; border: none; color: #fff; font-size: 2em;
 		  cursor: pointer; line-height: 1;
 		}
+
+		/* ── Feedback Tab ── */
+		.fb-stats {
+		  display: flex; gap: 0.75em; flex-wrap: wrap; margin-bottom: 1.5em;
+		}
+		.fb-stat-chip {
+		  flex: 1 1 80px; text-align: center; padding: 0.6em 0.5em;
+		  background: rgba(201,201,201,0.06); border: 1px solid rgba(201,201,201,0.1);
+		  border-radius: 6px;
+		}
+		.fb-stat-chip .fb-stat-num {
+		  display: block; font-size: 1.6em; font-weight: 700; line-height: 1;
+		}
+		.fb-stat-chip .fb-stat-label {
+		  display: block; font-size: 0.72em; color: #666; margin-top: 0.3em;
+		  text-transform: uppercase; letter-spacing: 0.08em;
+		}
+		.fb-stat-chip.pending   .fb-stat-num { color: #f2c94c; }
+		.fb-stat-chip.ack       .fb-stat-num { color: #6eb3f2; }
+		.fb-stat-chip.done      .fb-stat-num { color: #6ecf6e; }
+		.fb-stat-chip.total     .fb-stat-num { color: #aaa; }
+
+		.fb-form { margin-bottom: 0; }
+		.fb-form .field-row { margin-bottom: 0.65em; }
+		.fb-form textarea {
+		  width: 100%; background: rgba(201,201,201,0.05);
+		  border: 1px solid rgba(201,201,201,0.15); color: #ccc;
+		  padding: 0.6em 0.75em; border-radius: 4px; resize: vertical;
+		  min-height: 100px; font-size: 0.85em; font-family: inherit;
+		}
+		.fb-form textarea:focus {
+		  outline: none; border-color: rgba(201,201,201,0.35); color: #eee;
+		}
+		.fb-form select {
+		  background: rgba(201,201,201,0.07); border: 1px solid rgba(201,201,201,0.15);
+		  color: #ccc; padding: 0.45em 0.6em; border-radius: 4px; font-size: 0.85em;
+		  -webkit-appearance: none; cursor: pointer;
+		}
+		.fb-form select:focus { outline: none; border-color: rgba(201,201,201,0.35); }
+
+		.fb-card {
+		  background: rgba(201,201,201,0.04); border: 1px solid rgba(201,201,201,0.1);
+		  border-radius: 6px; padding: 1em 1.1em; margin-bottom: 0.85em;
+		  border-left: 3px solid rgba(201,201,201,0.15);
+		}
+		.fb-card.status-pending  { border-left-color: #f2c94c; }
+		.fb-card.status-acknowledged { border-left-color: #6eb3f2; }
+		.fb-card.status-done     { border-left-color: #3a5e3a; }
+		.fb-card-head {
+		  display: flex; justify-content: space-between; align-items: flex-start;
+		  gap: 0.75em; margin-bottom: 0.6em;
+		}
+		.fb-card-meta { font-size: 0.72em; color: #555; line-height: 1.5; text-align: right; }
+		.fb-tags { display: flex; flex-wrap: wrap; gap: 0.3em; margin-bottom: 0.6em; }
+		.fb-tag {
+		  display: inline-block; font-size: 0.68em; font-weight: 700;
+		  text-transform: uppercase; letter-spacing: 0.07em;
+		  padding: 0.2em 0.5em; border-radius: 3px;
+		}
+		.fb-tag.cat  { background: rgba(110,179,242,0.12); color: #6eb3f2; }
+		.fb-tag.pri-low      { background: rgba(201,201,201,0.1); color: #888; }
+		.fb-tag.pri-medium   { background: rgba(242,201,76,0.12);  color: #f2c94c; }
+		.fb-tag.pri-high     { background: rgba(242,130,80,0.14);  color: #f28350; }
+		.fb-tag.pri-critical { background: rgba(220,80,80,0.16);   color: #dc5050; }
+		.fb-tag.page { background: rgba(110,207,110,0.1); color: #6ecf6e; }
+		.fb-tag.status-pending      { background: rgba(242,201,76,0.12);  color: #f2c94c; }
+		.fb-tag.status-acknowledged { background: rgba(110,179,242,0.12); color: #6eb3f2; }
+		.fb-tag.status-done         { background: rgba(110,207,110,0.12); color: #6ecf6e; }
+
+		.fb-message {
+		  font-size: 0.85em; color: #bbb; line-height: 1.7; white-space: pre-wrap;
+		  margin-bottom: 0.75em;
+		}
+		.fb-ai-notes-wrap { margin-top: 0.6em; }
+		.fb-ai-notes-label {
+		  font-size: 0.7em; text-transform: uppercase; letter-spacing: 0.08em;
+		  color: #555; margin-bottom: 0.3em;
+		}
+		.fb-ai-notes {
+		  font-size: 0.8em; color: #888; line-height: 1.65; white-space: pre-wrap;
+		  background: rgba(110,179,242,0.04); border: 1px solid rgba(110,179,242,0.1);
+		  border-radius: 4px; padding: 0.5em 0.7em;
+		}
+		.fb-ai-notes-input {
+		  width: 100%; background: rgba(201,201,201,0.05);
+		  border: 1px solid rgba(201,201,201,0.15); color: #ccc;
+		  padding: 0.45em 0.6em; border-radius: 4px; resize: vertical;
+		  min-height: 60px; font-size: 0.82em; font-family: inherit;
+		  display: none; margin-top: 0.4em;
+		}
+		.fb-card-actions { display: flex; gap: 0.5em; margin-top: 1em; flex-wrap: wrap; }
+		.fb-list-section-label {
+		  font-size: 0.72em; text-transform: uppercase; letter-spacing: 0.1em;
+		  color: #555; margin: 1.5em 0 0.6em; font-weight: 700;
+		  border-bottom: 1px solid rgba(201,201,201,0.08); padding-bottom: 0.4em;
+		}
+		.fb-empty-hint {
+		  text-align: center; padding: 2.5em 1em; color: #555; font-size: 0.9em;
+		}
 	</style>
 </head>
 <body class="is-preload">
@@ -409,6 +508,7 @@
 				<button class="admin-tab" data-tab="pricing">Pricing</button>
 				<button class="admin-tab" data-tab="security">Security</button>
 				<button class="admin-tab" data-tab="inquiries">Inquiries <span id="inq-badge" class="inq-badge" style="display:none"></span></button>
+				<button class="admin-tab" data-tab="feedback">Feedback <span id="fb-badge" class="inq-badge" style="display:none"></span></button>
 			</div>
 
 			<!-- ============ GALLERY TAB ============ -->
@@ -630,6 +730,61 @@
 				<div id="inq-list"></div>
 			</div>
 
+			<!-- ============ FEEDBACK TAB ============ -->
+			<div id="tab-feedback" class="tab-content">
+
+				<div class="admin-card">
+					<h3>Submit Feedback</h3>
+					<p class="hint">Log issues, ideas, or notes for the AI to reference during routines. The AI reads all pending feedback when making improvements.</p>
+					<form class="fb-form" id="fb-form" autocomplete="off">
+						<div class="field-row">
+							<span class="field-label">Category</span>
+							<select id="fb-cat" class="field-input" style="width:auto">
+								<option value="bug">Bug / Broken</option>
+								<option value="improvement" selected>Improvement</option>
+								<option value="content">Content</option>
+								<option value="design">Design</option>
+								<option value="other">Other</option>
+							</select>
+						</div>
+						<div class="field-row">
+							<span class="field-label">Priority</span>
+							<select id="fb-pri" class="field-input" style="width:auto">
+								<option value="low">Low</option>
+								<option value="medium" selected>Medium</option>
+								<option value="high">High</option>
+								<option value="critical">Critical</option>
+							</select>
+						</div>
+						<div class="field-row">
+							<span class="field-label">Affected Page</span>
+							<select id="fb-page" class="field-input" style="width:auto">
+								<option value="general" selected>General</option>
+								<option value="home">Homepage</option>
+								<option value="commissions">Commissions</option>
+								<option value="admin">Admin</option>
+								<option value="gallery">Gallery</option>
+							</select>
+						</div>
+						<div class="field-row" style="flex-direction:column;align-items:stretch;gap:0.4em">
+							<span class="field-label">Message</span>
+							<textarea id="fb-msg" placeholder="Describe the issue or suggestion in detail…" required></textarea>
+						</div>
+						<ul class="actions" style="margin-top:0.75em">
+							<li><button type="submit" class="button primary small">Submit Feedback</button></li>
+						</ul>
+						<div id="fb-submit-status" class="status-line"></div>
+					</form>
+				</div>
+
+				<div class="admin-card" id="fb-list-card">
+					<h3>Feedback Log</h3>
+					<div id="fb-stats" class="fb-stats"></div>
+					<div id="fb-list"></div>
+				</div>
+
+			</div>
+
 			<!-- ============ SECURITY TAB ============ -->
 			<div id="tab-security" class="tab-content">
 
@@ -702,7 +857,7 @@
 <script src="../assets/js/breakpoints.min.js"></script>
 <script src="../assets/js/util.js"></script>
 <script src="../assets/js/main.js"></script>
-<script src="../assets/js/commission-data.js?v=20260517"></script>
+<script src="../assets/js/commission-data.js?v=20260521"></script>
 <script>
 (function () {
 	'use strict';
@@ -1634,6 +1789,156 @@ document.addEventListener('click', function(e){
 document.addEventListener('click', function(e){
   if (e.target.dataset && e.target.dataset.tab === 'inquiries') {
     renderInquiries();
+  }
+  if (e.target.dataset && e.target.dataset.tab === 'feedback') {
+    renderFeedbackTab();
+  }
+});
+
+/* ================================================================
+   FEEDBACK TAB
+================================================================ */
+
+function renderFeedbackTab() {
+  var list  = CommissionData.getFeedback();
+  var badge = document.getElementById('fb-badge');
+
+  // Update badge with pending count
+  var pendingCount = list.filter(function(f){ return f.status === 'pending'; }).length;
+  if (pendingCount > 0) {
+    badge.textContent = pendingCount;
+    badge.style.display = 'inline-block';
+  } else {
+    badge.style.display = 'none';
+  }
+
+  // Stats row
+  var statsEl = document.getElementById('fb-stats');
+  var ack  = list.filter(function(f){ return f.status === 'acknowledged'; }).length;
+  var done = list.filter(function(f){ return f.status === 'done'; }).length;
+  statsEl.innerHTML =
+    chip('total', list.length, 'Total') +
+    chip('pending', pendingCount, 'Pending') +
+    chip('ack', ack, 'Acknowledged') +
+    chip('done', done, 'Done');
+
+  function chip(cls, n, lbl) {
+    return '<div class="fb-stat-chip ' + cls + '"><span class="fb-stat-num">' + n +
+      '</span><span class="fb-stat-label">' + lbl + '</span></div>';
+  }
+
+  // List
+  var listEl = document.getElementById('fb-list');
+  if (!list.length) {
+    listEl.innerHTML = '<div class="fb-empty-hint">No feedback yet. Use the form above to submit your first entry.</div>';
+    return;
+  }
+
+  // Group by status: pending first, then acknowledged, then done
+  var groups = [
+    { key: 'pending',      label: 'Pending',      items: [] },
+    { key: 'acknowledged', label: 'Acknowledged', items: [] },
+    { key: 'done',         label: 'Done',          items: [] }
+  ];
+  list.forEach(function(f) {
+    var g = groups.filter(function(g){ return g.key === f.status; })[0];
+    if (g) g.items.push(f); else groups[0].items.push(f);
+  });
+
+  var html = '';
+  groups.forEach(function(g) {
+    if (!g.items.length) return;
+    html += '<div class="fb-list-section-label">' + g.label + ' (' + g.items.length + ')</div>';
+    g.items.forEach(function(f) {
+      var catLabel  = { bug:'Bug / Broken', improvement:'Improvement', content:'Content', design:'Design', other:'Other' }[f.category] || f.category;
+      var pageLabel = { general:'General', home:'Homepage', commissions:'Commissions', admin:'Admin', gallery:'Gallery' }[f.affectedPage] || f.affectedPage;
+      var priCls    = 'pri-' + (f.priority || 'medium');
+      var statusCls = 'status-' + (f.status || 'pending');
+      var notesHtml = f.aiNotes
+        ? '<div class="fb-ai-notes-wrap"><div class="fb-ai-notes-label">AI Notes</div><div class="fb-ai-notes">' + escHtml(f.aiNotes) + '</div></div>'
+        : '';
+      html += '<div class="fb-card status-' + f.status + '" id="fb-' + f.id + '">' +
+        '<div class="fb-card-head">' +
+          '<div class="fb-tags">' +
+            '<span class="fb-tag cat">' + escHtml(catLabel) + '</span>' +
+            '<span class="fb-tag ' + priCls + '">' + escHtml(f.priority || 'medium') + '</span>' +
+            '<span class="fb-tag page">' + escHtml(pageLabel) + '</span>' +
+            '<span class="fb-tag ' + statusCls + '">' + escHtml(f.status || 'pending') + '</span>' +
+          '</div>' +
+          '<div class="fb-card-meta">' + fmtDate(f.createdAt) + '</div>' +
+        '</div>' +
+        '<div class="fb-message">' + escHtml(f.message || '') + '</div>' +
+        notesHtml +
+        '<textarea class="fb-ai-notes-input" id="fb-notes-' + f.id + '" placeholder="AI notes / resolution…">' + escHtml(f.aiNotes || '') + '</textarea>' +
+        '<div class="fb-card-actions">' +
+          (f.status !== 'acknowledged' && f.status !== 'done'
+            ? '<button class="button small fb-ack" data-id="' + f.id + '">Mark Acknowledged</button>' : '') +
+          (f.status !== 'done'
+            ? '<button class="button small fb-done" data-id="' + f.id + '">Mark Done</button>' : '') +
+          '<button class="button small fb-add-notes" data-id="' + f.id + '">Add AI Notes</button>' +
+          '<button class="button small fb-del" data-id="' + f.id + '" style="color:#e07070;border-color:rgba(192,96,96,0.3)">Delete</button>' +
+        '</div>' +
+      '</div>';
+    });
+  });
+  listEl.innerHTML = html;
+}
+
+function escHtml(s) {
+  return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// Feedback form submit
+document.getElementById('fb-form').addEventListener('submit', function(e) {
+  e.preventDefault();
+  var cat  = document.getElementById('fb-cat').value;
+  var pri  = document.getElementById('fb-pri').value;
+  var page = document.getElementById('fb-page').value;
+  var msg  = document.getElementById('fb-msg').value.trim();
+  var status = document.getElementById('fb-submit-status');
+  if (!msg) { status.textContent = 'Please enter a message.'; status.className = 'status-line err'; return; }
+  CommissionData.addFeedback({ category: cat, priority: pri, affectedPage: page, message: msg });
+  document.getElementById('fb-msg').value = '';
+  status.textContent = 'Feedback submitted!';
+  status.className = 'status-line ok';
+  setTimeout(function(){ status.textContent = ''; status.className = 'status-line'; }, 3000);
+  renderFeedbackTab();
+});
+
+// Feedback list action delegation
+document.addEventListener('click', function(e) {
+  var t = e.target;
+  var id = t.dataset && +t.dataset.id;
+  if (!id) return;
+
+  if (t.classList.contains('fb-ack')) {
+    CommissionData.updateFeedback(id, { status: 'acknowledged' });
+    renderFeedbackTab();
+  }
+  if (t.classList.contains('fb-done')) {
+    CommissionData.updateFeedback(id, { status: 'done' });
+    renderFeedbackTab();
+  }
+  if (t.classList.contains('fb-del')) {
+    if (confirm('Delete this feedback? Cannot be undone.')) {
+      CommissionData.deleteFeedback(id);
+      renderFeedbackTab();
+    }
+  }
+  if (t.classList.contains('fb-add-notes')) {
+    var inp = document.getElementById('fb-notes-' + id);
+    if (!inp) return;
+    if (inp.style.display === 'block') {
+      // Save notes
+      CommissionData.updateFeedback(id, { aiNotes: inp.value.trim() });
+      inp.style.display = 'none';
+      t.textContent = 'Add AI Notes';
+      renderFeedbackTab();
+    } else {
+      inp.style.display = 'block';
+      t.textContent = 'Save Notes';
+      inp.focus();
+    }
   }
 });
 </script>
