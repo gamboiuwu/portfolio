@@ -7,12 +7,14 @@ window.CommissionData = (function () {
   'use strict';
 
   var KEYS = {
-    data:     '_gam_data_v1',
-    fonts:    '_gam_fonts_v1',
-    styles:   '_gam_styles_v1',
+    data:      '_gam_data_v1',
+    fonts:     '_gam_fonts_v1',
+    styles:    '_gam_styles_v1',
     inquiries: '_gam_inquiries_v1',
-    prices:   '_gam_prices_v1',
-    feedback: '_gam_feedback_v1'
+    prices:    '_gam_prices_v1',
+    feedback:  '_gam_feedback_v1',
+    analytics: '_gam_analytics_v1',
+    palettes:  '_gam_palettes_v1'
   };
 
   var DEFAULTS = {
@@ -374,6 +376,26 @@ window.CommissionData = (function () {
         return f.id === id ? Object.assign({}, f, changes) : f;
       });
       localStorage.setItem(KEYS.feedback, JSON.stringify(list));
+    },
+    /* Analytics */
+    getAnalytics: function () {
+      try { return JSON.parse(localStorage.getItem(KEYS.analytics) || '[]'); } catch (e) { return []; }
+    },
+    clearAnalytics: function () { localStorage.removeItem(KEYS.analytics); },
+    /* Palettes */
+    getPalettes: function () {
+      try { return JSON.parse(localStorage.getItem(KEYS.palettes) || '[]'); } catch (e) { return []; }
+    },
+    savePalette: function (palette) {
+      var list = CD.getPalettes();
+      palette.id = Date.now();
+      palette.savedAt = new Date().toISOString();
+      list.unshift(palette);
+      localStorage.setItem(KEYS.palettes, JSON.stringify(list));
+    },
+    deletePalette: function (id) {
+      var list = CD.getPalettes().filter(function (p) { return p.id !== id; });
+      localStorage.setItem(KEYS.palettes, JSON.stringify(list));
     },
     /* Utilities */
     loadGoogleFont: loadGoogleFont,

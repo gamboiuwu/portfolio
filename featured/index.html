@@ -12,6 +12,7 @@
 	<link rel="preconnect" href="https://fonts.googleapis.com" />
 	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 	<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&display=swap" rel="stylesheet" />
+	<script src="../assets/js/analytics.js" defer></script>
 
 	<style>
 	/* ══════════════════════════════════════════════════
@@ -278,6 +279,24 @@
 		.feat-gallery-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
 		.feat-lb-prev, .feat-lb-next { font-size: 1.4em; padding: 0.25em 0.4em; }
 	}
+
+	/* ── CYBERPUNK LAYER (subtle, light mode) ─────── */
+	body::before {
+		content: ''; position: fixed; inset: 0; z-index: 0; pointer-events: none;
+		background-image: radial-gradient(circle, rgba(44,41,38,0.04) 1px, transparent 1px);
+		background-size: 28px 28px;
+	}
+	#wrapper { position: relative; z-index: 1; }
+	.feat-gallery-figure { position: relative; }
+	.feat-gallery-figure::before, .feat-gallery-figure::after {
+		content: ''; position: absolute; width: 10px; height: 10px;
+		z-index: 2; pointer-events: none; opacity: 0; transition: opacity 0.25s;
+	}
+	.feat-gallery-figure::before { top: 5px; left: 5px;
+		border-top: 1px solid rgba(44,41,38,0.4); border-left: 1px solid rgba(44,41,38,0.4); }
+	.feat-gallery-figure::after { bottom: 5px; right: 5px;
+		border-bottom: 1px solid rgba(44,41,38,0.4); border-right: 1px solid rgba(44,41,38,0.4); }
+	.feat-gallery-figure:hover::before, .feat-gallery-figure:hover::after { opacity: 1; }
 	</style>
 </head>
 
@@ -324,8 +343,10 @@
 			<ul class="copyright">
 				<li>&copy; Anthony Ryabchikov. All rights reserved.</li>
 			</ul>
+			<div style="font-family:'Courier New',Courier,monospace;font-size:0.58em;color:rgba(255,255,255,0.12);letter-spacing:0.08em;overflow:hidden;white-space:nowrap;margin-top:0.2em"><span style="display:inline-block;animation:ticker 18s linear infinite">SYS::FEATURED.WORKS &nbsp;&nbsp; ARTIST::RYABCHIKOV &nbsp;&nbsp; STATUS::ACTIVE &nbsp;&nbsp; PORTFOLIO::ANTRYAB.COM &nbsp;&nbsp;</span></div>
 		</div>
 	</footer>
+	<style>@keyframes ticker { 0%{transform:translateX(100%)} 100%{transform:translateX(-100%)} }</style>
 
 </div><!-- /#wrapper -->
 

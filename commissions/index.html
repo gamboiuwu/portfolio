@@ -12,6 +12,7 @@
 		<link rel="preconnect" href="https://fonts.googleapis.com" />
 		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 		<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&display=swap" rel="stylesheet" />
+		<script src="../assets/js/analytics.js" defer></script>
 		<link rel="stylesheet" href="../assets/css/main.css" />
 		<noscript><link rel="stylesheet" href="../assets/css/noscript.css" /></noscript>
 
@@ -597,6 +598,37 @@
 			.lb-arrow { font-size: 1.2em; padding: 0.4em 0.5em; }
 		}
 
+		@keyframes ticker {
+			0%   { transform: translateX(100%); }
+			100% { transform: translateX(-100%); }
+		}
+		@media (min-width: 900px) {
+			.section-label { display: flex; align-items: center; justify-content: space-between; }
+			.section-label::after {
+				content: attr(data-sys); font-family: 'Courier New', Courier, monospace;
+				font-size: 0.85em; color: rgba(44,41,38,0.16); letter-spacing: 0.04em;
+				text-transform: none; font-weight: 400;
+			}
+		}
+		/* ── CYBERPUNK LAYER (subtle, light mode) ─────── */
+		body::before {
+			content: '';
+			position: fixed; inset: 0; z-index: 0; pointer-events: none;
+			background-image: radial-gradient(circle, rgba(44,41,38,0.04) 1px, transparent 1px);
+			background-size: 28px 28px;
+		}
+		#wrapper { position: relative; z-index: 1; }
+		/* Gallery items get techy corner brackets on hover */
+		.comm-gallery-item::before, .comm-gallery-item::after {
+			content: ''; position: absolute; width: 10px; height: 10px;
+			z-index: 3; pointer-events: none; opacity: 0; transition: opacity 0.3s;
+		}
+		.comm-gallery-item::before { top: 6px; left: 6px;
+			border-top: 1px solid rgba(44,41,38,0.5); border-left: 1px solid rgba(44,41,38,0.5); }
+		.comm-gallery-item::after { bottom: 6px; right: 6px;
+			border-bottom: 1px solid rgba(44,41,38,0.5); border-right: 1px solid rgba(44,41,38,0.5); }
+		.comm-gallery-item:hover::before, .comm-gallery-item:hover::after { opacity: 1; }
+
 		/* ══════════════════════════════════════════════════
 		   COMMISSION INQUIRY FORM
 		══════════════════════════════════════════════════ */
@@ -1013,10 +1045,10 @@
 
 				<!-- ── Bio ── -->
 				<div class="bio-section">
-					<p>I'm an artist working in traditional and digital media for about 5 years, specializing in pastel, charcoal, oil, and canvas work. Lately I've been open to digital commissions and would love to take on any furry-related art. I work in a wide range of styles — if you're looking for something specific, just ask!</p>
-					<p>My other works are on <a href="https://www.artstation.com/gamboiuwu">ArtStation</a> and throughout this site. Don't know what to commission? Reach out anyway — it's my job to come up with a unique idea for you. ^_^</p>
-					<p class="payment-line"><strong>Payment:</strong> Venmo, Cashapp, PayPal. Invoice sent upon price agreement. Tips appreciated but not required. Commercial use requires a formal agreement.</p>
-					<p><small>Last Updated: Apr 2, 2026</small></p>
+					<p>New York–based digital artist with over ten years of studio practice across traditional and digital media — pastel, charcoal, oil, canvas, and full digital illustration. Specializing in character design, furry art, and Telegram sticker packs with a range that stretches from clean flat-color headshots to fully rendered complex full bodies with environment.</p>
+					<p>My broader work spans animation, techwear fashion design, and award-winning game development. Every commission gets the same attention: a clear process, honest communication, and art you'll actually want to show off. Not sure what to order? Message me — coming up with ideas is part of what I do.</p>
+					<p>Full portfolio on <a href="https://www.artstation.com/gamboiuwu" target="_blank" rel="noopener">ArtStation</a> and throughout this site.</p>
+					<p class="payment-line"><strong>Payment:</strong> Venmo, Cashapp, or PayPal. Invoice sent upon price agreement. Tips appreciated but never required. Commercial licensing available — ask for rates.</p>
 				</div>
 
 				<!-- ── CTAs ── -->
@@ -1037,7 +1069,7 @@
 				<section id="commission-prices">
 
 					<!-- 01 — Art (Digital) -->
-					<span class="section-label">Digital Art</span>
+					<span class="section-label" data-sys="// 01">Digital Art</span>
 					<h2 id="digital">Art (Digital)</h2>
 					<p class="section-starting" id="digital-starting">Starting from <strong>$19</strong></p>
 
@@ -1062,7 +1094,7 @@
 					<hr class="section-divider">
 
 					<!-- 02 — Telegram Stickers -->
-					<span class="section-label">Telegram Stickers</span>
+					<span class="section-label" data-sys="// 02">Telegram Stickers</span>
 					<h2 id="stickers">Telegram Stickers</h2>
 					<p class="section-starting" id="sticker-starting">Starting from <strong>$17</strong></p>
 
@@ -1081,7 +1113,7 @@
 					<hr class="section-divider">
 
 					<!-- 03 — Animation -->
-					<span class="section-label">Animation</span>
+					<span class="section-label" data-sys="// 03">Animation</span>
 					<h2 id="animation">Animation <span class="status-badge closed" id="animation-status-badge">Closed</span></h2>
 
 					<div id="animation-table-wrap"></div>
@@ -1280,6 +1312,7 @@
 					<ul class="copyright">
 						<li>&copy; Anthony Ryabchikov. All rights reserved.</li>
 					</ul>
+					<div style="font-family:'Courier New',Courier,monospace;font-size:0.58em;color:rgba(255,255,255,0.12);letter-spacing:0.08em;overflow:hidden;white-space:nowrap;margin-top:0.2em"><span style="display:inline-block;animation:ticker 18s linear infinite">COMMISSIONS::OPEN &nbsp;&nbsp; ARTIST::RYABCHIKOV &nbsp;&nbsp; MEDIUM::DIGITAL &nbsp;&nbsp; STYLE::CHARACTER·FURRY·STICKERS &nbsp;&nbsp; STATUS::ACCEPTING &nbsp;&nbsp;</span></div>
 				</div>
 			</footer>
 
