@@ -1155,6 +1155,11 @@
 		refreshFontsList();
 		refreshStylesTab();
 		renderPricingTab();
+		/* Initialize dynamic tab badges on load */
+		setTimeout(function() {
+			if (typeof renderInquiries === 'function') renderInquiries();
+			if (typeof renderFeedbackTab === 'function') renderFeedbackTab();
+		}, 0);
 	}
 
 	/* ================================================================
@@ -2397,13 +2402,18 @@ document.addEventListener('click', function(e) {
   var t = e.target;
   if (t.dataset.applyAccent) {
     var hex = t.dataset.applyAccent;
-    if (typeof currentStyles !== 'undefined') {
-      currentStyles.accentColor = hex;
-      document.getElementById('accent-picker').value = hex;
-      document.getElementById('accent-hex').value = hex;
-      document.getElementById('color-swatch').style.background = hex;
-    }
-    toast('Accent color set to ' + hex + ' — go to Styles tab and Save All to apply.');
+    /* Read-modify-write through CommissionData so we don't need IIFE scope */
+    var styles = CommissionData.getStyles();
+    styles.accentColor = hex;
+    CommissionData.saveStyles(styles);
+    /* Update Styles tab UI elements if they exist */
+    var picker = document.getElementById('accent-picker');
+    var hexInp = document.getElementById('accent-hex');
+    var swatch = document.getElementById('color-swatch');
+    if (picker) picker.value = hex;
+    if (hexInp) hexInp.value = hex;
+    if (swatch) swatch.style.background = hex;
+    toast('Accent color applied: ' + hex + ' (saved).');
     return;
   }
   if (t.dataset.delPalette) {
