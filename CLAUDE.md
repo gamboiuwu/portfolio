@@ -118,12 +118,13 @@ Each event is a flat object:
 { sid, type, page, ts, ...extraFields }
 ```
 
-| Type      | Extra Fields                                   |
-|-----------|------------------------------------------------|
-| `pv`      | `ref` (referrer or "direct")                   |
-| `click`   | `el` (tag.class), `text`, `href`, `xp`, `yp`  |
-| `scroll`  | `depth` (25 / 50 / 75 / 100)                   |
-| `exit`    | `ms` (milliseconds on page)                    |
+| Type         | Extra Fields                                                   |
+|--------------|----------------------------------------------------------------|
+| `pv`         | `ref` (referrer or "direct")                                   |
+| `click`      | `el` (tag.class), `text`, `href`, `xp`, `yp`                  |
+| `scroll`     | `depth` (25 / 50 / 75 / 100)                                   |
+| `exit`       | `ms` (milliseconds on page)                                    |
+| `tile_hover` | `title` (h2 text of hovered `.tiles article`, up to 60 chars) |
 
 - **`sid`**: session ID (per tab, stored in sessionStorage)
 - **`page`**: URL pathname, normalized (trailing slash, no index.html)
@@ -136,6 +137,9 @@ Each event is a flat object:
 ### Heatmap Visualizer (Admin → Analytics tab)
 Canvas-based click density map. Select a page from the dropdown, see click positions as color-coded dots (blue=low density → red=high). Uses proximity bucketing (32×32 grid cells) to aggregate nearby clicks.
 
+### Artwork Engagement (Admin → Analytics tab)
+Bar chart of `tile_hover` events grouped by artwork title. A `tile_hover` fires after a visitor sustains a mouseover on a `.tiles article` for ≥1 second. Provides a qualitative engagement signal per portfolio piece beyond raw click counts.
+
 ---
 
 ## Admin Dashboard (`/admin/`)
@@ -143,22 +147,56 @@ Canvas-based click density map. Select a page from the dropdown, see click posit
 Password-protected (SHA-256 hash in localStorage, 5-attempt lockout). Session tracked via `sessionStorage._gam_sess`.
 
 ### Tabs
-| Tab         | Description                                                    |
-|-------------|----------------------------------------------------------------|
-| Gallery     | Manage commission images and Telegram stickers                 |
-| Fonts       | Load Google Fonts or upload font files; assign to headings/body|
-| Styles      | Accent color picker, custom CSS injection                      |
-| Featured    | Featured Works cards shown on homepage (cover, title, etc.)    |
-| Pricing     | Commission price tables (columns/rows/add-ons per category)    |
-| Security    | Change admin password; reset gallery/styles to defaults        |
-| Inquiries   | View, read, reply to, delete commission form submissions        |
-| Feedback    | Log issues/ideas for AI routine guidance; track status         |
-| Analytics   | Site visitor stats, session list, click heatmap visualizer     |
-| Palette     | Color palette extractor — sample dominant colors from artwork  |
+| Tab         | Description                                                                        |
+|-------------|------------------------------------------------------------------------------------|
+| Gallery     | Manage commission images and Telegram stickers                                     |
+| Fonts       | Load Google Fonts or upload font files; assign to headings/body                    |
+| Styles      | Accent color picker, custom CSS injection                                          |
+| Featured    | Featured Works cards shown on homepage (cover, title, etc.)                        |
+| Pricing     | Commission price tables (columns/rows/add-ons per category)                        |
+| Security    | Change admin password; reset gallery/styles to defaults                            |
+| Inquiries   | View, read, reply to, delete commission form submissions                            |
+| Feedback    | Log issues/ideas for AI routine guidance; track status                             |
+| Analytics   | Site visitor stats, session list, artwork engagement, click heatmap visualizer     |
+| Palette     | Color palette extractor — sample dominant colors from artwork                      |
+| Queue       | Commission Queue Board — Kanban tracker for active work-in-progress commissions    |
 
 ---
 
-## Color Palette Extractor (Admin → Palette tab) — NEW TOOL
+## Commission Queue Board (Admin → Queue tab)
+
+Kanban-style board for tracking every active commission from acceptance to delivery. This is **distinct from the Inquiries tab** (which stores form submissions) — it tracks the actual production workflow.
+
+**Stages (left → right):**
+Queue → Sketch → Lineart → Color → Complete → Delivered
+
+**Each card stores:**
+- `client` — handle or name
+- `type` — `digital` | `stickers` | `animation` | `other`
+- `desc` — brief commission description
+- `price` — agreed price string (e.g. `$96`)
+- `dueDate` — ISO date string (shown in MM/DD/YY format; overdue dates highlighted red)
+- `stage` — current Kanban column key
+- `priority` — `normal` | `rush` (rush cards show a red left border)
+- `notes` — private internal notes
+- `id` — timestamp integer (primary key)
+- `createdAt` — ISO string
+
+**Storage key:** `_gam_queue_v1` (Array of queue item objects, newest first)
+
+**API (commission-data.js):**
+```js
+CommissionData.getQueue()               // returns full array
+CommissionData.saveQueueItem(item)      // prepend new item, returns saved item
+CommissionData.updateQueueItem(id, changes) // partial update by id
+CommissionData.deleteQueueItem(id)      // remove by id
+```
+
+**Stats row** (above the board): active count, rush count, overdue count, delivered count.
+
+---
+
+## Color Palette Extractor (Admin → Palette tab)
 
 Admin-only tool for extracting and saving color palettes from artwork.
 
@@ -239,4 +277,4 @@ Stored in `_gam_prices_v1`. Three sections: `digital`, `stickers`, `animation`. 
 
 ---
 
-*Last updated: 2026-05-22*
+*Last updated: 2026-05-26*
