@@ -9,7 +9,7 @@
 	<meta charset="utf-8" />
 	<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
 
-	<meta name="description" content="Portfolio of Anthony Ryabchikov – designer, developer, and creator of Yuka Designs. Creative work in techwear fashion, web development, and digital art.">
+	<meta name="description" content="Anthony Ryabchikov — New York freelance artist specializing in character design, digital illustration, Telegram stickers, and animation. BFA Studio Art. Open for commissions.">
 	<meta name="keywords" content="portfolio, artist, gamboiuwu, anthony, ryabchikov">
 	<meta name="author" content="Anthony Ryabchikov">
 	<meta name="theme-color" content="#2c2926">
@@ -20,7 +20,7 @@
 	<meta property="og:image" content="https://antryab.com/images/yuka_header.png">
 	<meta property="og:image:alt" content="Yuka header">
 
-	<title>Anthony Ryabchikov | Designer, Developer, and Creator</title>
+	<title>Anthony Ryabchikov — Character Design & Digital Art</title>
 
 	<meta name="robots" content="index, follow" />
 
@@ -460,6 +460,102 @@
 		100% { transform: translateX(-100%); }
 	}
 
+	/* ── STATS BAR ───────────────────────────────── */
+	.stats-bar {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0;
+		border: 1px solid var(--rule-mid);
+		margin-bottom: var(--section-gap, 3em);
+		overflow: hidden;
+	}
+	.stats-bar-item {
+		flex: 1 1 120px;
+		padding: 1em 1.5em;
+		border-right: 1px solid var(--rule);
+		display: flex;
+		flex-direction: column;
+		gap: 0.2em;
+	}
+	.stats-bar-item:last-child { border-right: none; }
+	.stats-bar-num {
+		font-family: 'Courier New', Courier, monospace;
+		font-size: 1.45em;
+		color: var(--ink);
+		line-height: 1;
+		font-weight: 400;
+	}
+	.stats-bar-label {
+		font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif;
+		font-size: 0.6em;
+		letter-spacing: 0.13em;
+		text-transform: uppercase;
+		color: var(--lite);
+	}
+
+	/* ── COMMISSION STATUS BADGE ─────────────────── */
+	.commission-status {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.45em;
+		padding: 0.3em 0.8em;
+		border: 1px solid var(--rule-mid);
+		font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif;
+		font-size: 0.6em;
+		letter-spacing: 0.12em;
+		text-transform: uppercase;
+		color: var(--mid);
+		margin-bottom: 1em;
+	}
+	.commission-status-dot {
+		width: 6px; height: 6px; border-radius: 50%;
+		background: #7aaa88;
+		animation: pulse-dot 2.5s ease-in-out infinite;
+	}
+	@keyframes pulse-dot {
+		0%, 100% { opacity: 1; }
+		50%       { opacity: 0.35; }
+	}
+
+	/* ── ARTSTATION LINK ─────────────────────────── */
+	.artstation-link {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.5em;
+		font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif;
+		font-size: 0.65em;
+		letter-spacing: 0.1em;
+		text-transform: uppercase;
+		color: var(--mid) !important;
+		text-decoration: none !important;
+		border-bottom: none !important;
+		border: 1px solid var(--rule-mid);
+		padding: 0.45em 1em;
+		transition: background 0.2s, color 0.2s;
+		margin-top: 1.25em;
+	}
+	.artstation-link:hover {
+		background: var(--paper2);
+		color: var(--ink) !important;
+	}
+
+	/* ── SCAN-LINE OVERLAY ON FEATURED IMG ───────── */
+	.featured-img::before {
+		content: '';
+		position: absolute; inset: 0; z-index: 2;
+		pointer-events: none;
+		background: repeating-linear-gradient(
+			0deg,
+			transparent,
+			transparent 3px,
+			rgba(44,41,38,0.025) 3px,
+			rgba(44,41,38,0.025) 4px
+		);
+		opacity: 0;
+		transition: opacity 0.4s;
+	}
+	.featured-card:hover .featured-img::before { opacity: 1; }
+
 	/* ── RESPONSIVE ──────────────────────────────── */
 	@media (max-width: 736px) {
 		.featured-card { flex-direction: column; }
@@ -467,6 +563,9 @@
 		.featured-img::after { background: linear-gradient(to bottom, transparent 50%, var(--paper2) 100%); }
 		.featured-body { padding: 1.5em 1.5em; }
 		.hero-name { font-size: 2.2em !important; }
+		.stats-bar-item { flex-basis: 50%; }
+		.stats-bar-item:nth-child(2n) { border-right: none; }
+		.stats-bar-item:nth-child(n+3) { border-top: 1px solid var(--rule); }
 	}
 	</style>
 </head>
@@ -515,10 +614,37 @@
 				<!-- Bio -->
 				<div class="bio-block">
 					<span class="section-label" data-sys="// SYS.IDENTITY">About</span>
+					<div class="commission-status">
+						<span class="commission-status-dot"></span>
+						Open for commissions
+					</div>
 					<h1 class="hero-name" data-text="Anthony Ryabchikov">Anthony Ryabchikov</h1>
 					<h2 class="bio-subtitle">Studio Artist BFA &middot; Business &amp; Liberal Arts Minor &middot; Japanese Minor &mdash; Fall 2026 &nbsp;&nbsp; <span style="font-family:'Courier New',monospace;color:#8c887f;font-size:0.9em">gamboiuwu</span></h2>
-					<p>New York–based freelance artist, designer, and event director specializing in character design, digital illustration, animation, and videography. With over ten years in studio art and a background spanning Adobe Creative Cloud, 2D animation, and Blender, Anthony brings a technically rigorous and deeply personal voice to every commission.</p>
-					<p>Founder of <a href="https://nyfurs.org/" target="_blank" rel="noopener">New York Furs</a> — an independent not-for-profit running monthly community events including Phoenix Bark and Fuwa Furry Fest — and CEO of <a href="https://yuka.design/" target="_blank" rel="noopener">Yuka Designs</a>, an eco-friendly techwear label built on sustainable materials and in-house artistry. Award-winning game developer (Resonance Awards 2021).</p>
+					<p>New York–based freelance artist, designer, and event director specializing in character design, digital illustration, Telegram sticker packs, and animation. With 10+ years in studio art and fluency in Adobe Creative Cloud, Blender, and 2D animation pipelines, every commission is handled with technical rigor and a deeply personal creative voice.</p>
+					<p>Founder of <a href="https://nyfurs.org/" target="_blank" rel="noopener">New York Furs</a> — an independent not-for-profit running flagship events Phoenix Bark and Fuwa Furry Fest for the New York community — and CEO of <a href="https://yuka.design/" target="_blank" rel="noopener">Yuka Designs</a>, an eco-friendly techwear label. Award-winning game developer: <em>Extortia</em> took Most Innovative Project and Best Sound Design at the Resonance Awards 2021.</p>
+					<a href="https://www.artstation.com/gamboiuwu" target="_blank" rel="noopener" class="artstation-link">
+						<i class="icon brands fa-artstation" style="font-size:1.1em"></i> View full portfolio on ArtStation
+					</a>
+				</div>
+
+				<!-- Stats bar -->
+				<div class="stats-bar">
+					<div class="stats-bar-item">
+						<span class="stats-bar-num">10+</span>
+						<span class="stats-bar-label">Years in studio art</span>
+					</div>
+					<div class="stats-bar-item">
+						<span class="stats-bar-num">3</span>
+						<span class="stats-bar-label">Active services</span>
+					</div>
+					<div class="stats-bar-item">
+						<span class="stats-bar-num">2×</span>
+						<span class="stats-bar-label">Award-winning</span>
+					</div>
+					<div class="stats-bar-item">
+						<span class="stats-bar-num">NY</span>
+						<span class="stats-bar-label">Based</span>
+					</div>
 				</div>
 
 				<!-- Selected Works -->

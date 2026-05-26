@@ -551,6 +551,128 @@
 		  background: none; border: none; color: #c06060; cursor: pointer; padding: 0 0.3em;
 		  font-size: 0.9em; line-height: 1;
 		}
+
+		/* ── Queue Board Tab ── */
+		.queue-header-bar {
+		  display: flex; align-items: center; justify-content: space-between;
+		  flex-wrap: wrap; gap: 0.75em; margin-bottom: 1.5em;
+		}
+		.queue-stats-row {
+		  display: flex; gap: 0.6em; flex-wrap: wrap;
+		}
+		.queue-stat-chip {
+		  padding: 0.3em 0.8em; border-radius: 4px; font-size: 0.68em;
+		  font-family: 'Courier New', monospace; letter-spacing: 0.06em;
+		  background: rgba(201,201,201,0.05); border: 1px solid rgba(201,201,201,0.12);
+		  color: #888;
+		}
+		.queue-stat-chip strong { color: #ccc; }
+		.queue-stat-chip.urgent { border-color: rgba(224,112,112,0.35); color: #e07070; }
+		.queue-stat-chip.urgent strong { color: #e07070; }
+		.queue-board {
+		  display: flex; gap: 0.85em; overflow-x: auto;
+		  padding-bottom: 1em; min-height: 320px;
+		}
+		.queue-col {
+		  flex: 0 0 200px; min-width: 200px; display: flex; flex-direction: column; gap: 0.5em;
+		}
+		.queue-col-header {
+		  padding: 0.55em 0.75em;
+		  background: rgba(201,201,201,0.06); border: 1px solid rgba(201,201,201,0.12);
+		  border-radius: 6px 6px 0 0; display: flex; align-items: center; gap: 0.5em;
+		}
+		.queue-col-label {
+		  font-size: 0.65em; font-weight: 700; text-transform: uppercase;
+		  letter-spacing: 0.14em; color: #888; flex: 1;
+		}
+		.queue-col-badge {
+		  font-size: 0.62em; font-family: monospace; background: rgba(201,201,201,0.1);
+		  border-radius: 3px; padding: 0.1em 0.4em; color: #666;
+		}
+		.queue-col-dot {
+		  width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0;
+		}
+		.queue-col-body {
+		  flex: 1; border: 1px solid rgba(201,201,201,0.08);
+		  border-top: none; border-radius: 0 0 6px 6px;
+		  padding: 0.5em; background: rgba(0,0,0,0.15);
+		  display: flex; flex-direction: column; gap: 0.45em;
+		}
+		.queue-card {
+		  background: rgba(255,255,255,0.04); border: 1px solid rgba(201,201,201,0.1);
+		  border-radius: 5px; padding: 0.65em 0.7em; cursor: default;
+		  transition: border-color 0.15s; position: relative;
+		}
+		.queue-card:hover { border-color: rgba(201,201,201,0.25); }
+		.queue-card.is-rush { border-left: 2px solid #e07070; }
+		.queue-card-client {
+		  font-size: 0.82em; color: #ccc; font-weight: 600; margin-bottom: 0.2em;
+		  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+		}
+		.queue-card-type {
+		  font-size: 0.62em; font-family: monospace; color: #666; text-transform: uppercase;
+		  letter-spacing: 0.07em;
+		}
+		.queue-card-desc {
+		  font-size: 0.73em; color: #777; margin-top: 0.3em; line-height: 1.4;
+		  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+		  overflow: hidden;
+		}
+		.queue-card-meta {
+		  display: flex; align-items: center; justify-content: space-between;
+		  margin-top: 0.5em; gap: 0.3em; flex-wrap: wrap;
+		}
+		.queue-card-due {
+		  font-size: 0.62em; font-family: monospace; color: #666;
+		}
+		.queue-card-due.overdue { color: #e07070; }
+		.queue-card-price {
+		  font-size: 0.65em; font-family: monospace; color: #c9a87c;
+		}
+		.queue-card-actions {
+		  display: flex; gap: 0.25em; margin-top: 0.5em; flex-wrap: wrap;
+		}
+		.qc-btn {
+		  font-size: 0.6em; padding: 0.25em 0.5em; border-radius: 3px;
+		  background: rgba(201,201,201,0.07); border: 1px solid rgba(201,201,201,0.14);
+		  color: #888; cursor: pointer; letter-spacing: 0.05em;
+		  transition: color 0.15s, border-color 0.15s;
+		}
+		.qc-btn:hover { color: #ccc; border-color: rgba(201,201,201,0.3); }
+		.qc-btn.qc-del { color: #c06060; border-color: rgba(192,96,96,0.2); }
+		.qc-btn.qc-del:hover { color: #e08080; border-color: rgba(224,128,128,0.4); }
+		.queue-empty-hint {
+		  font-size: 0.72em; color: #3a3a3a; text-align: center; padding: 1.5em 0.5em;
+		  font-family: monospace; line-height: 1.6;
+		}
+		.queue-modal-overlay {
+		  position: fixed; inset: 0; z-index: 9000;
+		  background: rgba(0,0,0,0.75); display: flex; align-items: center; justify-content: center;
+		}
+		.queue-modal {
+		  background: #141414; border: 1px solid rgba(201,201,201,0.18);
+		  border-radius: 10px; padding: 2em; width: 420px; max-width: 95vw;
+		  max-height: 90vh; overflow-y: auto;
+		}
+		.queue-modal h3 {
+		  font-size: 0.78em; text-transform: uppercase; letter-spacing: 0.16em;
+		  color: #888; margin: 0 0 1.25em;
+		}
+		.qm-field { margin-bottom: 0.85em; }
+		.qm-label {
+		  display: block; font-size: 0.65em; color: #666; text-transform: uppercase;
+		  letter-spacing: 0.12em; margin-bottom: 0.3em;
+		}
+		.qm-input {
+		  width: 100%; background: rgba(255,255,255,0.05);
+		  border: 1px solid rgba(201,201,201,0.15); border-radius: 4px;
+		  color: #dedede; font-family: inherit; font-size: 0.85em;
+		  padding: 0.5em 0.65em; box-sizing: border-box;
+		}
+		.qm-input:focus { outline: none; border-color: rgba(201,201,201,0.35); }
+		.qm-row { display: flex; gap: 0.6em; }
+		.qm-row .qm-field { flex: 1; }
+		.qm-actions { display: flex; gap: 0.5em; margin-top: 1.25em; }
 	</style>
 </head>
 <body class="is-preload">
@@ -621,6 +743,7 @@
 				<button class="admin-tab" data-tab="feedback">Feedback <span id="fb-badge" class="inq-badge" style="display:none"></span></button>
 				<button class="admin-tab" data-tab="analytics">Analytics</button>
 				<button class="admin-tab" data-tab="palette">Palette</button>
+				<button class="admin-tab" data-tab="queue">Queue <span id="queue-badge" class="inq-badge" style="display:none"></span></button>
 			</div>
 
 			<!-- ============ GALLERY TAB ============ -->
@@ -959,6 +1082,12 @@
 				</div>
 
 				<div class="admin-card">
+					<h3>Artwork Engagement</h3>
+					<p class="hint">Tiles visitors hovered over for 1+ seconds — a proxy for genuine interest in a piece.</p>
+					<ul id="analytics-tile-hovers" class="top-clicks-list"></ul>
+				</div>
+
+				<div class="admin-card">
 					<h3>Click Heatmap</h3>
 					<p class="hint">Select a page to visualize where visitors click. Each dot represents a click — brighter and larger means higher density.</p>
 					<div class="field-row" style="margin-bottom:1em">
@@ -1025,6 +1154,23 @@
 					<h3>Saved Palettes</h3>
 					<p class="hint">Saved palettes persist in your browser. Apply any swatch color as the accent to test branding options.</p>
 					<div id="palette-saved-list"></div>
+				</div>
+
+			</div>
+
+			<!-- ============ QUEUE TAB ============ -->
+			<div id="tab-queue" class="tab-content">
+
+				<div class="admin-card">
+					<h3>Commission Queue Board</h3>
+					<p class="hint">Track every active commission from acceptance through delivery. Rush commissions appear with a red left border. Cards auto-highlight overdue due dates.</p>
+
+					<div class="queue-header-bar">
+						<div class="queue-stats-row" id="queue-stats-row"></div>
+						<button class="button small primary" id="queue-add-btn">+ Add Commission</button>
+					</div>
+
+					<div class="queue-board" id="queue-board"></div>
 				</div>
 
 			</div>
@@ -1159,6 +1305,7 @@
 		setTimeout(function() {
 			if (typeof renderInquiries === 'function') renderInquiries();
 			if (typeof renderFeedbackTab === 'function') renderFeedbackTab();
+			if (typeof renderQueueTab === 'function') renderQueueTab();
 		}, 0);
 	}
 
@@ -2226,6 +2373,25 @@ function renderAnalyticsTab() {
       '<span class="tc-count">' + elCounts[k] + '</span></li>';
   }).join('') || '<li style="color:#444;padding:1em 0">No click data yet.</li>';
 
+  /* Artwork tile hover engagement */
+  var hoverEvents = events.filter(function(e){ return e.type === 'tile_hover'; });
+  var hoverCounts = {};
+  hoverEvents.forEach(function(e){
+    var key = e.title || '(untitled)';
+    hoverCounts[key] = (hoverCounts[key] || 0) + 1;
+  });
+  var topHovers    = Object.keys(hoverCounts).sort(function(a,b){ return hoverCounts[b]-hoverCounts[a]; }).slice(0, 8);
+  var maxHoverCount = topHovers.length ? hoverCounts[topHovers[0]] : 1;
+  var thEl = document.getElementById('analytics-tile-hovers');
+  if (thEl) {
+    thEl.innerHTML = topHovers.map(function(k) {
+      var pct = Math.round((hoverCounts[k] / maxHoverCount) * 100);
+      return '<li><span class="tc-label">' + escHtml(k.slice(0,28)) + '</span>' +
+        '<div class="tc-bar-wrap"><div class="tc-bar" style="width:' + pct + '%;background:#c9a87c"></div></div>' +
+        '<span class="tc-count">' + hoverCounts[k] + '</span></li>';
+    }).join('') || '<li style="color:#444;padding:1em 0">No hover data yet — visit the site and hover over tiles.</li>';
+  }
+
   /* Recent sessions */
   var sessionMap = {};
   events.forEach(function(e) {
@@ -2573,6 +2739,252 @@ document.getElementById('palette-save-btn').addEventListener('click', function()
   document.getElementById('palette-status').textContent = 'Palette saved.';
   document.getElementById('palette-status').className   = 'status-line ok';
 });
+
+/* ================================================================
+   QUEUE TAB — Commission Queue Board
+================================================================ */
+
+var QUEUE_STAGES = [
+  { key: 'queue',     label: 'Queue',     dot: '#666688' },
+  { key: 'sketch',    label: 'Sketch',    dot: '#8877aa' },
+  { key: 'lineart',   label: 'Lineart',   dot: '#7799bb' },
+  { key: 'color',     label: 'Color',     dot: '#77aa88' },
+  { key: 'complete',  label: 'Complete',  dot: '#c9a87c' },
+  { key: 'delivered', label: 'Delivered', dot: '#556655' }
+];
+
+function renderQueueTab() {
+  var items = CommissionData.getQueue();
+  renderQueueStats(items);
+  renderQueueBoard(items);
+  updateQueueBadge(items);
+}
+
+function updateQueueBadge(items) {
+  var active = (items || CommissionData.getQueue()).filter(function(q) {
+    return q.stage !== 'delivered';
+  }).length;
+  var badge = document.getElementById('queue-badge');
+  if (!badge) return;
+  if (active > 0) {
+    badge.textContent = active;
+    badge.style.display = 'inline-block';
+  } else {
+    badge.style.display = 'none';
+  }
+}
+
+function renderQueueStats(items) {
+  var el = document.getElementById('queue-stats-row');
+  if (!el) return;
+  var now     = Date.now();
+  var active  = items.filter(function(q) { return q.stage !== 'delivered'; }).length;
+  var rush    = items.filter(function(q) { return q.priority === 'rush' && q.stage !== 'delivered'; }).length;
+  var overdue = items.filter(function(q) {
+    return q.dueDate && q.stage !== 'delivered' && q.stage !== 'complete' && new Date(q.dueDate).getTime() < now;
+  }).length;
+  var done    = items.filter(function(q) { return q.stage === 'delivered'; }).length;
+
+  el.innerHTML =
+    chip('<strong>' + active + '</strong> active') +
+    (rush    ? chip('<strong>' + rush    + '</strong> rush',    'urgent') : '') +
+    (overdue ? chip('<strong>' + overdue + '</strong> overdue', 'urgent') : '') +
+    chip('<strong>' + done  + '</strong> delivered');
+}
+
+function chip(html, cls) {
+  return '<span class="queue-stat-chip' + (cls ? ' ' + cls : '') + '">' + html + '</span>';
+}
+
+function renderQueueBoard(items) {
+  var board = document.getElementById('queue-board');
+  if (!board) return;
+  var now = Date.now();
+
+  board.innerHTML = QUEUE_STAGES.map(function(stage) {
+    var stageItems = items.filter(function(q) { return q.stage === stage.key; });
+
+    var cards = stageItems.length
+      ? stageItems.map(function(item) { return renderQueueCard(item, stage.key, now); }).join('')
+      : '<div class="queue-empty-hint">—</div>';
+
+    return '<div class="queue-col" data-stage="' + escHtml(stage.key) + '">' +
+      '<div class="queue-col-header">' +
+        '<div class="queue-col-dot" style="background:' + stage.dot + '"></div>' +
+        '<span class="queue-col-label">' + escHtml(stage.label) + '</span>' +
+        '<span class="queue-col-badge">' + stageItems.length + '</span>' +
+      '</div>' +
+      '<div class="queue-col-body">' + cards + '</div>' +
+    '</div>';
+  }).join('');
+}
+
+function renderQueueCard(item, currentStage, now) {
+  var isRush    = item.priority === 'rush';
+  var isOverdue = item.dueDate && currentStage !== 'delivered' && currentStage !== 'complete'
+                  && new Date(item.dueDate).getTime() < now;
+  var dueHtml   = item.dueDate
+    ? '<span class="queue-card-due' + (isOverdue ? ' overdue' : '') + '">' +
+        (isOverdue ? '⚠ ' : '') + fmtDate(item.dueDate) +
+      '</span>'
+    : '';
+  var priceHtml = item.price
+    ? '<span class="queue-card-price">' + escHtml(item.price) + '</span>'
+    : '';
+
+  var stageIdx = QUEUE_STAGES.findIndex(function(s) { return s.key === currentStage; });
+  var prevStage = stageIdx > 0                         ? QUEUE_STAGES[stageIdx - 1].key : null;
+  var nextStage = stageIdx < QUEUE_STAGES.length - 1   ? QUEUE_STAGES[stageIdx + 1].key : null;
+
+  var moveButtons =
+    (prevStage ? '<button class="qc-btn" data-qmove="' + item.id + '" data-stage="' + prevStage + '">◀</button>' : '') +
+    (nextStage ? '<button class="qc-btn" data-qmove="' + item.id + '" data-stage="' + nextStage + '">▶</button>' : '');
+
+  return '<div class="queue-card' + (isRush ? ' is-rush' : '') + '">' +
+    '<div class="queue-card-client">' + escHtml(item.client || 'Unnamed') + '</div>' +
+    '<div class="queue-card-type">' + escHtml(item.type || 'digital') + (isRush ? ' · RUSH' : '') + '</div>' +
+    (item.desc ? '<div class="queue-card-desc">' + escHtml(item.desc) + '</div>' : '') +
+    '<div class="queue-card-meta">' + dueHtml + priceHtml + '</div>' +
+    '<div class="queue-card-actions">' +
+      moveButtons +
+      '<button class="qc-btn" data-qedit="' + item.id + '">Edit</button>' +
+      '<button class="qc-btn qc-del" data-qdel="' + item.id + '">×</button>' +
+    '</div>' +
+  '</div>';
+}
+
+function fmtDate(iso) {
+  try {
+    var d = new Date(iso);
+    return (d.getMonth()+1) + '/' + d.getDate() + '/' + String(d.getFullYear()).slice(-2);
+  } catch(e) { return iso; }
+}
+
+/* Find polyfill for older browsers */
+if (!Array.prototype.findIndex) {
+  Array.prototype.findIndex = function(fn) {
+    for (var i = 0; i < this.length; i++) { if (fn(this[i], i)) return i; }
+    return -1;
+  };
+}
+
+/* Queue board event delegation */
+document.addEventListener('click', function(e) {
+  var t = e.target;
+
+  if (t.dataset.qmove) {
+    CommissionData.updateQueueItem(+t.dataset.qmove, { stage: t.dataset.stage });
+    renderQueueTab();
+    return;
+  }
+  if (t.dataset.qdel) {
+    if (!confirm('Remove this commission from the queue?')) return;
+    CommissionData.deleteQueueItem(+t.dataset.qdel);
+    renderQueueTab();
+    return;
+  }
+  if (t.dataset.qedit) {
+    var id   = +t.dataset.qedit;
+    var item = CommissionData.getQueue().find(function(q) { return q.id === id; });
+    if (item) openQueueModal(item);
+    return;
+  }
+});
+
+/* Add button */
+document.getElementById('queue-add-btn').addEventListener('click', function() {
+  openQueueModal(null);
+});
+
+function openQueueModal(existing) {
+  var isEdit = !!existing;
+  var overlay = document.createElement('div');
+  overlay.className = 'queue-modal-overlay';
+
+  var stageOptions = QUEUE_STAGES.map(function(s) {
+    var sel = (existing && existing.stage === s.key) ? ' selected' : (!existing && s.key === 'queue' ? ' selected' : '');
+    return '<option value="' + s.key + '"' + sel + '>' + s.label + '</option>';
+  }).join('');
+
+  overlay.innerHTML =
+    '<div class="queue-modal">' +
+      '<h3>' + (isEdit ? 'Edit Commission' : 'Add Commission') + '</h3>' +
+      '<div class="qm-row">' +
+        '<div class="qm-field"><label class="qm-label">Client / Handle</label>' +
+          '<input class="qm-input" id="qm-client" placeholder="@handle or Name" value="' + escHtml(existing && existing.client || '') + '" /></div>' +
+        '<div class="qm-field"><label class="qm-label">Type</label>' +
+          '<select class="qm-input" id="qm-type">' +
+            '<option value="digital"'   + ((!existing || existing.type==='digital')   ? ' selected' : '') + '>Digital Art</option>' +
+            '<option value="stickers"'  + ((existing && existing.type==='stickers')   ? ' selected' : '') + '>Stickers</option>' +
+            '<option value="animation"' + ((existing && existing.type==='animation')  ? ' selected' : '') + '>Animation</option>' +
+            '<option value="other"'     + ((existing && existing.type==='other')      ? ' selected' : '') + '>Other</option>' +
+          '</select></div>' +
+      '</div>' +
+      '<div class="qm-field"><label class="qm-label">Description</label>' +
+        '<input class="qm-input" id="qm-desc" placeholder="Brief commission description" value="' + escHtml(existing && existing.desc || '') + '" /></div>' +
+      '<div class="qm-row">' +
+        '<div class="qm-field"><label class="qm-label">Price</label>' +
+          '<input class="qm-input" id="qm-price" placeholder="e.g. $96" value="' + escHtml(existing && existing.price || '') + '" /></div>' +
+        '<div class="qm-field"><label class="qm-label">Due Date</label>' +
+          '<input class="qm-input" id="qm-due" type="date" value="' + escHtml(existing && existing.dueDate ? existing.dueDate.slice(0,10) : '') + '" /></div>' +
+      '</div>' +
+      '<div class="qm-row">' +
+        '<div class="qm-field"><label class="qm-label">Stage</label>' +
+          '<select class="qm-input" id="qm-stage">' + stageOptions + '</select></div>' +
+        '<div class="qm-field"><label class="qm-label">Priority</label>' +
+          '<select class="qm-input" id="qm-priority">' +
+            '<option value="normal"' + ((!existing || existing.priority!=='rush') ? ' selected' : '') + '>Normal</option>' +
+            '<option value="rush"'   + ((existing && existing.priority==='rush')  ? ' selected' : '') + '>Rush</option>' +
+          '</select></div>' +
+      '</div>' +
+      '<div class="qm-field"><label class="qm-label">Notes (private)</label>' +
+        '<input class="qm-input" id="qm-notes" placeholder="Internal notes only" value="' + escHtml(existing && existing.notes || '') + '" /></div>' +
+      '<div class="qm-actions">' +
+        '<button class="button small primary" id="qm-save-btn">' + (isEdit ? 'Save Changes' : 'Add to Queue') + '</button>' +
+        '<button class="button small" id="qm-cancel-btn">Cancel</button>' +
+      '</div>' +
+    '</div>';
+
+  document.body.appendChild(overlay);
+
+  overlay.querySelector('#qm-cancel-btn').addEventListener('click', function() {
+    document.body.removeChild(overlay);
+  });
+  overlay.addEventListener('click', function(e) {
+    if (e.target === overlay) document.body.removeChild(overlay);
+  });
+
+  overlay.querySelector('#qm-save-btn').addEventListener('click', function() {
+    var client   = overlay.querySelector('#qm-client').value.trim();
+    var type     = overlay.querySelector('#qm-type').value;
+    var desc     = overlay.querySelector('#qm-desc').value.trim();
+    var price    = overlay.querySelector('#qm-price').value.trim();
+    var dueDate  = overlay.querySelector('#qm-due').value;
+    var stage    = overlay.querySelector('#qm-stage').value;
+    var priority = overlay.querySelector('#qm-priority').value;
+    var notes    = overlay.querySelector('#qm-notes').value.trim();
+
+    if (!client) { overlay.querySelector('#qm-client').focus(); return; }
+
+    if (isEdit) {
+      CommissionData.updateQueueItem(existing.id, { client: client, type: type, desc: desc, price: price, dueDate: dueDate, stage: stage, priority: priority, notes: notes });
+      toast('Commission updated.');
+    } else {
+      CommissionData.saveQueueItem({ client: client, type: type, desc: desc, price: price, dueDate: dueDate, stage: stage, priority: priority, notes: notes });
+      toast('Commission added to queue.');
+    }
+    document.body.removeChild(overlay);
+    renderQueueTab();
+  });
+}
+
+/* Find polyfill */
+if (!Array.prototype.find) {
+  Array.prototype.find = function(fn) {
+    for (var i = 0; i < this.length; i++) { if (fn(this[i], i)) return this[i]; }
+    return undefined;
+  };
+}
 </script>
 
 </body>

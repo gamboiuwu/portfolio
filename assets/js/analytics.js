@@ -94,6 +94,35 @@
     }, 250);
   }, { passive: true });
 
+  /* ── Artwork tile hover (fires after 1 s sustained hover) ── */
+  var hoverTimers = {};
+  function findTileArticle(el) {
+    for (var i = 0; i < 6; i++) {
+      if (!el || el === document.body) return null;
+      var par = el.parentElement;
+      if (el.tagName === 'ARTICLE' && par && par.className && par.className.indexOf('tiles') !== -1) return el;
+      el = par;
+    }
+    return null;
+  }
+  document.addEventListener('mouseover', function (e) {
+    var art = findTileArticle(e.target);
+    if (!art) return;
+    var key = art.className + '|' + (art.offsetTop || 0);
+    if (hoverTimers[key]) return;
+    hoverTimers[key] = setTimeout(function () {
+      var h2 = art.querySelector('h2');
+      push({ sid: sid, type: 'tile_hover', page: page, title: h2 ? h2.textContent.trim().slice(0, 60) : '', ts: Date.now() });
+      delete hoverTimers[key];
+    }, 1000);
+  }, { passive: true });
+  document.addEventListener('mouseout', function (e) {
+    var art = findTileArticle(e.target);
+    if (!art) return;
+    var key = art.className + '|' + (art.offsetTop || 0);
+    if (hoverTimers[key]) { clearTimeout(hoverTimers[key]); delete hoverTimers[key]; }
+  }, { passive: true });
+
   /* ── Exit event ── */
   var exitFired = false;
   function fireExit() {

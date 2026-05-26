@@ -14,7 +14,8 @@ window.CommissionData = (function () {
     prices:    '_gam_prices_v1',
     feedback:  '_gam_feedback_v1',
     analytics: '_gam_analytics_v1',
-    palettes:  '_gam_palettes_v1'
+    palettes:  '_gam_palettes_v1',
+    queue:     '_gam_queue_v1'
   };
 
   var DEFAULTS = {
@@ -396,6 +397,30 @@ window.CommissionData = (function () {
     deletePalette: function (id) {
       var list = CD.getPalettes().filter(function (p) { return p.id !== id; });
       localStorage.setItem(KEYS.palettes, JSON.stringify(list));
+    },
+    /* Commission Queue (work-in-progress tracker) */
+    getQueue: function () {
+      try { return JSON.parse(localStorage.getItem(KEYS.queue) || '[]'); } catch (e) { return []; }
+    },
+    saveQueueItem: function (item) {
+      var list = CD.getQueue();
+      item.id        = item.id        || Date.now();
+      item.createdAt = item.createdAt || new Date().toISOString();
+      item.stage     = item.stage     || 'queue';
+      item.priority  = item.priority  || 'normal';
+      list.unshift(item);
+      localStorage.setItem(KEYS.queue, JSON.stringify(list));
+      return item;
+    },
+    updateQueueItem: function (id, changes) {
+      var list = CD.getQueue().map(function (q) {
+        return q.id === id ? Object.assign({}, q, changes) : q;
+      });
+      localStorage.setItem(KEYS.queue, JSON.stringify(list));
+    },
+    deleteQueueItem: function (id) {
+      var list = CD.getQueue().filter(function (q) { return q.id !== id; });
+      localStorage.setItem(KEYS.queue, JSON.stringify(list));
     },
     /* Utilities */
     loadGoogleFont: loadGoogleFont,
