@@ -551,6 +551,103 @@
 		  background: none; border: none; color: #c06060; cursor: pointer; padding: 0 0.3em;
 		  font-size: 0.9em; line-height: 1;
 		}
+
+		/* ── Queue Tab ── */
+		.queue-summary {
+		  display: flex; gap: 1px; background: rgba(201,201,201,0.08);
+		  border: 1px solid rgba(201,201,201,0.1); border-radius: 6px;
+		  overflow: hidden; margin-bottom: 1.5em;
+		}
+		.queue-stat {
+		  flex: 1; background: rgba(255,255,255,0.015);
+		  padding: 0.9em 1em; text-align: center;
+		  transition: background 0.15s;
+		}
+		.queue-stat:hover { background: rgba(255,255,255,0.04); }
+		.queue-stat-value {
+		  font-size: 1.5em; font-weight: 700; color: #dedede;
+		  font-family: 'Courier New', monospace; line-height: 1;
+		}
+		.queue-stat-label {
+		  font-size: 0.62em; font-weight: 900; letter-spacing: 0.12em;
+		  text-transform: uppercase; color: #555; margin-top: 0.3em;
+		}
+
+		.queue-pipeline {
+		  display: grid;
+		  grid-template-columns: repeat(4, 1fr);
+		  gap: 1em; margin-bottom: 1.5em;
+		}
+		@media (max-width: 800px) { .queue-pipeline { grid-template-columns: repeat(2, 1fr); } }
+		@media (max-width: 480px) { .queue-pipeline { grid-template-columns: 1fr; } }
+		.queue-column {}
+		.queue-col-head {
+		  display: flex; align-items: center; gap: 0.4em;
+		  font-size: 0.65em; font-weight: 900; letter-spacing: 0.14em;
+		  text-transform: uppercase; color: #555;
+		  padding-bottom: 0.6em;
+		  border-bottom: 2px solid rgba(201,201,201,0.08);
+		  margin-bottom: 0.6em;
+		}
+		.queue-col-head-dot {
+		  width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0;
+		}
+		.qdot-queued    { background: #888; }
+		.qdot-inprogress { background: #c9a87c; }
+		.qdot-review    { background: #8aadcc; }
+		.qdot-done      { background: #6ecf6e; }
+		.qdot-cancelled { background: #c06060; }
+
+		.queue-item {
+		  background: rgba(255,255,255,0.025);
+		  border: 1px solid rgba(201,201,201,0.1);
+		  border-radius: 6px; padding: 0.9em;
+		  margin-bottom: 0.5em;
+		  transition: border-color 0.15s;
+		  cursor: default;
+		}
+		.queue-item:hover { border-color: rgba(201,201,201,0.25); }
+		.queue-item-client {
+		  font-size: 0.88em; color: #dedede; font-weight: 600;
+		  margin: 0 0 0.2em; white-space: nowrap;
+		  overflow: hidden; text-overflow: ellipsis;
+		}
+		.queue-item-type {
+		  font-size: 0.65em; color: #666; letter-spacing: 0.08em;
+		  text-transform: uppercase; margin-bottom: 0.4em;
+		}
+		.queue-item-price {
+		  font-family: 'Courier New', monospace;
+		  font-size: 0.78em; color: #c9a87c;
+		}
+		.queue-item-due {
+		  font-size: 0.65em; color: #555; margin-top: 0.3em;
+		}
+		.queue-item-due.overdue { color: #c06060; }
+		.queue-item-actions {
+		  display: flex; gap: 0.3em; margin-top: 0.6em;
+		}
+		.queue-item-btn {
+		  background: rgba(255,255,255,0.04);
+		  border: 1px solid rgba(201,201,201,0.12);
+		  border-radius: 3px; color: #888; cursor: pointer;
+		  font-size: 0.65em; letter-spacing: 0.06em;
+		  padding: 0.25em 0.55em; transition: all 0.15s;
+		  text-transform: uppercase;
+		}
+		.queue-item-btn:hover { color: #ccc; border-color: rgba(201,201,201,0.3); }
+		.queue-item-btn.del { color: #c06060; }
+		.queue-item-btn.del:hover { background: rgba(192,96,96,0.1); }
+
+		.queue-form-wrap {
+		  display: none;
+		}
+		.queue-form-wrap.open { display: block; }
+		.queue-form-grid {
+		  display: grid; grid-template-columns: 1fr 1fr; gap: 0.6em;
+		  margin-bottom: 0.75em;
+		}
+		@media (max-width: 600px) { .queue-form-grid { grid-template-columns: 1fr; } }
 	</style>
 </head>
 <body class="is-preload">
@@ -621,6 +718,7 @@
 				<button class="admin-tab" data-tab="feedback">Feedback <span id="fb-badge" class="inq-badge" style="display:none"></span></button>
 				<button class="admin-tab" data-tab="analytics">Analytics</button>
 				<button class="admin-tab" data-tab="palette">Palette</button>
+				<button class="admin-tab" data-tab="queue">Queue <span id="queue-badge" class="inq-badge" style="display:none"></span></button>
 			</div>
 
 			<!-- ============ GALLERY TAB ============ -->
@@ -1029,6 +1127,92 @@
 
 			</div>
 
+			<!-- ============ QUEUE TAB ============ -->
+			<div id="tab-queue" class="tab-content">
+
+				<div class="admin-card">
+					<h3>Commission Work Queue</h3>
+					<p class="hint">Track your active commission work orders. This is your internal pipeline — separate from public inquiries. Add jobs, update their status as you work, and keep an eye on total value and what's overdue.</p>
+
+					<div class="queue-summary" id="queue-summary">
+						<div class="queue-stat"><div class="queue-stat-value" id="qs-active">0</div><div class="queue-stat-label">Active</div></div>
+						<div class="queue-stat"><div class="queue-stat-value" id="qs-total">$0</div><div class="queue-stat-label">Pipeline Value</div></div>
+						<div class="queue-stat"><div class="queue-stat-value" id="qs-done">0</div><div class="queue-stat-label">Completed</div></div>
+						<div class="queue-stat"><div class="queue-stat-value" id="qs-overdue">0</div><div class="queue-stat-label">Overdue</div></div>
+					</div>
+
+					<ul class="actions" style="margin-bottom:1.25em">
+						<li><button class="button small primary" id="queue-add-btn">+ New Work Order</button></li>
+					</ul>
+
+					<!-- Add/Edit form -->
+					<div class="queue-form-wrap" id="queue-form-wrap">
+						<div style="font-size:0.72em;font-weight:900;letter-spacing:0.14em;text-transform:uppercase;color:#888;margin-bottom:0.75em" id="queue-form-title">New Work Order</div>
+						<div class="queue-form-grid">
+							<div>
+								<div class="field-label" style="margin-bottom:0.3em">Client Name</div>
+								<input type="text" id="qf-client" class="field-input" placeholder="Client or alias" />
+							</div>
+							<div>
+								<div class="field-label" style="margin-bottom:0.3em">Type</div>
+								<select id="qf-type" class="field-input">
+									<option value="Character Art">Character Art</option>
+									<option value="Telegram Stickers">Telegram Stickers</option>
+									<option value="Animation">Animation</option>
+									<option value="Reference Sheet">Reference Sheet</option>
+									<option value="Illustration">Illustration</option>
+									<option value="Other">Other</option>
+								</select>
+							</div>
+							<div>
+								<div class="field-label" style="margin-bottom:0.3em">Status</div>
+								<select id="qf-status" class="field-input">
+									<option value="queued">Queued</option>
+									<option value="inprogress">In Progress</option>
+									<option value="review">In Review</option>
+									<option value="done">Done</option>
+									<option value="cancelled">Cancelled</option>
+								</select>
+							</div>
+							<div>
+								<div class="field-label" style="margin-bottom:0.3em">Price (USD)</div>
+								<input type="number" id="qf-price" class="field-input" placeholder="e.g. 95" min="0" step="1" />
+							</div>
+							<div>
+								<div class="field-label" style="margin-bottom:0.3em">Due Date</div>
+								<input type="date" id="qf-due" class="field-input" />
+							</div>
+							<div>
+								<div class="field-label" style="margin-bottom:0.3em">Description</div>
+								<input type="text" id="qf-desc" class="field-input" placeholder="Brief description" />
+							</div>
+						</div>
+						<div>
+							<div class="field-label" style="margin-bottom:0.3em">Notes</div>
+							<textarea id="qf-notes" class="field-input" style="min-height:60px;resize:vertical" placeholder="Internal notes, references, client preferences…"></textarea>
+						</div>
+						<div style="display:flex;gap:0.5em;margin-top:0.75em">
+							<button class="button small primary" id="queue-save-btn">Save</button>
+							<button class="button small" id="queue-cancel-btn">Cancel</button>
+						</div>
+						<div id="queue-form-status" class="status-line" style="margin-top:0.4em"></div>
+						<input type="hidden" id="qf-edit-id" value="" />
+					</div>
+				</div>
+
+				<!-- Pipeline columns -->
+				<div class="queue-pipeline" id="queue-pipeline">
+					<!-- rendered by renderQueueTab() -->
+				</div>
+
+				<!-- Done / Cancelled archive -->
+				<div class="admin-card" id="queue-archive-card" style="display:none">
+					<h3>Archive — Done &amp; Cancelled</h3>
+					<div id="queue-archive-list"></div>
+				</div>
+
+			</div>
+
 		</div><!-- /#admin-dash -->
 		<input type="file" id="img-file-input" accept="image/*" style="display:none" />
 
@@ -1159,6 +1343,7 @@
 		setTimeout(function() {
 			if (typeof renderInquiries === 'function') renderInquiries();
 			if (typeof renderFeedbackTab === 'function') renderFeedbackTab();
+			if (typeof renderQueueTab === 'function') renderQueueTab();
 		}, 0);
 	}
 
@@ -2010,6 +2195,9 @@ document.addEventListener('click', function(e){
   if (e.target.dataset && e.target.dataset.tab === 'palette') {
     renderPaletteTab();
   }
+  if (e.target.dataset && e.target.dataset.tab === 'queue') {
+    renderQueueTab();
+  }
 });
 
 /* ================================================================
@@ -2572,6 +2760,216 @@ document.getElementById('palette-save-btn').addEventListener('click', function()
   toast('Palette "' + name + '" saved!');
   document.getElementById('palette-status').textContent = 'Palette saved.';
   document.getElementById('palette-status').className   = 'status-line ok';
+});
+
+/* ================================================================
+   COMMISSION QUEUE TAB
+================================================================ */
+
+var queueEditingId = null;
+
+var QUEUE_STATUS_LABELS = {
+  queued:      'Queued',
+  inprogress:  'In Progress',
+  review:      'In Review',
+  done:        'Done',
+  cancelled:   'Cancelled'
+};
+
+function renderQueueTab() {
+  var items    = CommissionData.getQueue();
+  var pipeline = document.getElementById('queue-pipeline');
+  var archive  = document.getElementById('queue-archive-list');
+  var archCard = document.getElementById('queue-archive-card');
+
+  /* Summary stats */
+  var active   = items.filter(function(q){ return q.status !== 'done' && q.status !== 'cancelled'; });
+  var done     = items.filter(function(q){ return q.status === 'done'; });
+  var today    = new Date(); today.setHours(0,0,0,0);
+  var overdue  = active.filter(function(q){
+    if (!q.due) return false;
+    var d = new Date(q.due); d.setHours(0,0,0,0);
+    return d < today;
+  });
+  var pipelineVal = active.reduce(function(sum, q){ return sum + (parseFloat(q.price) || 0); }, 0);
+
+  document.getElementById('qs-active').textContent  = active.length;
+  document.getElementById('qs-total').textContent   = '$' + pipelineVal.toFixed(0);
+  document.getElementById('qs-done').textContent    = done.length;
+  document.getElementById('qs-overdue').textContent = overdue.length;
+
+  /* Badge on tab */
+  var badge = document.getElementById('queue-badge');
+  if (active.length > 0) {
+    badge.textContent = active.length;
+    badge.style.display = '';
+  } else {
+    badge.style.display = 'none';
+  }
+
+  /* Pipeline columns */
+  var cols = ['queued','inprogress','review'];
+  var dotClass = { queued:'qdot-queued', inprogress:'qdot-inprogress', review:'qdot-review' };
+  pipeline.innerHTML = '';
+  cols.forEach(function(status) {
+    var col = document.createElement('div');
+    col.className = 'queue-column';
+    var colItems = items.filter(function(q){ return q.status === status; });
+    col.innerHTML =
+      '<div class="queue-col-head">'
+      + '<span class="queue-col-head-dot ' + dotClass[status] + '"></span>'
+      + esc(QUEUE_STATUS_LABELS[status]) + ' (' + colItems.length + ')'
+      + '</div>';
+    if (colItems.length === 0) {
+      col.innerHTML += '<div style="font-size:0.72em;color:#444;padding:0.5em 0">— empty —</div>';
+    }
+    colItems.forEach(function(item) {
+      col.appendChild(buildQueueCard(item, today));
+    });
+    pipeline.appendChild(col);
+  });
+
+  /* Archive */
+  var archived = items.filter(function(q){ return q.status === 'done' || q.status === 'cancelled'; });
+  if (archived.length > 0) {
+    archCard.style.display = '';
+    archive.innerHTML = '';
+    archived.forEach(function(item) {
+      archive.appendChild(buildQueueCard(item, today));
+    });
+  } else {
+    archCard.style.display = 'none';
+  }
+}
+
+function buildQueueCard(item, today) {
+  var card = document.createElement('div');
+  card.className = 'queue-item';
+
+  var dueHtml = '';
+  if (item.due) {
+    var d = new Date(item.due); d.setHours(0,0,0,0);
+    var isOverdue = d < today && item.status !== 'done' && item.status !== 'cancelled';
+    dueHtml = '<div class="queue-item-due' + (isOverdue ? ' overdue' : '') + '">'
+      + (isOverdue ? '⚠ ' : '') + 'Due ' + item.due + '</div>';
+  }
+
+  card.innerHTML =
+    '<div class="queue-item-client">' + esc(item.client || '(no client)') + '</div>'
+    + '<div class="queue-item-type">' + esc(item.type || '') + (item.desc ? ' — ' + esc(item.desc) : '') + '</div>'
+    + (item.price ? '<div class="queue-item-price">$' + parseFloat(item.price).toFixed(0) + '</div>' : '')
+    + dueHtml
+    + (item.notes ? '<div style="font-size:0.7em;color:#555;margin-top:0.35em;line-height:1.5">' + esc(item.notes).replace(/\n/g,'<br>') + '</div>' : '')
+    + '<div class="queue-item-actions">'
+    +   '<button class="queue-item-btn" data-action="edit" data-id="' + esc(String(item.id)) + '">Edit</button>';
+
+  if (item.status !== 'done' && item.status !== 'cancelled') {
+    card.innerHTML +=
+      '<button class="queue-item-btn" data-action="next" data-id="' + esc(String(item.id)) + '">'
+      + nextStatusLabel(item.status) + '</button>';
+  }
+  card.innerHTML +=
+    '<button class="queue-item-btn del" data-action="del" data-id="' + esc(String(item.id)) + '">Delete</button>'
+    + '</div>';
+
+  card.addEventListener('click', function(e) {
+    var btn = e.target.closest('[data-action]');
+    if (!btn) return;
+    var id  = btn.dataset.id;
+    var act = btn.dataset.action;
+    if (act === 'edit') {
+      openQueueForm(id);
+    } else if (act === 'next') {
+      var cur  = CommissionData.getQueue().find(function(q){ return String(q.id) === id; });
+      if (cur) {
+        CommissionData.updateQueueItem(cur.id, { status: nextStatus(cur.status) });
+        renderQueueTab();
+      }
+    } else if (act === 'del') {
+      if (confirm('Delete this work order?')) {
+        CommissionData.deleteQueueItem(isNaN(id) ? id : Number(id));
+        renderQueueTab();
+        toast('Work order deleted.');
+      }
+    }
+  });
+  return card;
+}
+
+function nextStatus(s) {
+  var map = { queued: 'inprogress', inprogress: 'review', review: 'done' };
+  return map[s] || s;
+}
+function nextStatusLabel(s) {
+  var map = { queued: '→ Start', inprogress: '→ Review', review: '→ Done' };
+  return map[s] || '→';
+}
+
+function openQueueForm(editId) {
+  queueEditingId = editId || null;
+  var wrap = document.getElementById('queue-form-wrap');
+  var titleEl = document.getElementById('queue-form-title');
+  wrap.classList.add('open');
+
+  if (editId) {
+    titleEl.textContent = 'Edit Work Order';
+    var item = CommissionData.getQueue().find(function(q){ return String(q.id) === String(editId); });
+    if (item) {
+      document.getElementById('qf-client').value  = item.client  || '';
+      document.getElementById('qf-type').value    = item.type    || 'Character Art';
+      document.getElementById('qf-status').value  = item.status  || 'queued';
+      document.getElementById('qf-price').value   = item.price   || '';
+      document.getElementById('qf-due').value     = item.due     || '';
+      document.getElementById('qf-desc').value    = item.desc    || '';
+      document.getElementById('qf-notes').value   = item.notes   || '';
+      document.getElementById('qf-edit-id').value = String(item.id);
+    }
+  } else {
+    titleEl.textContent = 'New Work Order';
+    ['qf-client','qf-price','qf-due','qf-desc','qf-notes'].forEach(function(id){
+      document.getElementById(id).value = '';
+    });
+    document.getElementById('qf-type').value   = 'Character Art';
+    document.getElementById('qf-status').value = 'queued';
+    document.getElementById('qf-edit-id').value = '';
+  }
+  document.getElementById('queue-form-status').textContent = '';
+  document.getElementById('qf-client').focus();
+}
+
+document.getElementById('queue-add-btn').addEventListener('click', function() {
+  openQueueForm(null);
+});
+
+document.getElementById('queue-cancel-btn').addEventListener('click', function() {
+  document.getElementById('queue-form-wrap').classList.remove('open');
+  queueEditingId = null;
+});
+
+document.getElementById('queue-save-btn').addEventListener('click', function() {
+  var client = document.getElementById('qf-client').value.trim();
+  if (!client) {
+    var st = document.getElementById('queue-form-status');
+    st.textContent = 'Client name is required.';
+    st.className   = 'status-line err';
+    return;
+  }
+  var editId = document.getElementById('qf-edit-id').value;
+  var item = {
+    id:      editId ? (isNaN(editId) ? editId : Number(editId)) : undefined,
+    client:  client,
+    type:    document.getElementById('qf-type').value,
+    status:  document.getElementById('qf-status').value,
+    price:   document.getElementById('qf-price').value,
+    due:     document.getElementById('qf-due').value,
+    desc:    document.getElementById('qf-desc').value.trim(),
+    notes:   document.getElementById('qf-notes').value.trim()
+  };
+  CommissionData.saveQueueItem(item);
+  document.getElementById('queue-form-wrap').classList.remove('open');
+  queueEditingId = null;
+  renderQueueTab();
+  toast(editId ? 'Work order updated.' : 'Work order added.');
 });
 </script>
 
