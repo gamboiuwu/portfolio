@@ -74,6 +74,7 @@ Single IIFE that exposes `window.CommissionData`. All persistent data is stored 
 | `_gam_feedback_v1`     | Array   | Admin feedback / AI guidance notes              |
 | `_gam_analytics_v1`    | Array   | Site visitor analytics events (see below)       |
 | `_gam_palettes_v1`     | Array   | Saved color palettes (from Palette Extractor)   |
+| `_gam_queue_v1`        | Array   | Commission work-order queue (internal tracker)  |
 
 ### Public API
 ```js
@@ -98,6 +99,10 @@ CommissionData.clearAnalytics()
 CommissionData.getPalettes()
 CommissionData.savePalette(palette)
 CommissionData.deletePalette(id)
+CommissionData.getQueue()
+CommissionData.saveQueueItem(item)
+CommissionData.updateQueueItem(id, changes)
+CommissionData.deleteQueueItem(id)
 CommissionData.applyAll()         // apply fonts/styles to current page
 CommissionData.renderCommissions()
 CommissionData.renderStickers()
@@ -155,6 +160,7 @@ Password-protected (SHA-256 hash in localStorage, 5-attempt lockout). Session tr
 | Feedback    | Log issues/ideas for AI routine guidance; track status         |
 | Analytics   | Site visitor stats, session list, click heatmap visualizer     |
 | Palette     | Color palette extractor — sample dominant colors from artwork  |
+| Queue       | Internal commission work-order tracker (new, see below)        |
 
 ---
 
@@ -176,6 +182,41 @@ Admin-only tool for extracting and saving color palettes from artwork.
 - Canvas pixel access requires same-origin or CORS-enabled images
 - Data-URI images (uploaded) always work
 - External URLs may fail silently due to CORS; the tool shows a friendly warning
+
+---
+
+## Commission Queue Tracker (Admin → Queue tab) — NEW TOOL
+
+Internal work-order tracker for the artist to manage active commission jobs. This is **not** the public inquiry form — it is a private pipeline for tracking work in progress.
+
+**What it does:**
+- Add commission jobs with: client name, type, status, price, due date, description, notes
+- Kanban-style pipeline view: Queued → In Progress → In Review → Done
+- One-click "advance to next status" button on each card
+- Summary stats: active count, total pipeline value ($), completed count, overdue count
+- Overdue items highlighted in red (past due date, not yet done/cancelled)
+- Archive section for Done and Cancelled items
+- Badge on the Queue tab showing active work count
+
+**Work order schema:**
+```js
+{
+  id:        String | Number,  // auto-generated
+  client:    String,           // client name or alias
+  type:      String,           // Character Art / Telegram Stickers / Animation / etc.
+  status:    String,           // queued | inprogress | review | done | cancelled
+  price:     Number,           // USD amount
+  due:       String,           // YYYY-MM-DD date string
+  desc:      String,           // short description
+  notes:     String,           // internal notes
+  createdAt: ISO string,
+  updatedAt: ISO string
+}
+```
+
+**Storage:** `localStorage._gam_queue_v1` (Array of work order objects)
+
+**API:** `CommissionData.getQueue()`, `.saveQueueItem(item)`, `.updateQueueItem(id, changes)`, `.deleteQueueItem(id)`
 
 ---
 
@@ -239,4 +280,21 @@ Stored in `_gam_prices_v1`. Three sections: `digital`, `stickers`, `animation`. 
 
 ---
 
-*Last updated: 2026-05-22*
+## Homepage Sections (index.html)
+
+| Section             | Description                                                              |
+|---------------------|--------------------------------------------------------------------------|
+| Featured Works      | Dynamic cards rendered by `CommissionData.renderFeatured()`              |
+| Commission Status   | Animated pulse badge showing open/closed status; links to /commissions/  |
+| Bio Block           | Name, subtitle (BFA/minors/alias), bio paragraphs, discipline chips      |
+| Expertise Grid      | 6-cell grid: Illustration, Stickers, Animation, Fashion, Events, Education|
+| Works / Projects    | 5 tile cards: Yuka Designs, Commissions, NYFurs, letfexraut, Extortia    |
+| Footer              | Contact strip, social icons (Twitter, Instagram, ArtStation, Bandcamp, etc.), sys-status ticker |
+
+**Discipline chips** (`.disc-chip`): small bordered tags listing skills. Styled to match the label aesthetic.  
+**Expertise grid** (`.expertise-grid`): 3-column responsive grid, each cell has a monospace label (01 //, 02 //, …), serif title, and short description.  
+**Commission status badge** (`.comm-status`): monospace pill with animated green pulse dot. Links to `/commissions/`.
+
+---
+
+*Last updated: 2026-05-27*

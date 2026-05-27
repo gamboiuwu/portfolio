@@ -14,7 +14,8 @@ window.CommissionData = (function () {
     prices:    '_gam_prices_v1',
     feedback:  '_gam_feedback_v1',
     analytics: '_gam_analytics_v1',
-    palettes:  '_gam_palettes_v1'
+    palettes:  '_gam_palettes_v1',
+    queue:     '_gam_queue_v1'
   };
 
   var DEFAULTS = {
@@ -397,12 +398,38 @@ window.CommissionData = (function () {
       var list = CD.getPalettes().filter(function (p) { return p.id !== id; });
       localStorage.setItem(KEYS.palettes, JSON.stringify(list));
     },
+    /* Commission Queue */
+    getQueue: function () {
+      try { return JSON.parse(localStorage.getItem(KEYS.queue) || '[]'); } catch (e) { return []; }
+    },
+    saveQueueItem: function (item) {
+      var list = CD.getQueue();
+      item.id        = item.id        || (Date.now() + Math.random().toString(36).slice(2, 6));
+      item.createdAt = item.createdAt || new Date().toISOString();
+      item.updatedAt = new Date().toISOString();
+      var idx = list.findIndex(function (q) { return q.id === item.id; });
+      if (idx > -1) { list[idx] = item; } else { list.unshift(item); }
+      localStorage.setItem(KEYS.queue, JSON.stringify(list));
+    },
+    updateQueueItem: function (id, changes) {
+      var list = CD.getQueue();
+      var idx  = list.findIndex(function (q) { return q.id === id; });
+      if (idx > -1) {
+        list[idx] = Object.assign({}, list[idx], changes, { updatedAt: new Date().toISOString() });
+        localStorage.setItem(KEYS.queue, JSON.stringify(list));
+      }
+    },
+    deleteQueueItem: function (id) {
+      var list = CD.getQueue().filter(function (q) { return q.id !== id; });
+      localStorage.setItem(KEYS.queue, JSON.stringify(list));
+    },
     /* Utilities */
     loadGoogleFont: loadGoogleFont,
     applyAll:       applyAll,
     renderCommissions: renderCommissions,
     renderStickers:    renderStickers,
     renderFeatured:    renderFeatured,
+    renderPriceTables: renderPriceTables,
     esc:     esc,
     DEFAULTS: DEFAULTS
   };

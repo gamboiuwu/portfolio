@@ -9,25 +9,27 @@
 	<meta charset="utf-8" />
 	<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
 
-	<meta name="description" content="Portfolio of Anthony Ryabchikov – designer, developer, and creator of Yuka Designs. Creative work in techwear fashion, web development, and digital art.">
-	<meta name="keywords" content="portfolio, artist, gamboiuwu, anthony, ryabchikov">
+	<meta name="description" content="Anthony Ryabchikov (gamboiuwu) — freelance artist, character designer, and event director based in New York. Commission character art, Telegram stickers, animation, and more.">
+	<meta name="keywords" content="portfolio, artist, gamboiuwu, anthony, ryabchikov, character design, furry art, telegram stickers, digital illustration, animation, new york furs, yuka designs">
 	<meta name="author" content="Anthony Ryabchikov">
 	<meta name="theme-color" content="#2c2926">
-	<meta property="og:title" content="Anthony Ryabchikov">
-	<meta property="og:site_name" content="Anthony Ryabchikov | Designer, Developer, and Creator">
-	<meta property="og:description" content="Portfolio of Anthony Ryabchikov – designer, developer, and creator of Yuka Designs. Creative work in techwear fashion, web development, and digital art.">
+	<meta property="og:title" content="Anthony Ryabchikov — gamboiuwu">
+	<meta property="og:site_name" content="Anthony Ryabchikov | Artist &amp; Creator">
+	<meta property="og:description" content="Freelance artist specializing in character design, digital illustration, and animation. Founder of New York Furs and Yuka Designs. Now accepting commissions.">
 	<meta property="og:url" content="https://antryab.com">
-	<meta property="og:image" content="https://antryab.com/images/yuka_header.png">
-	<meta property="og:image:alt" content="Yuka header">
+	<meta property="og:image" content="https://antryab.com/images/yuka_header.jpg">
+	<meta property="og:image:alt" content="Yuka Designs — techwear by gamboiuwu">
 
-	<title>Anthony Ryabchikov | Designer, Developer, and Creator</title>
+	<title>Anthony Ryabchikov | gamboiuwu — Artist &amp; Creator</title>
 
 	<meta name="robots" content="index, follow" />
 
 	<meta name="twitter:card" content="summary_large_image" />
-	<meta name="twitter:title" content="Anthony Ryabchikov | Designer, Developer, and Creator" />
-	<meta name="twitter:description" content="Check out Anthony Ryabchikov's portfolio: techwear, code, art." />
-	<meta name="twitter:image" content="https://antryab.com/images/yuka_header.png" />
+	<meta name="twitter:site" content="@gamboiuwu" />
+	<meta name="twitter:creator" content="@gamboiuwu" />
+	<meta name="twitter:title" content="Anthony Ryabchikov — gamboiuwu" />
+	<meta name="twitter:description" content="Freelance character artist, Telegram sticker maker, and event director based in New York. Commissions open." />
+	<meta name="twitter:image" content="https://antryab.com/images/yuka_header.jpg" />
 
 	<link rel="icon" type="image/png" href="images/favicon.png" />
 	<link rel="stylesheet" href="assets/css/main.css" />
@@ -460,6 +462,110 @@
 		100% { transform: translateX(-100%); }
 	}
 
+	/* ── COMMISSION STATUS BADGE ─────────────────── */
+	.comm-status {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.45em;
+		font-family: 'Courier New', Courier, monospace;
+		font-size: 0.6em;
+		letter-spacing: 0.1em;
+		text-transform: uppercase;
+		color: var(--lite);
+		border: 1px solid var(--rule-mid);
+		padding: 0.3em 0.8em;
+		margin-bottom: 1.5em;
+		background: var(--paper2);
+	}
+	.comm-status-dot {
+		width: 6px; height: 6px;
+		border-radius: 50%;
+		background: #7a9a6e;
+		flex-shrink: 0;
+		animation: pulse-dot 2.4s ease-in-out infinite;
+	}
+	@keyframes pulse-dot {
+		0%, 100% { opacity: 1; transform: scale(1); }
+		50%       { opacity: 0.45; transform: scale(0.85); }
+	}
+	.comm-status a {
+		color: var(--mid) !important;
+		text-decoration: none !important;
+		border-bottom: 1px solid var(--rule-mid);
+		transition: color 0.2s, border-color 0.2s;
+		font-size: 1em;
+		letter-spacing: inherit;
+	}
+	.comm-status a:hover { color: var(--ink) !important; border-bottom-color: var(--ink); }
+
+	/* ── DISCIPLINES STRIP ────────────────────────── */
+	.disciplines {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.45em;
+		margin: 1.4em 0 0;
+	}
+	.disc-chip {
+		font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif;
+		font-size: 0.62em;
+		font-weight: 400;
+		letter-spacing: 0.1em;
+		text-transform: uppercase;
+		color: var(--lite);
+		border: 1px solid var(--rule-mid);
+		padding: 0.3em 0.7em;
+		background: transparent;
+		transition: color 0.2s, border-color 0.2s, background 0.2s;
+	}
+	.disc-chip:hover {
+		color: var(--ink);
+		border-color: rgba(44,41,38,0.35);
+		background: var(--paper2);
+	}
+
+	/* ── EXPERTISE SECTION ────────────────────────── */
+	.expertise-section {
+		padding-bottom: var(--section-gap, 3em);
+		border-bottom: 1px solid var(--rule);
+		margin-bottom: var(--section-gap, 3em);
+	}
+	.expertise-grid {
+		display: grid;
+		grid-template-columns: repeat(3, 1fr);
+		gap: 1px;
+		background: var(--rule);
+		margin-top: 1.5em;
+		border: 1px solid var(--rule);
+	}
+	.expertise-item {
+		background: var(--paper);
+		padding: 1.4em 1.6em;
+		transition: background 0.2s;
+	}
+	.expertise-item:hover { background: var(--paper2); }
+	.expertise-item-label {
+		font-family: 'Courier New', Courier, monospace;
+		font-size: 0.6em;
+		letter-spacing: 0.12em;
+		text-transform: uppercase;
+		color: var(--lite);
+		margin-bottom: 0.5em;
+	}
+	.expertise-item-title {
+		font-family: 'Cormorant Garamond', Georgia, serif;
+		font-size: 1.1em;
+		font-weight: 400;
+		color: var(--ink);
+		line-height: 1.3;
+		margin-bottom: 0.4em;
+	}
+	.expertise-item-desc {
+		font-size: 0.78em;
+		color: var(--lite);
+		line-height: 1.7;
+		margin: 0;
+	}
+
 	/* ── RESPONSIVE ──────────────────────────────── */
 	@media (max-width: 736px) {
 		.featured-card { flex-direction: column; }
@@ -467,6 +573,11 @@
 		.featured-img::after { background: linear-gradient(to bottom, transparent 50%, var(--paper2) 100%); }
 		.featured-body { padding: 1.5em 1.5em; }
 		.hero-name { font-size: 2.2em !important; }
+		.expertise-grid { grid-template-columns: 1fr; }
+		.comm-status { font-size: 0.58em; }
+	}
+	@media (max-width: 900px) {
+		.expertise-grid { grid-template-columns: repeat(2, 1fr); }
 	}
 	</style>
 </head>
@@ -495,7 +606,8 @@
 			<ul>
 				<li><a href="index.html">Home</a></li>
 				<li><a href="commissions/">Commissions</a></li>
-				<li><a href="">Examples</a></li>
+				<li><a href="https://www.artstation.com/gamboiuwu" target="_blank" rel="noopener">ArtStation</a></li>
+				<li><a href="https://instagram.com/gamboi.v" target="_blank" rel="noopener">Instagram</a></li>
 				<li><a href="mailto:gamboiuwu@nyfurs.org">Contact</a></li>
 			</ul>
 		</nav>
@@ -515,10 +627,63 @@
 				<!-- Bio -->
 				<div class="bio-block">
 					<span class="section-label" data-sys="// SYS.IDENTITY">About</span>
+					<div class="comm-status">
+						<span class="comm-status-dot"></span>
+						commissions open &nbsp;&mdash;&nbsp; <a href="commissions/">view pricing &amp; inquire</a>
+					</div>
 					<h1 class="hero-name" data-text="Anthony Ryabchikov">Anthony Ryabchikov</h1>
 					<h2 class="bio-subtitle">Studio Artist BFA &middot; Business &amp; Liberal Arts Minor &middot; Japanese Minor &mdash; Fall 2026 &nbsp;&nbsp; <span style="font-family:'Courier New',monospace;color:#8c887f;font-size:0.9em">gamboiuwu</span></h2>
-					<p>New York–based freelance artist, designer, and event director specializing in character design, digital illustration, animation, and videography. With over ten years in studio art and a background spanning Adobe Creative Cloud, 2D animation, and Blender, Anthony brings a technically rigorous and deeply personal voice to every commission.</p>
-					<p>Founder of <a href="https://nyfurs.org/" target="_blank" rel="noopener">New York Furs</a> — an independent not-for-profit running monthly community events including Phoenix Bark and Fuwa Furry Fest — and CEO of <a href="https://yuka.design/" target="_blank" rel="noopener">Yuka Designs</a>, an eco-friendly techwear label built on sustainable materials and in-house artistry. Award-winning game developer (Resonance Awards 2021).</p>
+					<p>New York–based freelance artist, character designer, and event director. Ten-plus years in studio art with a focus on character design, digital illustration, animation, and Telegram sticker production. Work is technically precise and deeply personal — built in Adobe Creative Cloud, Blender, and After Effects with strong roots in traditional drawing and color theory.</p>
+					<p>Founder of <a href="https://nyfurs.org/" target="_blank" rel="noopener">New York Furs</a> — an independent not-for-profit running monthly community events including Phoenix Bark and Fuwa Furry Fest — and CEO of <a href="https://yuka.design/" target="_blank" rel="noopener">Yuka Designs</a>, a futuristic eco-friendly techwear label. Award-winning game developer (Resonance Awards 2021: Most Innovative Project &amp; Best Sound Design). Drawing instructor at Anthro Art Academy.</p>
+					<div class="disciplines">
+						<span class="disc-chip">Character Design</span>
+						<span class="disc-chip">Digital Illustration</span>
+						<span class="disc-chip">Telegram Stickers</span>
+						<span class="disc-chip">2D Animation</span>
+						<span class="disc-chip">Blender / 3D</span>
+						<span class="disc-chip">Videography</span>
+						<span class="disc-chip">Adobe CC</span>
+						<span class="disc-chip">Techwear Design</span>
+						<span class="disc-chip">Event Direction</span>
+						<span class="disc-chip">Art Education</span>
+					</div>
+				</div>
+
+				<!-- Expertise -->
+				<div class="expertise-section">
+					<span class="section-label" data-sys="// SYS.PRACTICE">Practice</span>
+					<div class="expertise-grid">
+						<div class="expertise-item">
+							<div class="expertise-item-label">01 // ILLUSTRATION</div>
+							<div class="expertise-item-title">Character &amp; Creature Design</div>
+							<p class="expertise-item-desc">Fully rendered commissions from headshot to complex full-body with environment. Sketch, flat, flat-shade, and complex tiers available.</p>
+						</div>
+						<div class="expertise-item">
+							<div class="expertise-item-label">02 // STICKERS</div>
+							<div class="expertise-item-title">Telegram Sticker Packs</div>
+							<p class="expertise-item-desc">Simple and complex sticker packs optimized for Telegram. Packs of 1, 3, 5, or 10 — expressive, on-brand, and fast.</p>
+						</div>
+						<div class="expertise-item">
+							<div class="expertise-item-label">03 // ANIMATION</div>
+							<div class="expertise-item-title">2D Animated Loops</div>
+							<p class="expertise-item-desc">Looping animations for use as emotes, stream overlays, or social content. Built in After Effects and Adobe Animate.</p>
+						</div>
+						<div class="expertise-item">
+							<div class="expertise-item-label">04 // FASHION</div>
+							<div class="expertise-item-title">Techwear &amp; Apparel</div>
+							<p class="expertise-item-desc">Futuristic, eco-friendly apparel through <a href="https://yuka.design/" target="_blank" rel="noopener">Yuka Designs</a>. Designed and produced in-house — no dropshipping.</p>
+						</div>
+						<div class="expertise-item">
+							<div class="expertise-item-label">05 // EVENTS</div>
+							<div class="expertise-item-title">Community &amp; Event Direction</div>
+							<p class="expertise-item-desc">Founder and board director of <a href="https://nyfurs.org/" target="_blank" rel="noopener">New York Furs</a>, producing Phoenix Bark, Fuwa Furry Fest, and Anthro Art Academy.</p>
+						</div>
+						<div class="expertise-item">
+							<div class="expertise-item-label">06 // EDUCATION</div>
+							<div class="expertise-item-title">Art Instruction</div>
+							<p class="expertise-item-desc">Drawing instructor covering character anatomy, color theory, and background art — open to all skill levels at Anthro Art Academy.</p>
+						</div>
+					</div>
 				</div>
 
 				<!-- Selected Works -->
@@ -533,10 +698,10 @@
 						<span class="image">
 							<img src="images/yuka.png" alt="Yuka Designs techwear brand" />
 						</span>
-						<a href="https://yuka.design/">
+						<a href="https://yuka.design/" target="_blank" rel="noopener">
 							<h2>Yuka Designs</h2>
 							<div class="content">
-								<p>An eco-friendly techwear brand.</p>
+								<p>CEO &amp; founder. Futuristic eco-techwear — in-house design, production, and distribution. Est. 2023.</p>
 							</div>
 						</a>
 					</article>
@@ -547,7 +712,7 @@
 						<a href="commissions/">
 							<h2>Commissions</h2>
 							<div class="content">
-								<p>Freelance commissions — digital art, stickers, animation.</p>
+								<p>Open for character art, Telegram sticker packs, and animation. Detailed pricing and inquiry form available.</p>
 							</div>
 						</a>
 					</article>
@@ -555,10 +720,10 @@
 						<span class="image">
 							<img src="images/fff.png" alt="New York Furs" />
 						</span>
-						<a href="https://nyfurs.org/">
+						<a href="https://nyfurs.org/" target="_blank" rel="noopener">
 							<h2>New York Furs</h2>
 							<div class="content">
-								<p>Board Director and Founder of the not-for-profit bringing unique events to the NY community.</p>
+								<p>Founder &amp; board director. Independent not-for-profit producing Phoenix Bark, Fuwa Furry Fest, and more.</p>
 							</div>
 						</a>
 					</article>
@@ -566,10 +731,10 @@
 						<span class="image">
 							<img src="images/letfexraut.jpg" alt="letfexraut music" />
 						</span>
-						<a href="https://letfexraut.bandcamp.com/">
+						<a href="https://letfexraut.bandcamp.com/" target="_blank" rel="noopener">
 							<h2>letfexraut</h2>
 							<div class="content">
-								<p>Music alias ranging from breakcore to post-2000s trance.</p>
+								<p>Music alias. Breakcore, post-2000s trance, and experimental electronic — available on Bandcamp.</p>
 							</div>
 						</a>
 					</article>
@@ -577,10 +742,10 @@
 						<span class="image">
 							<img src="images/extortia.png" alt="Extortia game" />
 						</span>
-						<a href="https://www.youtube.com/watch?v=-MMhvUsZJW4">
+						<a href="https://www.youtube.com/watch?v=-MMhvUsZJW4" target="_blank" rel="noopener">
 							<h2>Extortia</h2>
 							<div class="content">
-								<p>Award-winning sci-fi indie game. Resonance Awards 2021: Most Innovative Project &amp; Best Sound Design.</p>
+								<p>Sci-fi indie game. Resonance Awards 2021 — Most Innovative Project &amp; Best Sound Design.</p>
 							</div>
 						</a>
 					</article>
@@ -599,6 +764,7 @@
 						<p>
 							<a href="mailto:gamboiuwu@nyfurs.org">gamboiuwu@nyfurs.org</a>
 							&nbsp;&middot;&nbsp; Discord / Telegram: <code>@gamboiuwu</code>
+							&nbsp;&middot;&nbsp; Instagram: <code>@gamboi.v</code>
 						</p>
 					</div>
 					<div class="contact-strip-right">
@@ -608,19 +774,21 @@
 
 				<section>
 					<ul class="icons">
-						<li><a href="https://x.com/gamboiuwu" class="icon brands style2 fa-twitter"><span class="label">Twitter</span></a></li>
-						<li><a href="https://instagram.com/gamboi.v" class="icon brands style2 fa-instagram"><span class="label">Instagram</span></a></li>
+						<li><a href="https://x.com/gamboiuwu" class="icon brands style2 fa-twitter" target="_blank" rel="noopener"><span class="label">Twitter / X</span></a></li>
+						<li><a href="https://instagram.com/gamboi.v" class="icon brands style2 fa-instagram" target="_blank" rel="noopener"><span class="label">Instagram</span></a></li>
+						<li><a href="https://www.artstation.com/gamboiuwu" class="icon brands style2 fa-artstation" target="_blank" rel="noopener"><span class="label">ArtStation</span></a></li>
 						<li><a href="mailto:gamboiuwu@nyfurs.org" class="icon solid style2 fa-envelope"><span class="label">Email</span></a></li>
-						<li><a href="https://yuka.design/" class="icon solid style2 fa-globe"><span class="label">Yuka Designs</span></a></li>
-						<li><a href="https://events.nyfurs.org" class="icon solid style2 fa-paw"><span class="label">NYFurs</span></a></li>
-						<li><a href="https://www.artstation.com/gamboiuwu" class="icon brands style2 fa-artstation"><span class="label">ArtStation</span></a></li>
+						<li><a href="https://yuka.design/" class="icon solid style2 fa-globe" target="_blank" rel="noopener"><span class="label">Yuka Designs</span></a></li>
+						<li><a href="https://nyfurs.org/" class="icon solid style2 fa-paw" target="_blank" rel="noopener"><span class="label">NYFurs</span></a></li>
+						<li><a href="https://letfexraut.bandcamp.com/" class="icon brands style2 fa-bandcamp" target="_blank" rel="noopener"><span class="label">Bandcamp</span></a></li>
 					</ul>
 				</section>
 
 				<ul class="copyright">
-					<li>&copy; Anthony Ryabchikov. All rights reserved.</li>
+					<li>&copy; 2026 Anthony Ryabchikov. All rights reserved.</li>
+					<li>New York, NY</li>
 				</ul>
-				<div class="sys-status"><span>SYS::PORTFOLIO.v2 &nbsp;&nbsp; STATUS::ONLINE &nbsp;&nbsp; ARTIST::RYABCHIKOV &nbsp;&nbsp; DOMAIN::ANTRYAB.COM &nbsp;&nbsp; BUILD::2026 &nbsp;&nbsp; SIGNAL::ACTIVE &nbsp;&nbsp;</span></div>
+				<div class="sys-status"><span>SYS::PORTFOLIO.v3 &nbsp;&nbsp; STATUS::ONLINE &nbsp;&nbsp; ARTIST::RYABCHIKOV &nbsp;&nbsp; ALIAS::GAMBOIUWU &nbsp;&nbsp; DOMAIN::ANTRYAB.COM &nbsp;&nbsp; COMMISSIONS::OPEN &nbsp;&nbsp; SIGNAL::ACTIVE &nbsp;&nbsp; NODE::NY &nbsp;&nbsp;</span></div>
 
 			</div>
 		</footer>
