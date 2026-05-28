@@ -508,6 +508,21 @@
 		.tc-label { color: #888; min-width: 130px; font-family: monospace; }
 		.tc-count { color: #555; font-size: 0.9em; min-width: 2.5em; text-align: right; }
 
+		/* ── Analytics Trend Chart ── */
+		#analytics-trend-canvas {
+		  display: block; width: 100%;
+		}
+		.referrer-bar-wrap {
+		  display: flex; align-items: center; gap: 0.6em;
+		  padding: 0.4em 0; border-bottom: 1px solid rgba(201,201,201,0.06);
+		  font-size: 0.82em;
+		}
+		.referrer-bar-wrap:last-child { border-bottom: none; }
+		.ref-label { color: #888; min-width: 120px; font-family: monospace; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+		.ref-bar-outer { flex: 1; height: 6px; background: rgba(201,201,201,0.08); border-radius: 3px; overflow: hidden; }
+		.ref-bar-inner { height: 100%; border-radius: 3px; background: rgba(201,168,124,0.65); }
+		.ref-count { color: #555; font-size: 0.9em; min-width: 2.5em; text-align: right; }
+
 		/* ── Palette Tab ── */
 		.palette-extract-area {
 		  display: flex; flex-direction: column; gap: 0.75em;
@@ -1134,8 +1149,19 @@
 				</div>
 
 				<div class="admin-card">
-					<h3>Pages</h3>
-					<div id="analytics-pages-wrap"></div>
+					<h3>Traffic Trend — Past 30 Days</h3>
+					<canvas id="analytics-trend-canvas" width="560" height="120"></canvas>
+				</div>
+
+				<div class="admin-card" style="display:grid;grid-template-columns:1fr 1fr;gap:1.5em">
+					<div>
+						<h3 style="margin-top:0">Pages</h3>
+						<div id="analytics-pages-wrap"></div>
+					</div>
+					<div>
+						<h3 style="margin-top:0">Traffic Sources</h3>
+						<div id="analytics-referrers"></div>
+					</div>
 				</div>
 
 				<div class="admin-card">
@@ -2530,6 +2556,79 @@ function renderAnalyticsTab() {
     chip(fmtSec(avgSec), 'Avg. Time') +
     chip(topPage, 'Top Page');
 
+  /* 30-day traffic trend chart */
+  (function() {
+    var canvas = document.getElementById('analytics-trend-canvas');
+    if (!canvas) return;
+    var ctx = canvas.getContext('2d');
+    var W = canvas.width, H = canvas.height;
+    var pad = { t: 14, r: 12, b: 26, l: 36 };
+    var cW = W - pad.l - pad.r, cH = H - pad.t - pad.b;
+
+    /* Build 30-day buckets */
+    var days = [], now = new Date();
+    for (var di = 29; di >= 0; di--) {
+      var d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - di);
+      days.push({
+        label: di === 0 ? 'today' : (d.getMonth()+1) + '/' + d.getDate(),
+        dateStr: d.toDateString(),
+        views: 0
+      });
+    }
+    pvEvents.forEach(function(e) {
+      var ds = new Date(e.ts).toDateString();
+      var bucket = days.find(function(d){ return d.dateStr === ds; });
+      if (bucket) bucket.views++;
+    });
+
+    var maxViews = Math.max.apply(null, days.map(function(d){ return d.views; }).concat([1]));
+    ctx.clearRect(0, 0, W, H);
+
+    /* Grid */
+    [0, 0.5, 1].forEach(function(t) {
+      var y = pad.t + cH * (1 - t);
+      ctx.strokeStyle = 'rgba(201,201,201,0.06)'; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(pad.l, y); ctx.lineTo(pad.l + cW, y); ctx.stroke();
+      ctx.fillStyle = '#3a3a3a'; ctx.font = '9px monospace'; ctx.textAlign = 'right';
+      ctx.fillText(Math.round(maxViews * t), pad.l - 4, y + 3);
+    });
+
+    /* Area fill */
+    ctx.beginPath();
+    days.forEach(function(day, i) {
+      var x = pad.l + (i / (days.length - 1)) * cW;
+      var y = pad.t + cH * (1 - day.views / maxViews);
+      i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    });
+    ctx.lineTo(pad.l + cW, pad.t + cH);
+    ctx.lineTo(pad.l, pad.t + cH);
+    ctx.closePath();
+    var areaGrad = ctx.createLinearGradient(0, pad.t, 0, pad.t + cH);
+    areaGrad.addColorStop(0, 'rgba(201,168,124,0.22)');
+    areaGrad.addColorStop(1, 'rgba(201,168,124,0.02)');
+    ctx.fillStyle = areaGrad;
+    ctx.fill();
+
+    /* Line */
+    ctx.beginPath();
+    days.forEach(function(day, i) {
+      var x = pad.l + (i / (days.length - 1)) * cW;
+      var y = pad.t + cH * (1 - day.views / maxViews);
+      i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    });
+    ctx.strokeStyle = 'rgba(201,168,124,0.75)'; ctx.lineWidth = 1.5;
+    ctx.stroke();
+
+    /* X-axis labels — every 5 days */
+    ctx.fillStyle = '#3a3a3a'; ctx.font = '8px monospace'; ctx.textAlign = 'center';
+    days.forEach(function(day, i) {
+      if (i % 5 === 0 || i === days.length - 1) {
+        var x = pad.l + (i / (days.length - 1)) * cW;
+        ctx.fillText(day.label, x, H - 4);
+      }
+    });
+  })();
+
   /* Pages table */
   var pageRows = Object.keys(pageCounts).sort(function(a,b){ return pageCounts[b]-pageCounts[a]; });
   var pagesHtml = '<table class="analytics-page-table"><thead><tr>' +
@@ -2543,6 +2642,24 @@ function renderAnalyticsTab() {
   if (!pageRows.length) pagesHtml += '<tr><td colspan="4" style="color:#444;text-align:center;padding:1.5em">No data yet — visit the site first.</td></tr>';
   pagesHtml += '</tbody></table>';
   document.getElementById('analytics-pages-wrap').innerHTML = pagesHtml;
+
+  /* Referrer breakdown */
+  var refCounts = {};
+  pvEvents.forEach(function(e) {
+    var r = e.ref || 'direct';
+    refCounts[r] = (refCounts[r] || 0) + 1;
+  });
+  var refKeys = Object.keys(refCounts).sort(function(a,b){ return refCounts[b] - refCounts[a]; }).slice(0, 8);
+  var maxRef = refKeys.length ? refCounts[refKeys[0]] : 1;
+  var refHtml = refKeys.map(function(r) {
+    var pct = Math.round(refCounts[r] / maxRef * 100);
+    return '<div class="referrer-bar-wrap">' +
+      '<span class="ref-label" title="' + escHtml(r) + '">' + escHtml(r.slice(0, 24)) + '</span>' +
+      '<div class="ref-bar-outer"><div class="ref-bar-inner" style="width:' + pct + '%"></div></div>' +
+      '<span class="ref-count">' + refCounts[r] + '</span>' +
+      '</div>';
+  }).join('') || '<p style="color:#444;font-size:0.85em">No referrer data yet.</p>';
+  document.getElementById('analytics-referrers').innerHTML = refHtml;
 
   /* Top clicked elements */
   var elCounts = {};
