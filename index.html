@@ -603,6 +603,49 @@
 	.reveal-stagger.visible > *:nth-child(5) { opacity:1; transform:none; transition-delay: 0.28s; }
 	.reveal-stagger.visible > *:nth-child(6) { opacity:1; transform:none; transition-delay: 0.35s; }
 
+	/* ── STATS ROW ──────────────────────────────── */
+	.stats-row {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0;
+		border: 1px solid var(--rule-mid);
+		margin-top: 1.75em;
+		background: var(--paper2);
+		overflow: hidden;
+	}
+	.stat-item {
+		flex: 1 1 80px;
+		padding: 0.9em 1.2em;
+		border-right: 1px solid var(--rule);
+		text-align: center;
+		transition: background 0.2s;
+	}
+	.stat-item:last-child { border-right: none; }
+	.stat-item:hover { background: rgba(44,41,38,0.04); }
+	.stat-num {
+		font-family: 'Cormorant Garamond', Georgia, serif;
+		font-size: 1.85em;
+		font-weight: 300;
+		color: var(--ink);
+		line-height: 1;
+		display: block;
+	}
+	.stat-label {
+		font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif;
+		font-size: 0.58em;
+		font-weight: 400;
+		letter-spacing: 0.1em;
+		text-transform: uppercase;
+		color: var(--lite);
+		display: block;
+		margin-top: 0.3em;
+	}
+	@media (max-width: 736px) {
+		.stats-row { display: grid; grid-template-columns: repeat(2, 1fr); }
+		.stat-item { border-right: 1px solid var(--rule); border-bottom: 1px solid var(--rule); }
+		.stat-item:nth-child(2n) { border-right: none; }
+	}
+
 	/* ── SCAN-LINE ACCENT (very subtle, cyberpunk) ── */
 	/* Only visible on tall viewport elements — stays behind artwork */
 	.featured-img::before {
@@ -672,6 +715,29 @@
 					<h2 class="bio-subtitle">Studio Artist BFA &middot; Business &amp; Liberal Arts Minor &middot; Japanese Minor &mdash; Fall 2026 &nbsp;&nbsp; <span style="font-family:'Courier New',monospace;color:#8c887f;font-size:0.9em">gamboiuwu</span></h2>
 					<p>New York–based freelance artist, character designer, and event director. Over a decade in studio art with a focus on character design, digital illustration, 2D animation, and Telegram sticker production. Work is technically precise and deeply personal — built in Adobe Creative Cloud, Blender, and After Effects, grounded in traditional drawing and color theory.</p>
 					<p>Ten-year senior Lua programmer (Roblox), award-winning indie game developer (Resonance Awards 2021: Most Innovative Project &amp; Best Sound Design), and abstract/sci-fi visual artist. Founder of <a href="https://nyfurs.org/" target="_blank" rel="noopener">New York Furs</a> — producing Phoenix Bark, Fuwa Furry Fest, and Anthro Art Academy — and CEO of <a href="https://yuka.design/" target="_blank" rel="noopener">Yuka Designs</a>, a futuristic eco-friendly techwear label. Available for commissions, collaborations, and speaking at events.</p>
+					<div class="stats-row">
+						<div class="stat-item">
+							<span class="stat-num">10+</span>
+							<span class="stat-label">Years Studio Art</span>
+						</div>
+						<div class="stat-item">
+							<span class="stat-num">7+</span>
+							<span class="stat-label">Years Adobe CC</span>
+						</div>
+						<div class="stat-item">
+							<span class="stat-num">2</span>
+							<span class="stat-label">Resonance Awards</span>
+						</div>
+						<div class="stat-item">
+							<span class="stat-num">3</span>
+							<span class="stat-label">Active Projects</span>
+						</div>
+						<div class="stat-item">
+							<span class="stat-num">NY</span>
+							<span class="stat-label">Based in New York</span>
+						</div>
+					</div>
+
 					<div class="disciplines">
 						<span class="disc-chip">Character Design</span>
 						<span class="disc-chip">Digital Illustration</span>
