@@ -648,6 +648,92 @@
 		  margin-bottom: 0.75em;
 		}
 		@media (max-width: 600px) { .queue-form-grid { grid-template-columns: 1fr; } }
+
+		/* ── Revenue Tab ── */
+		.rev-stat-grid {
+		  display: grid;
+		  grid-template-columns: repeat(4, 1fr);
+		  gap: 0.75em;
+		  margin-bottom: 1.75em;
+		}
+		@media (max-width: 700px) { .rev-stat-grid { grid-template-columns: repeat(2, 1fr); } }
+		.rev-stat {
+		  background: rgba(255,255,255,0.02);
+		  border: 1px solid rgba(201,201,201,0.1);
+		  border-radius: 6px;
+		  padding: 1em 1.1em;
+		  text-align: center;
+		}
+		.rev-stat-value {
+		  font-size: 1.5em;
+		  font-weight: 700;
+		  color: #c9a87c;
+		  font-family: 'Courier New', monospace;
+		  line-height: 1;
+		}
+		.rev-stat-label {
+		  font-size: 0.62em;
+		  font-weight: 900;
+		  letter-spacing: 0.12em;
+		  text-transform: uppercase;
+		  color: #555;
+		  margin-top: 0.35em;
+		}
+		.rev-charts-row {
+		  display: grid;
+		  grid-template-columns: 3fr 1.2fr;
+		  gap: 1em;
+		  margin-bottom: 1.25em;
+		}
+		@media (max-width: 700px) { .rev-charts-row { grid-template-columns: 1fr; } }
+		.rev-chart-wrap {
+		  background: rgba(255,255,255,0.015);
+		  border: 1px solid rgba(201,201,201,0.1);
+		  border-radius: 6px;
+		  padding: 0.9em 1em 0.7em;
+		  overflow: hidden;
+		}
+		.rev-chart-title {
+		  font-size: 0.64em;
+		  font-weight: 900;
+		  letter-spacing: 0.12em;
+		  text-transform: uppercase;
+		  color: #555;
+		  margin-bottom: 0.65em;
+		}
+		#rev-monthly-canvas,
+		#rev-type-canvas {
+		  display: block;
+		  width: 100%;
+		  height: auto;
+		}
+		.rev-client-table {
+		  width: 100%;
+		  border-collapse: collapse;
+		  font-size: 0.82em;
+		}
+		.rev-client-table th {
+		  text-align: left;
+		  padding: 0.4em 0.6em;
+		  color: #555;
+		  font-size: 0.78em;
+		  text-transform: uppercase;
+		  letter-spacing: 0.09em;
+		  border-bottom: 1px solid rgba(201,201,201,0.1);
+		}
+		.rev-client-table td {
+		  padding: 0.5em 0.6em;
+		  color: #aaa;
+		  border-bottom: 1px solid rgba(201,201,201,0.06);
+		  font-family: monospace;
+		}
+		.rev-client-table tr:last-child td { border-bottom: none; }
+		.rev-empty-note {
+		  text-align: center;
+		  padding: 2em 1em;
+		  color: #444;
+		  font-size: 0.85em;
+		}
 	</style>
 </head>
 <body class="is-preload">
@@ -719,6 +805,7 @@
 				<button class="admin-tab" data-tab="analytics">Analytics</button>
 				<button class="admin-tab" data-tab="palette">Palette</button>
 				<button class="admin-tab" data-tab="queue">Queue <span id="queue-badge" class="inq-badge" style="display:none"></span></button>
+				<button class="admin-tab" data-tab="revenue">Revenue</button>
 			</div>
 
 			<!-- ============ GALLERY TAB ============ -->
@@ -1212,6 +1299,62 @@
 				</div>
 
 			</div>
+
+			<!-- ===================== REVENUE TAB ===================== -->
+			<div id="tab-revenue" class="tab-content">
+				<div class="admin-card">
+					<h3>Revenue Dashboard</h3>
+					<p class="hint">Financial overview derived from your Commission Queue. Items marked <strong>Done</strong> in the Queue tab count as earned revenue. Pipeline includes all active (non-done, non-cancelled) orders.</p>
+
+					<div class="rev-stat-grid">
+						<div class="rev-stat">
+							<div class="rev-stat-value" id="rev-total">$0</div>
+							<div class="rev-stat-label">Total Earned</div>
+						</div>
+						<div class="rev-stat">
+							<div class="rev-stat-value" id="rev-pipeline">$0</div>
+							<div class="rev-stat-label">Pipeline Value</div>
+						</div>
+						<div class="rev-stat">
+							<div class="rev-stat-value" id="rev-avg">—</div>
+							<div class="rev-stat-label">Avg. Commission</div>
+						</div>
+						<div class="rev-stat">
+							<div class="rev-stat-value" id="rev-rate">—</div>
+							<div class="rev-stat-label">Completion Rate</div>
+						</div>
+					</div>
+
+					<div class="rev-charts-row">
+						<div class="rev-chart-wrap">
+							<div class="rev-chart-title">Monthly Earnings — Past 12 Months</div>
+							<canvas id="rev-monthly-canvas" width="560" height="170"></canvas>
+						</div>
+						<div class="rev-chart-wrap">
+							<div class="rev-chart-title">Revenue by Type</div>
+							<canvas id="rev-type-canvas" width="220" height="220"></canvas>
+						</div>
+					</div>
+
+					<div class="rev-chart-wrap">
+						<div class="rev-chart-title">Top Clients — by Revenue</div>
+						<table class="rev-client-table">
+							<thead>
+								<tr>
+									<th>Client</th>
+									<th>Total Earned</th>
+									<th>Commissions</th>
+									<th>Avg. Value</th>
+								</tr>
+							</thead>
+							<tbody id="rev-client-rows">
+								<tr><td colspan="4" class="rev-empty-note">No completed commissions yet — mark Queue items as Done to see data here.</td></tr>
+							</tbody>
+						</table>
+					</div>
+
+				</div>
+			</div><!-- /#tab-revenue -->
 
 		</div><!-- /#admin-dash -->
 		<input type="file" id="img-file-input" accept="image/*" style="display:none" />
@@ -2198,6 +2341,9 @@ document.addEventListener('click', function(e){
   if (e.target.dataset && e.target.dataset.tab === 'queue') {
     renderQueueTab();
   }
+  if (e.target.dataset && e.target.dataset.tab === 'revenue') {
+    renderRevenueDashboard();
+  }
 });
 
 /* ================================================================
@@ -2971,6 +3117,191 @@ document.getElementById('queue-save-btn').addEventListener('click', function() {
   renderQueueTab();
   toast(editId ? 'Work order updated.' : 'Work order added.');
 });
+
+/* ================================================================
+   REVENUE DASHBOARD
+================================================================ */
+
+function renderRevenueDashboard() {
+  var items = CommissionData.getQueue();
+
+  var totalEarned = 0, pipelineVal = 0, completedCount = 0, cancelledCount = 0;
+  var typeEarned = {}, clientData = {}, monthMap = {};
+
+  items.forEach(function(item) {
+    var price = parseFloat(item.price) || 0;
+    if (item.status === 'done') {
+      totalEarned += price;
+      completedCount++;
+      var dateStr = item.updatedAt || item.createdAt;
+      if (dateStr) {
+        var d = new Date(dateStr);
+        var mk = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+        monthMap[mk] = (monthMap[mk] || 0) + price;
+      }
+      var t = item.type || 'Other';
+      typeEarned[t] = (typeEarned[t] || 0) + price;
+      var c = (item.client || 'Unknown').trim();
+      if (!clientData[c]) clientData[c] = { earned: 0, count: 0 };
+      clientData[c].earned += price;
+      clientData[c].count++;
+    } else if (item.status === 'cancelled') {
+      cancelledCount++;
+    } else {
+      pipelineVal += price;
+    }
+  });
+
+  var activeDenom = items.length - cancelledCount || 1;
+  var avgVal = completedCount > 0 ? totalEarned / completedCount : 0;
+  var compRate = items.length > 0 ? Math.round(completedCount / activeDenom * 100) : null;
+
+  document.getElementById('rev-total').textContent    = '$' + totalEarned.toFixed(0);
+  document.getElementById('rev-pipeline').textContent = '$' + pipelineVal.toFixed(0);
+  document.getElementById('rev-avg').textContent      = avgVal > 0 ? '$' + avgVal.toFixed(0) : '—';
+  document.getElementById('rev-rate').textContent     = compRate !== null ? compRate + '%' : '—';
+
+  _drawMonthlyChart(monthMap);
+  _drawTypeChart(typeEarned, totalEarned);
+
+  var clients = Object.keys(clientData).sort(function(a, b) {
+    return clientData[b].earned - clientData[a].earned;
+  });
+  var tbody = document.getElementById('rev-client-rows');
+  if (clients.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="4" class="rev-empty-note">No completed commissions yet — mark Queue items as Done to see data here.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = clients.slice(0, 12).map(function(c) {
+    var d = clientData[c];
+    var avg = d.count > 0 ? '$' + (d.earned / d.count).toFixed(0) : '—';
+    return '<tr><td>' + esc(c) + '</td><td>$' + d.earned.toFixed(0) + '</td><td>' + d.count + '</td><td>' + avg + '</td></tr>';
+  }).join('');
+}
+
+function _drawMonthlyChart(monthMap) {
+  var canvas = document.getElementById('rev-monthly-canvas');
+  if (!canvas) return;
+  var ctx = canvas.getContext('2d');
+  var W = canvas.width, H = canvas.height;
+
+  var months = [];
+  var now = new Date();
+  for (var i = 11; i >= 0; i--) {
+    var d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    var mk = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+    months.push({ key: mk, label: d.toLocaleDateString('en-US', { month: 'short' }), value: monthMap[mk] || 0 });
+  }
+
+  var pad = { t: 22, r: 12, b: 30, l: 46 };
+  var cW = W - pad.l - pad.r;
+  var cH = H - pad.t - pad.b;
+  var maxVal = Math.max.apply(null, months.map(function(m) { return m.value; }).concat([1]));
+
+  ctx.clearRect(0, 0, W, H);
+
+  [0, 0.25, 0.5, 0.75, 1].forEach(function(t) {
+    var y = pad.t + cH * (1 - t);
+    ctx.strokeStyle = 'rgba(201,201,201,0.06)';
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(pad.l, y); ctx.lineTo(pad.l + cW, y); ctx.stroke();
+    ctx.fillStyle = '#3e3e3e';
+    ctx.font = '9px monospace';
+    ctx.textAlign = 'right';
+    ctx.fillText('$' + Math.round(maxVal * t), pad.l - 5, y + 3);
+  });
+
+  var slotW = cW / months.length;
+  var barW  = Math.max(slotW * 0.62, 4);
+  months.forEach(function(m, i) {
+    var x    = pad.l + i * slotW + (slotW - barW) / 2;
+    var barH = cH * (m.value / maxVal);
+    var y    = pad.t + cH - barH;
+    if (m.value > 0) {
+      var grad = ctx.createLinearGradient(0, y, 0, y + barH);
+      grad.addColorStop(0, 'rgba(201,168,124,0.9)');
+      grad.addColorStop(1, 'rgba(201,168,124,0.3)');
+      ctx.fillStyle = grad;
+      ctx.fillRect(x, y, barW, barH);
+      ctx.fillStyle = '#888';
+      ctx.font = '8px monospace';
+      ctx.textAlign = 'center';
+      if (barH > 16) ctx.fillText('$' + m.value.toFixed(0), x + barW / 2, y - 3);
+    } else {
+      ctx.fillStyle = 'rgba(201,201,201,0.06)';
+      ctx.fillRect(x, pad.t + cH - 2, barW, 2);
+    }
+    ctx.fillStyle = '#444';
+    ctx.font = '9px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText(m.label, x + barW / 2, H - 5);
+  });
+}
+
+function _drawTypeChart(typeEarned, total) {
+  var canvas = document.getElementById('rev-type-canvas');
+  if (!canvas) return;
+  var ctx = canvas.getContext('2d');
+  var W = canvas.width, H = canvas.height;
+
+  ctx.clearRect(0, 0, W, H);
+
+  var types = Object.keys(typeEarned);
+  if (types.length === 0 || total === 0) {
+    ctx.fillStyle = '#333';
+    ctx.font = '11px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('No data yet', W / 2, H / 2);
+    return;
+  }
+
+  var palette = [
+    'rgba(201,168,124,0.88)',
+    'rgba(138,173,180,0.85)',
+    'rgba(122,175,122,0.85)',
+    'rgba(180,155,100,0.6)',
+    'rgba(100,155,180,0.6)',
+    'rgba(100,175,100,0.6)'
+  ];
+
+  var legendH = types.length * 20 + 8;
+  var donutR  = Math.min((H - legendH) / 2 - 10, W / 2 - 10);
+  var cx = W / 2;
+  var cy = donutR + 10;
+  var ir = donutR * 0.52;
+
+  var start = -Math.PI / 2;
+  types.forEach(function(type, i) {
+    var angle = (typeEarned[type] / total) * Math.PI * 2;
+    ctx.beginPath();
+    ctx.arc(cx, cy, donutR, start, start + angle);
+    ctx.arc(cx, cy, ir, start + angle, start, true);
+    ctx.closePath();
+    ctx.fillStyle = palette[i % palette.length];
+    ctx.fill();
+    start += angle;
+  });
+
+  ctx.fillStyle = '#c9a87c';
+  ctx.font = 'bold 13px monospace';
+  ctx.textAlign = 'center';
+  ctx.fillText('$' + total.toFixed(0), cx, cy + 4);
+  ctx.fillStyle = '#444';
+  ctx.font = '9px monospace';
+  ctx.fillText('EARNED', cx, cy + 16);
+
+  var ly = cy + donutR + 18;
+  types.forEach(function(type, i) {
+    var x = 12;
+    ctx.fillStyle = palette[i % palette.length];
+    ctx.fillRect(x, ly + i * 20, 10, 10);
+    ctx.fillStyle = '#999';
+    ctx.font = '9px monospace';
+    ctx.textAlign = 'left';
+    var pct = Math.round(typeEarned[type] / total * 100);
+    ctx.fillText(type.slice(0, 14) + ' (' + pct + '%)', x + 14, ly + i * 20 + 9);
+  });
+}
 </script>
 
 </body>

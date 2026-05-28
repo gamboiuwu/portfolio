@@ -579,6 +579,43 @@
 	@media (max-width: 900px) {
 		.expertise-grid { grid-template-columns: repeat(2, 1fr); }
 	}
+
+	/* ── SCROLL REVEAL ───────────────────────────── */
+	.reveal {
+		opacity: 0;
+		transform: translateY(18px);
+		transition: opacity 0.55s ease, transform 0.55s ease;
+	}
+	.reveal.visible {
+		opacity: 1;
+		transform: translateY(0);
+	}
+	/* stagger children inside a reveal-stagger parent */
+	.reveal-stagger > * {
+		opacity: 0;
+		transform: translateY(14px);
+		transition: opacity 0.45s ease, transform 0.45s ease;
+	}
+	.reveal-stagger.visible > *:nth-child(1) { opacity:1; transform:none; transition-delay: 0s; }
+	.reveal-stagger.visible > *:nth-child(2) { opacity:1; transform:none; transition-delay: 0.07s; }
+	.reveal-stagger.visible > *:nth-child(3) { opacity:1; transform:none; transition-delay: 0.14s; }
+	.reveal-stagger.visible > *:nth-child(4) { opacity:1; transform:none; transition-delay: 0.21s; }
+	.reveal-stagger.visible > *:nth-child(5) { opacity:1; transform:none; transition-delay: 0.28s; }
+	.reveal-stagger.visible > *:nth-child(6) { opacity:1; transform:none; transition-delay: 0.35s; }
+
+	/* ── SCAN-LINE ACCENT (very subtle, cyberpunk) ── */
+	/* Only visible on tall viewport elements — stays behind artwork */
+	.featured-img::before {
+		content: '';
+		position: absolute; inset: 0; z-index: 1; pointer-events: none;
+		background: repeating-linear-gradient(
+			180deg,
+			transparent,
+			transparent 3px,
+			rgba(44,41,38,0.018) 3px,
+			rgba(44,41,38,0.018) 4px
+		);
+	}
 	</style>
 </head>
 
@@ -617,7 +654,7 @@
 			<div class="inner">
 
 				<!-- Featured Works -->
-				<div class="featured-section">
+				<div class="featured-section reveal">
 					<span class="section-label" data-sys="// SYS.FEATURED">Featured Works</span>
 					<div id="featured-container">
 						<!-- rendered by CommissionData.renderFeatured() -->
@@ -625,7 +662,7 @@
 				</div>
 
 				<!-- Bio -->
-				<div class="bio-block">
+				<div class="bio-block reveal">
 					<span class="section-label" data-sys="// SYS.IDENTITY">About</span>
 					<div class="comm-status">
 						<span class="comm-status-dot"></span>
@@ -633,8 +670,8 @@
 					</div>
 					<h1 class="hero-name" data-text="Anthony Ryabchikov">Anthony Ryabchikov</h1>
 					<h2 class="bio-subtitle">Studio Artist BFA &middot; Business &amp; Liberal Arts Minor &middot; Japanese Minor &mdash; Fall 2026 &nbsp;&nbsp; <span style="font-family:'Courier New',monospace;color:#8c887f;font-size:0.9em">gamboiuwu</span></h2>
-					<p>New York–based freelance artist, character designer, and event director. Ten-plus years in studio art with a focus on character design, digital illustration, animation, and Telegram sticker production. Work is technically precise and deeply personal — built in Adobe Creative Cloud, Blender, and After Effects with strong roots in traditional drawing and color theory.</p>
-					<p>Founder of <a href="https://nyfurs.org/" target="_blank" rel="noopener">New York Furs</a> — an independent not-for-profit running monthly community events including Phoenix Bark and Fuwa Furry Fest — and CEO of <a href="https://yuka.design/" target="_blank" rel="noopener">Yuka Designs</a>, a futuristic eco-friendly techwear label. Award-winning game developer (Resonance Awards 2021: Most Innovative Project &amp; Best Sound Design). Drawing instructor at Anthro Art Academy.</p>
+					<p>New York–based freelance artist, character designer, and event director. Over a decade in studio art with a focus on character design, digital illustration, 2D animation, and Telegram sticker production. Work is technically precise and deeply personal — built in Adobe Creative Cloud, Blender, and After Effects, grounded in traditional drawing and color theory.</p>
+					<p>Ten-year senior Lua programmer (Roblox), award-winning indie game developer (Resonance Awards 2021: Most Innovative Project &amp; Best Sound Design), and abstract/sci-fi visual artist. Founder of <a href="https://nyfurs.org/" target="_blank" rel="noopener">New York Furs</a> — producing Phoenix Bark, Fuwa Furry Fest, and Anthro Art Academy — and CEO of <a href="https://yuka.design/" target="_blank" rel="noopener">Yuka Designs</a>, a futuristic eco-friendly techwear label. Available for commissions, collaborations, and speaking at events.</p>
 					<div class="disciplines">
 						<span class="disc-chip">Character Design</span>
 						<span class="disc-chip">Digital Illustration</span>
@@ -650,9 +687,9 @@
 				</div>
 
 				<!-- Expertise -->
-				<div class="expertise-section">
+				<div class="expertise-section reveal">
 					<span class="section-label" data-sys="// SYS.PRACTICE">Practice</span>
-					<div class="expertise-grid">
+					<div class="expertise-grid reveal-stagger">
 						<div class="expertise-item">
 							<div class="expertise-item-label">01 // ILLUSTRATION</div>
 							<div class="expertise-item-title">Character &amp; Creature Design</div>
@@ -687,7 +724,7 @@
 				</div>
 
 				<!-- Selected Works -->
-				<div class="works-intro">
+				<div class="works-intro reveal">
 					<span class="section-label" data-sys="// SYS.WORKS">Selected Works</span>
 					<h2 class="works-heading">Projects</h2>
 					<p class="works-sub">Interdisciplinary work spanning design, live events, and studio art — through academic study and applied practice.</p>
@@ -806,6 +843,27 @@
 		document.addEventListener('DOMContentLoaded', function () {
 			CommissionData.applyAll();
 			CommissionData.renderFeatured();
+
+			/* ── Scroll-reveal via IntersectionObserver ── */
+			if ('IntersectionObserver' in window) {
+				var io = new IntersectionObserver(function(entries) {
+					entries.forEach(function(entry) {
+						if (entry.isIntersecting) {
+							entry.target.classList.add('visible');
+							io.unobserve(entry.target);
+						}
+					});
+				}, { threshold: 0.08 });
+
+				document.querySelectorAll('.reveal, .reveal-stagger').forEach(function(el) {
+					io.observe(el);
+				});
+			} else {
+				/* Fallback: show everything if IntersectionObserver unavailable */
+				document.querySelectorAll('.reveal, .reveal-stagger').forEach(function(el) {
+					el.classList.add('visible');
+				});
+			}
 		});
 	</script>
 
