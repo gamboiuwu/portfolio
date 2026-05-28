@@ -125,7 +125,7 @@ Each event is a flat object:
 
 | Type      | Extra Fields                                   |
 |-----------|------------------------------------------------|
-| `pv`      | `ref` (referrer or "direct")                   |
+| `pv`      | `ref` (referrer or "direct"), `dev` (mobile/tablet/desktop), `sw`/`sh` (screen size) |
 | `click`   | `el` (tag.class), `text`, `href`, `xp`, `yp`  |
 | `scroll`  | `depth` (25 / 50 / 75 / 100)                   |
 | `exit`    | `ms` (milliseconds on page)                    |

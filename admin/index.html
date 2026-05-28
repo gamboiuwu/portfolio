@@ -2549,12 +2549,26 @@ function renderAnalyticsTab() {
     return '<div class="analytics-stat-chip"><span class="asc-num">' + num +
       '</span><span class="asc-label">' + label + '</span></div>';
   }
+  /* Device breakdown */
+  var devCounts = { mobile: 0, tablet: 0, desktop: 0, unknown: 0 };
+  pvEvents.forEach(function(e) {
+    var d = e.dev || 'unknown';
+    if (devCounts[d] !== undefined) devCounts[d]++; else devCounts.unknown++;
+  });
+  var totalPvDev = pvEvents.length || 1;
+  var devStr = [
+    devCounts.mobile  ? Math.round(devCounts.mobile  / totalPvDev * 100) + '% mob' : '',
+    devCounts.tablet  ? Math.round(devCounts.tablet  / totalPvDev * 100) + '% tab' : '',
+    devCounts.desktop ? Math.round(devCounts.desktop / totalPvDev * 100) + '% desk' : ''
+  ].filter(Boolean).join(' / ') || '—';
+
   statsEl.innerHTML =
     chip(sessionCount, 'Sessions') +
     chip(pvEvents.length, 'Page Views') +
     chip(clkEvents.length, 'Clicks') +
     chip(fmtSec(avgSec), 'Avg. Time') +
-    chip(topPage, 'Top Page');
+    chip(topPage, 'Top Page') +
+    chip(devStr, 'Devices');
 
   /* 30-day traffic trend chart */
   (function() {
