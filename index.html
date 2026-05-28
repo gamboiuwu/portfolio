@@ -145,6 +145,10 @@
 		background-size: cover;
 		background-position: center;
 		position: relative;
+		transition: background-size 0.6s ease;
+	}
+	.featured-card:hover .featured-img {
+		background-size: 108%;
 	}
 	.featured-img::after {
 		content: '';
@@ -909,6 +913,29 @@
 		document.addEventListener('DOMContentLoaded', function () {
 			CommissionData.applyAll();
 			CommissionData.renderFeatured();
+
+			/* ── Dynamic commission status badge ── */
+			(function() {
+				var prices  = CommissionData.getPrices();
+				var anyOpen = ['digital', 'stickers', 'animation'].some(function(k) {
+					return prices[k] && prices[k].status === 'open';
+				});
+				var badge = document.querySelector('.comm-status');
+				if (!badge) return;
+				var dot   = badge.querySelector('.comm-status-dot');
+				if (!anyOpen && dot) {
+					dot.style.background  = '#c06060';
+					dot.style.animation   = 'none';
+					badge.innerHTML = '<span class="comm-status-dot" style="background:#c06060;animation:none;flex-shrink:0"></span> commissions closed &nbsp;&mdash;&nbsp; <a href="commissions/">view info</a>';
+				}
+			})();
+
+			/* ── Hide featured section if empty ── */
+			var featCont = document.getElementById('featured-container');
+			if (featCont && !featCont.children.length) {
+				var featSect = featCont.closest('.featured-section');
+				if (featSect) featSect.style.display = 'none';
+			}
 
 			/* ── Scroll-reveal via IntersectionObserver ── */
 			if ('IntersectionObserver' in window) {
