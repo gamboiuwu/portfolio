@@ -280,6 +280,14 @@
 		.feat-lb-prev, .feat-lb-next { font-size: 1.4em; padding: 0.25em 0.4em; }
 	}
 
+	/* ── REVEAL ─────────────────────────────────── */
+	.reveal {
+		opacity: 0;
+		transform: translateY(16px);
+		transition: opacity 0.5s ease, transform 0.5s ease;
+	}
+	.reveal.visible { opacity: 1; transform: none; }
+
 	/* ── CYBERPUNK LAYER (subtle, light mode) ─────── */
 	body::before {
 		content: ''; position: fixed; inset: 0; z-index: 0; pointer-events: none;
@@ -425,14 +433,29 @@
 	container.innerHTML =
 		'<a href="../" class="back-link">Back to Portfolio</a>' +
 		heroHtml +
-		'<div class="feat-meta">' +
+		'<div class="feat-meta reveal">' +
 			(item.tagline ? '<p class="feat-tagline">' + esc(item.tagline) + '</p>' : '') +
 			'<h1 class="feat-title">' + esc(item.title) + '</h1>' +
 		'</div>' +
-		'<hr class="feat-rule" />' +
-		(item.statement ? '<p class="feat-statement">' + esc(item.statement) + '</p>' : '') +
+		'<hr class="feat-rule reveal" />' +
+		(item.statement ? '<p class="feat-statement reveal">' + esc(item.statement) + '</p>' : '') +
 		extLinkHtml +
 		galleryHtml;
+
+	/* Scroll-reveal on dynamically-rendered content */
+	if ('IntersectionObserver' in window) {
+		var io = new IntersectionObserver(function(entries) {
+			entries.forEach(function(entry) {
+				if (entry.isIntersecting) {
+					entry.target.classList.add('visible');
+					io.unobserve(entry.target);
+				}
+			});
+		}, { threshold: 0.08 });
+		container.querySelectorAll('.reveal').forEach(function(el) { io.observe(el); });
+	} else {
+		container.querySelectorAll('.reveal').forEach(function(el) { el.classList.add('visible'); });
+	}
 
 	/* ── Lightbox ── */
 	if (!galleryImages.length) return;
