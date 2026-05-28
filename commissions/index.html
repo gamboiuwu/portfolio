@@ -645,6 +645,45 @@
 		.reveal-stagger.visible > *:nth-child(4) { opacity:1; transform:none; transition-delay:0.24s; }
 		.reveal-stagger.visible > *:nth-child(5) { opacity:1; transform:none; transition-delay:0.32s; }
 
+		/* ── TRUST STRIP ────────────────────────────── */
+		.trust-strip {
+			display: flex;
+			flex-wrap: wrap;
+			border: 1px solid var(--rule-mid);
+			background: var(--paper2);
+			margin: 1.5em 0;
+		}
+		.trust-item {
+			flex: 1 1 80px;
+			padding: 0.85em 1em;
+			text-align: center;
+			border-right: 1px solid var(--rule);
+			transition: background 0.2s;
+		}
+		.trust-item:last-child { border-right: none; }
+		.trust-item:hover { background: rgba(44,41,38,0.04); }
+		.trust-icon {
+			font-family: 'Courier New', Courier, monospace;
+			font-size: 1.05em;
+			font-weight: 700;
+			color: var(--ink);
+			letter-spacing: 0.04em;
+			line-height: 1;
+		}
+		.trust-label {
+			font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif;
+			font-size: 0.6em;
+			font-weight: 400;
+			letter-spacing: 0.09em;
+			text-transform: uppercase;
+			color: var(--lite);
+			margin-top: 0.3em;
+		}
+		@media (max-width: 600px) {
+			.trust-strip { display: grid; grid-template-columns: repeat(3, 1fr); }
+			.trust-item { border-bottom: 1px solid var(--rule); }
+		}
+
 		/* ── PROCESS SECTION ─────────────────────────── */
 		.process-steps {
 			display: grid;
@@ -1190,6 +1229,30 @@
 					<img src="../images/gamsig.png" alt="gamboiuwu signature" class="gam-sig" />
 
 				</section>
+
+				<!-- ── Trust Signals ── -->
+				<div class="trust-strip reveal">
+					<div class="trust-item">
+						<div class="trust-icon">48h</div>
+						<div class="trust-label">Response time</div>
+					</div>
+					<div class="trust-item">
+						<div class="trust-icon">50%</div>
+						<div class="trust-label">Deposit to start</div>
+					</div>
+					<div class="trust-item">
+						<div class="trust-icon">PNG</div>
+						<div class="trust-label">High-res delivery</div>
+					</div>
+					<div class="trust-item">
+						<div class="trust-icon">2×</div>
+						<div class="trust-label">Free revisions</div>
+					</div>
+					<div class="trust-item">
+						<div class="trust-icon">10+</div>
+						<div class="trust-label">Years experience</div>
+					</div>
+				</div>
 
 				<!-- ── Commission Form CTA ── -->
 				<div class="bottom-cta-wrap">
