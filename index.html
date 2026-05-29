@@ -9,18 +9,18 @@
 	<meta charset="utf-8" />
 	<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
 
-	<meta name="description" content="Anthony Ryabchikov (gamboiuwu) — freelance artist, character designer, and event director based in New York. Commission character art, Telegram stickers, animation, and more.">
-	<meta name="keywords" content="portfolio, artist, gamboiuwu, anthony, ryabchikov, character design, furry art, telegram stickers, digital illustration, animation, new york furs, yuka designs">
+	<meta name="description" content="Anthony Ryabchikov (gamboiuwu / ギャム) — freelance character artist, Telegram sticker creator, and event director based in New York. Founder of New York Furs. CEO of Yuka Designs techwear. Commissions open.">
+	<meta name="keywords" content="portfolio, artist, gamboiuwu, anthony, ryabchikov, character design, furry art, kemono art, anthro art, telegram stickers, digital illustration, animation, protogen, new york furs, yuka designs, techwear">
 	<meta name="author" content="Anthony Ryabchikov">
 	<meta name="theme-color" content="#2c2926">
 	<meta property="og:title" content="Anthony Ryabchikov — gamboiuwu">
 	<meta property="og:site_name" content="Anthony Ryabchikov | Artist &amp; Creator">
-	<meta property="og:description" content="Freelance artist specializing in character design, digital illustration, and animation. Founder of New York Furs and Yuka Designs. Now accepting commissions.">
+	<meta property="og:description" content="Freelance character artist and ecosystem builder — commissions, Telegram sticker packs, animation. Founder of New York Furs (160+ events, 100+ monthly). CEO of Yuka Designs techwear. Now accepting commissions.">
 	<meta property="og:url" content="https://antryab.com">
 	<meta property="og:image" content="https://antryab.com/images/yuka_header.jpg">
-	<meta property="og:image:alt" content="Yuka Designs — techwear by gamboiuwu">
+	<meta property="og:image:alt" content="Yuka Designs DIVIDE collection — techwear by gamboiuwu">
 
-	<title>Anthony Ryabchikov | gamboiuwu — Artist &amp; Creator</title>
+	<title>Anthony Ryabchikov | gamboiuwu — Character Artist &amp; Creator</title>
 
 	<meta name="robots" content="index, follow" />
 
@@ -28,7 +28,7 @@
 	<meta name="twitter:site" content="@gamboiuwu" />
 	<meta name="twitter:creator" content="@gamboiuwu" />
 	<meta name="twitter:title" content="Anthony Ryabchikov — gamboiuwu" />
-	<meta name="twitter:description" content="Freelance character artist, Telegram sticker maker, and event director based in New York. Commissions open." />
+	<meta name="twitter:description" content="Freelance character artist, kemono/anthro specialist, Telegram sticker creator, and event director based in New York. 160+ events. Commissions open." />
 	<meta name="twitter:image" content="https://antryab.com/images/yuka_header.jpg" />
 
 	<link rel="icon" type="image/png" href="images/favicon.png" />
@@ -566,6 +566,92 @@
 		margin: 0;
 	}
 
+	/* ── STATS BAR ───────────────────────────────── */
+	.stats-bar {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0;
+		margin: 1.8em 0 0;
+		border: 1px solid var(--rule-mid);
+		background: var(--paper2);
+	}
+	.stat-item {
+		flex: 1;
+		min-width: 100px;
+		padding: 0.85em 1.2em;
+		border-right: 1px solid var(--rule-mid);
+		transition: background 0.2s;
+	}
+	.stat-item:last-child { border-right: none; }
+	.stat-item:hover { background: rgba(44,41,38,0.04); }
+	.stat-num {
+		display: block;
+		font-family: 'Cormorant Garamond', Georgia, serif;
+		font-size: 1.5em;
+		font-weight: 300;
+		color: var(--ink);
+		line-height: 1.1;
+		margin-bottom: 0.1em;
+	}
+	.stat-label {
+		display: block;
+		font-family: 'Courier New', Courier, monospace;
+		font-size: 0.52em;
+		letter-spacing: 0.12em;
+		text-transform: uppercase;
+		color: var(--lite);
+	}
+
+	/* ── DATA INDEX on featured cards ────────────── */
+	.featured-card::before {
+		content: attr(data-index);
+		position: absolute;
+		top: 0.65em;
+		right: 0.75em;
+		font-family: 'Courier New', Courier, monospace;
+		font-size: 0.5em;
+		letter-spacing: 0.12em;
+		color: rgba(44,41,38,0.18);
+		z-index: 2;
+		pointer-events: none;
+	}
+
+	/* ── PROCESS STRIP (commission flow) ─────────── */
+	.process-strip {
+		display: flex;
+		align-items: center;
+		gap: 0;
+		margin: 1.5em 0 0;
+		font-family: 'Courier New', Courier, monospace;
+		font-size: 0.58em;
+		letter-spacing: 0.08em;
+		color: var(--lite);
+		overflow-x: auto;
+	}
+	.process-step {
+		display: flex;
+		align-items: center;
+		gap: 0.5em;
+		padding: 0.4em 0.8em;
+		border: 1px solid var(--rule);
+		background: var(--paper2);
+		white-space: nowrap;
+		transition: background 0.2s, color 0.2s;
+	}
+	.process-step:hover { background: rgba(44,41,38,0.06); color: var(--mid); }
+	.process-arrow {
+		color: rgba(44,41,38,0.2);
+		font-size: 0.85em;
+		flex-shrink: 0;
+		padding: 0 0.1em;
+	}
+	.process-step-dot {
+		width: 5px; height: 5px;
+		border-radius: 50%;
+		background: var(--lite);
+		flex-shrink: 0;
+	}
+
 	/* ── RESPONSIVE ──────────────────────────────── */
 	@media (max-width: 736px) {
 		.featured-card { flex-direction: column; }
@@ -575,6 +661,11 @@
 		.hero-name { font-size: 2.2em !important; }
 		.expertise-grid { grid-template-columns: 1fr; }
 		.comm-status { font-size: 0.58em; }
+		.stats-bar { flex-direction: column; }
+		.stat-item { border-right: none; border-bottom: 1px solid var(--rule-mid); }
+		.stat-item:last-child { border-bottom: none; }
+		.process-strip { flex-direction: column; align-items: flex-start; }
+		.process-arrow { display: none; }
 	}
 	@media (max-width: 900px) {
 		.expertise-grid { grid-template-columns: repeat(2, 1fr); }
@@ -632,20 +723,57 @@
 						commissions open &nbsp;&mdash;&nbsp; <a href="commissions/">view pricing &amp; inquire</a>
 					</div>
 					<h1 class="hero-name" data-text="Anthony Ryabchikov">Anthony Ryabchikov</h1>
-					<h2 class="bio-subtitle">Studio Artist BFA &middot; Business &amp; Liberal Arts Minor &middot; Japanese Minor &mdash; Fall 2026 &nbsp;&nbsp; <span style="font-family:'Courier New',monospace;color:#8c887f;font-size:0.9em">gamboiuwu</span></h2>
-					<p>New York–based freelance artist, character designer, and event director. Ten-plus years in studio art with a focus on character design, digital illustration, animation, and Telegram sticker production. Work is technically precise and deeply personal — built in Adobe Creative Cloud, Blender, and After Effects with strong roots in traditional drawing and color theory.</p>
-					<p>Founder of <a href="https://nyfurs.org/" target="_blank" rel="noopener">New York Furs</a> — an independent not-for-profit running monthly community events including Phoenix Bark and Fuwa Furry Fest — and CEO of <a href="https://yuka.design/" target="_blank" rel="noopener">Yuka Designs</a>, a futuristic eco-friendly techwear label. Award-winning game developer (Resonance Awards 2021: Most Innovative Project &amp; Best Sound Design). Drawing instructor at Anthro Art Academy.</p>
+					<h2 class="bio-subtitle">Studio Artist BFA &middot; Business &amp; Liberal Arts Minor &middot; Japanese Minor &mdash; Fall 2026 &nbsp;&nbsp; <span style="font-family:'Courier New',monospace;color:#8c887f;font-size:0.9em">gamboiuwu &nbsp;/&nbsp; ギャム</span></h2>
+					<p>New York–based freelance character artist, event director, and creative ecosystem builder. Ten-plus years in studio art with a specialization in kemono and anthro character design, digital illustration, Telegram sticker packs, and 2D animation. Work is technically precise and emotionally resonant — built in Clip Studio Paint, Adobe Creative Cloud, Blender, and After Effects, rooted in traditional drawing and color theory.</p>
+					<p>Founder of <a href="https://nyfurs.org/" target="_blank" rel="noopener">New York Furs</a> — an independent not-for-profit with 160+ events including Phoenix Bark (NYC's largest furry bar event, 100+ monthly) and Fuwa Furry Fest — and CEO of <a href="https://yuka.design/" target="_blank" rel="noopener">Yuka Designs</a>, a futuristic eco-friendly techwear label. Award-winning game developer (Resonance Awards 2021: Most Innovative Project &amp; Best Sound Design). Drawing instructor at Anthro Art Academy. Music composer as <em>letfexraut</em>.</p>
 					<div class="disciplines">
+						<span class="disc-chip">Kemono &amp; Anthro Art</span>
 						<span class="disc-chip">Character Design</span>
 						<span class="disc-chip">Digital Illustration</span>
 						<span class="disc-chip">Telegram Stickers</span>
 						<span class="disc-chip">2D Animation</span>
 						<span class="disc-chip">Blender / 3D</span>
-						<span class="disc-chip">Videography</span>
+						<span class="disc-chip">Clip Studio Paint</span>
 						<span class="disc-chip">Adobe CC</span>
 						<span class="disc-chip">Techwear Design</span>
 						<span class="disc-chip">Event Direction</span>
 						<span class="disc-chip">Art Education</span>
+						<span class="disc-chip">Music Composition</span>
+					</div>
+					<!-- Stats bar -->
+					<div class="stats-bar">
+						<div class="stat-item">
+							<span class="stat-num">10+</span>
+							<span class="stat-label">// years in studio art</span>
+						</div>
+						<div class="stat-item">
+							<span class="stat-num">160+</span>
+							<span class="stat-label">// community events</span>
+						</div>
+						<div class="stat-item">
+							<span class="stat-num">100+</span>
+							<span class="stat-label">// monthly event attendees</span>
+						</div>
+						<div class="stat-item">
+							<span class="stat-num">2</span>
+							<span class="stat-label">// resonance awards 2021</span>
+						</div>
+						<div class="stat-item">
+							<span class="stat-num">7yrs</span>
+							<span class="stat-label">// adobe creative cloud</span>
+						</div>
+					</div>
+					<!-- Commission process strip -->
+					<div class="process-strip">
+						<div class="process-step"><span class="process-step-dot"></span>Inquiry</div>
+						<span class="process-arrow">&#8594;</span>
+						<div class="process-step"><span class="process-step-dot"></span>Quote &amp; Ref</div>
+						<span class="process-arrow">&#8594;</span>
+						<div class="process-step"><span class="process-step-dot"></span>Sketch Review</div>
+						<span class="process-arrow">&#8594;</span>
+						<div class="process-step"><span class="process-step-dot"></span>Final Render</div>
+						<span class="process-arrow">&#8594;</span>
+						<div class="process-step"><span class="process-step-dot"></span>Delivery</div>
 					</div>
 				</div>
 
@@ -656,32 +784,32 @@
 						<div class="expertise-item">
 							<div class="expertise-item-label">01 // ILLUSTRATION</div>
 							<div class="expertise-item-title">Character &amp; Creature Design</div>
-							<p class="expertise-item-desc">Fully rendered commissions from headshot to complex full-body with environment. Sketch, flat, flat-shade, and complex tiers available.</p>
+							<p class="expertise-item-desc">Kemono, anthro, protogen, and original character commissions from headshot to complex full-body with environment. Sketch, flat, flat-shade, and complex tiers — Clip Studio Paint &amp; Photoshop.</p>
 						</div>
 						<div class="expertise-item">
 							<div class="expertise-item-label">02 // STICKERS</div>
 							<div class="expertise-item-title">Telegram Sticker Packs</div>
-							<p class="expertise-item-desc">Simple and complex sticker packs optimized for Telegram. Packs of 1, 3, 5, or 10 — expressive, on-brand, and fast.</p>
+							<p class="expertise-item-desc">Expressive sticker packs built for Telegram — simple chibi flats and complex rendered sets. Packs of 1, 3, 5, or 10. No NSFW upcharge. Fast turnaround.</p>
 						</div>
 						<div class="expertise-item">
 							<div class="expertise-item-label">03 // ANIMATION</div>
 							<div class="expertise-item-title">2D Animated Loops</div>
-							<p class="expertise-item-desc">Looping animations for use as emotes, stream overlays, or social content. Built in After Effects and Adobe Animate.</p>
+							<p class="expertise-item-desc">Looping animations for emotes, stream overlays, and social content. Built in After Effects and Adobe Animate. Award-winning sound design background (Resonance Awards 2021).</p>
 						</div>
 						<div class="expertise-item">
 							<div class="expertise-item-label">04 // FASHION</div>
 							<div class="expertise-item-title">Techwear &amp; Apparel</div>
-							<p class="expertise-item-desc">Futuristic, eco-friendly apparel through <a href="https://yuka.design/" target="_blank" rel="noopener">Yuka Designs</a>. Designed and produced in-house — no dropshipping.</p>
+							<p class="expertise-item-desc">Futuristic, 100% eco-friendly apparel through <a href="https://yuka.design/" target="_blank" rel="noopener">Yuka Designs</a> (est. 2023). Designed and manufactured in-house — no dropshipping. Active DIVIDE 2025 collection.</p>
 						</div>
 						<div class="expertise-item">
 							<div class="expertise-item-label">05 // EVENTS</div>
 							<div class="expertise-item-title">Community &amp; Event Direction</div>
-							<p class="expertise-item-desc">Founder and board director of <a href="https://nyfurs.org/" target="_blank" rel="noopener">New York Furs</a>, producing Phoenix Bark, Fuwa Furry Fest, and Anthro Art Academy.</p>
+							<p class="expertise-item-desc">Founder of <a href="https://nyfurs.org/" target="_blank" rel="noopener">New York Furs</a> — 160+ events across NYC including Phoenix Bark (100+ monthly at East Village) and Fuwa Furry Fest at Japan Village, Brooklyn.</p>
 						</div>
 						<div class="expertise-item">
 							<div class="expertise-item-label">06 // EDUCATION</div>
 							<div class="expertise-item-title">Art Instruction</div>
-							<p class="expertise-item-desc">Drawing instructor covering character anatomy, color theory, and background art — open to all skill levels at Anthro Art Academy.</p>
+							<p class="expertise-item-desc">Drawing instructor at Anthro Art Academy covering kemono anatomy, color theory, character design, and background art. All skill levels welcome. Pathway toward professional art teaching.</p>
 						</div>
 					</div>
 				</div>
@@ -734,7 +862,7 @@
 						<a href="https://letfexraut.bandcamp.com/" target="_blank" rel="noopener">
 							<h2>letfexraut</h2>
 							<div class="content">
-								<p>Music alias. Breakcore, post-2000s trance, and experimental electronic — available on Bandcamp.</p>
+								<p>Music alias. Breakcore, post-2000s trance, and experimental electronic — award-winning sound design. On Bandcamp.</p>
 							</div>
 						</a>
 					</article>
@@ -788,7 +916,7 @@
 					<li>&copy; 2026 Anthony Ryabchikov. All rights reserved.</li>
 					<li>New York, NY</li>
 				</ul>
-				<div class="sys-status"><span>SYS::PORTFOLIO.v3 &nbsp;&nbsp; STATUS::ONLINE &nbsp;&nbsp; ARTIST::RYABCHIKOV &nbsp;&nbsp; ALIAS::GAMBOIUWU &nbsp;&nbsp; DOMAIN::ANTRYAB.COM &nbsp;&nbsp; COMMISSIONS::OPEN &nbsp;&nbsp; SIGNAL::ACTIVE &nbsp;&nbsp; NODE::NY &nbsp;&nbsp;</span></div>
+				<div class="sys-status"><span>SYS::PORTFOLIO.v4 &nbsp;&nbsp;&nbsp; STATUS::ONLINE &nbsp;&nbsp;&nbsp; ARTIST::RYABCHIKOV &nbsp;&nbsp;&nbsp; ALIAS::GAMBOIUWU &nbsp;&nbsp;&nbsp; ギャム &nbsp;&nbsp;&nbsp; NODE::NEW_YORK &nbsp;&nbsp;&nbsp; COMMISSIONS::OPEN &nbsp;&nbsp;&nbsp; EVENTS::160+ &nbsp;&nbsp;&nbsp; YUKA_DESIGNS::ACTIVE &nbsp;&nbsp;&nbsp; NYFURS::EST.2021 &nbsp;&nbsp;&nbsp; PROTOGEN::QC#19 &nbsp;&nbsp;&nbsp; SIGNAL::ACTIVE &nbsp;&nbsp;&nbsp;</span></div>
 
 			</div>
 		</footer>
