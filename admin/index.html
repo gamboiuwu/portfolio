@@ -749,6 +749,46 @@
 		  color: #444;
 		  font-size: 0.85em;
 		}
+		/* ---- Spotlight Tab ---- */
+		.spotlight-board { display: flex; flex-direction: column; gap: 0.55em; }
+		.spotlight-row {
+		  display: flex; align-items: center; gap: 0.75em;
+		  background: rgba(255,255,255,0.02); border: 1px solid rgba(201,201,201,0.07);
+		  border-radius: 5px; padding: 0.6em 0.75em;
+		  transition: border-color 0.15s;
+		}
+		.spotlight-row:hover { border-color: rgba(201,201,201,0.18); }
+		.sp-rank {
+		  font-family: 'Courier New', monospace;
+		  font-size: 0.7em; color: #444; min-width: 1.4em;
+		  text-align: right;
+		}
+		.sp-info { flex: 1; min-width: 0; }
+		.sp-label {
+		  font-size: 0.8em; color: #ccc;
+		  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+		  margin-bottom: 0.35em;
+		}
+		.sp-bar-wrap {
+		  height: 4px; background: rgba(255,255,255,0.07);
+		  border-radius: 2px; overflow: hidden;
+		}
+		.sp-bar {
+		  height: 100%; background: linear-gradient(to right, #8c887f, #c9a87c);
+		  border-radius: 2px; transition: width 0.4s ease;
+		  min-width: 2px;
+		}
+		.sp-meta {
+		  display: flex; flex-direction: column; align-items: flex-end;
+		  gap: 0.15em; flex-shrink: 0;
+		}
+		.sp-time {
+		  font-family: 'Courier New', monospace;
+		  font-size: 0.8em; color: #c9a87c; white-space: nowrap;
+		}
+		.sp-views, .sp-sess {
+		  font-size: 0.65em; color: #555; white-space: nowrap;
+		}
 	</style>
 </head>
 <body class="is-preload">
@@ -821,6 +861,7 @@
 				<button class="admin-tab" data-tab="palette">Palette</button>
 				<button class="admin-tab" data-tab="queue">Queue <span id="queue-badge" class="inq-badge" style="display:none"></span></button>
 				<button class="admin-tab" data-tab="revenue">Revenue</button>
+				<button class="admin-tab" data-tab="spotlight">Spotlight</button>
 			</div>
 
 			<!-- ============ GALLERY TAB ============ -->
@@ -1381,6 +1422,40 @@
 
 				</div>
 			</div><!-- /#tab-revenue -->
+
+			<!-- ============ SPOTLIGHT TAB ============ -->
+			<div id="tab-spotlight" class="tab-content">
+
+				<div class="admin-card">
+					<h3>Spotlight — Artwork Attention Tracker</h3>
+					<p class="hint">Tracks how long each artwork, featured card, and project tile is visible in visitors' viewports. Uses IntersectionObserver — no clicks required. Each bar shows total combined viewport time across all sessions.</p>
+					<div id="spotlight-stats" class="analytics-stats" style="margin-bottom:1em"></div>
+					<div style="display:flex;gap:0.5em;flex-wrap:wrap">
+						<button class="button small" id="spotlight-refresh-btn">Refresh</button>
+						<button class="button small" id="spotlight-export-btn">Export JSON</button>
+						<button class="button small" id="spotlight-clear-btn" style="color:#e07070;border-color:rgba(192,96,96,0.3)">Clear Data</button>
+					</div>
+				</div>
+
+				<div class="admin-card">
+					<h3>Artwork Leaderboard</h3>
+					<p class="hint">Ranked by total viewport time. Items at the top hold visitors' attention longest.</p>
+					<div id="spotlight-leaderboard"></div>
+				</div>
+
+				<div class="admin-card">
+					<h3>By Page</h3>
+					<p class="hint">Which page drives the most artwork engagement.</p>
+					<div id="spotlight-by-page"></div>
+				</div>
+
+				<div class="admin-card">
+					<h3>Recent Artwork Views</h3>
+					<p class="hint">Last 30 individual artwork viewport events.</p>
+					<div id="spotlight-recent"></div>
+				</div>
+
+			</div>
 
 		</div><!-- /#admin-dash -->
 		<input type="file" id="img-file-input" accept="image/*" style="display:none" />
@@ -2369,6 +2444,9 @@ document.addEventListener('click', function(e){
   }
   if (e.target.dataset && e.target.dataset.tab === 'revenue') {
     renderRevenueDashboard();
+  }
+  if (e.target.dataset && e.target.dataset.tab === 'spotlight') {
+    renderSpotlightTab();
   }
 });
 
@@ -3433,6 +3511,143 @@ function _drawTypeChart(typeEarned, total) {
     ctx.fillText(type.slice(0, 14) + ' (' + pct + '%)', x + 14, ly + i * 20 + 9);
   });
 }
+
+/* ================================================================
+   SPOTLIGHT TAB — Artwork Attention Tracker
+================================================================ */
+
+function renderSpotlightTab() {
+  var events = CommissionData.getSpotlight();
+
+  /* ── Stats ── */
+  var totalMs     = events.reduce(function(s, e){ return s + (e.ms || 0); }, 0);
+  var uniqueArts  = {};
+  var uniqueSess  = {};
+  events.forEach(function(e) {
+    if (e.artId) uniqueArts[e.artId] = true;
+    if (e.sid)   uniqueSess[e.sid]   = true;
+  });
+  var artCount  = Object.keys(uniqueArts).length;
+  var sessCount = Object.keys(uniqueSess).length;
+
+  function fmtMs(ms) {
+    var s = Math.round(ms / 1000);
+    if (s < 60)  return s + 's';
+    var m = Math.floor(s / 60), rs = s % 60;
+    return m + 'm ' + (rs > 0 ? rs + 's' : '');
+  }
+
+  function statChip(num, label) {
+    return '<div class="analytics-stat-chip"><span class="asc-num">' + num +
+      '</span><span class="asc-label">' + label + '</span></div>';
+  }
+
+  var statsEl = document.getElementById('spotlight-stats');
+  statsEl.innerHTML =
+    statChip(events.length,  'Art Views')      +
+    statChip(artCount,       'Artworks')        +
+    statChip(sessCount,      'Sessions')        +
+    statChip(fmtMs(totalMs), 'Total View Time');
+
+  /* ── Leaderboard — aggregate by artId ── */
+  var byArt = {};
+  events.forEach(function(e) {
+    if (!e.artId) return;
+    if (!byArt[e.artId]) byArt[e.artId] = { artId: e.artId, label: e.label || e.alt || e.artId, totalMs: 0, views: 0, sessions: {} };
+    byArt[e.artId].totalMs += (e.ms || 0);
+    byArt[e.artId].views++;
+    if (e.sid) byArt[e.artId].sessions[e.sid] = true;
+    /* Keep best label */
+    if (e.label && e.label.length > (byArt[e.artId].label || '').length) {
+      byArt[e.artId].label = e.label;
+    }
+  });
+
+  var ranked = Object.values(byArt).sort(function(a, b){ return b.totalMs - a.totalMs; });
+  var maxMs  = ranked.length ? ranked[0].totalMs : 1;
+  var lbEl   = document.getElementById('spotlight-leaderboard');
+
+  if (!ranked.length) {
+    lbEl.innerHTML = '<p style="color:#444;font-size:0.85em;padding:1em 0">No artwork view data yet. Visit the portfolio pages and the tracker will populate automatically.</p>';
+  } else {
+    lbEl.innerHTML = '<div class="spotlight-board">' + ranked.map(function(item, idx) {
+      var pct      = Math.round((item.totalMs / maxMs) * 100);
+      var uniqSess = Object.keys(item.sessions).length;
+      /* strip type prefix (e.g. "feat::", "tile::") from artId for display */
+      var displayLabel = item.label || item.artId.split('::').pop() || item.artId;
+      return '<div class="spotlight-row">' +
+        '<span class="sp-rank">' + (idx + 1) + '</span>' +
+        '<div class="sp-info">' +
+          '<div class="sp-label" title="' + escHtml(item.artId) + '">' + escHtml(displayLabel.slice(0, 48)) + '</div>' +
+          '<div class="sp-bar-wrap"><div class="sp-bar" style="width:' + pct + '%"></div></div>' +
+        '</div>' +
+        '<div class="sp-meta">' +
+          '<span class="sp-time">' + fmtMs(item.totalMs) + '</span>' +
+          '<span class="sp-views">' + item.views + ' view' + (item.views !== 1 ? 's' : '') + '</span>' +
+          '<span class="sp-sess">' + uniqSess + ' session' + (uniqSess !== 1 ? 's' : '') + '</span>' +
+        '</div>' +
+      '</div>';
+    }).join('') + '</div>';
+  }
+
+  /* ── By page ── */
+  var byPage = {};
+  events.forEach(function(e) {
+    var pg = e.page || '/';
+    if (!byPage[pg]) byPage[pg] = { views: 0, totalMs: 0 };
+    byPage[pg].views++;
+    byPage[pg].totalMs += (e.ms || 0);
+  });
+  var pageRows = Object.keys(byPage).sort(function(a, b){ return byPage[b].totalMs - byPage[a].totalMs; });
+  var byPageEl = document.getElementById('spotlight-by-page');
+  if (!pageRows.length) {
+    byPageEl.innerHTML = '<p style="color:#444;font-size:0.85em;padding:0.5em 0">No data yet.</p>';
+  } else {
+    byPageEl.innerHTML = '<table class="analytics-page-table"><thead><tr>' +
+      '<th>Page</th><th>Art Views</th><th>Total View Time</th>' +
+      '</tr></thead><tbody>' +
+      pageRows.map(function(pg) {
+        return '<tr><td>' + escHtml(pg) + '</td><td>' + byPage[pg].views + '</td><td>' + fmtMs(byPage[pg].totalMs) + '</td></tr>';
+      }).join('') +
+      '</tbody></table>';
+  }
+
+  /* ── Recent events ── */
+  var recentEl = document.getElementById('spotlight-recent');
+  var recent   = events.slice().reverse().slice(0, 30);
+  if (!recent.length) {
+    recentEl.innerHTML = '<p style="color:#444;font-size:0.85em;padding:0.5em 0">No events yet.</p>';
+  } else {
+    recentEl.innerHTML = recent.map(function(e) {
+      var displayLabel = e.label || e.alt || e.artId || '—';
+      return '<div class="session-item">' +
+        '<span class="session-page">' + escHtml(displayLabel.slice(0, 45)) + '</span>' +
+        '<div><div class="session-meta">' +
+          new Date(e.ts).toLocaleString() + ' &nbsp;·&nbsp; ' + fmtMs(e.ms || 0) + ' visible' +
+          ' &nbsp;·&nbsp; pg: ' + escHtml(e.page || '/') +
+        '</div><div class="session-evts">sid: ' + escHtml(e.sid || '—') + '</div></div>' +
+        '</div>';
+    }).join('');
+  }
+}
+
+document.getElementById('spotlight-refresh-btn').addEventListener('click', renderSpotlightTab);
+
+document.getElementById('spotlight-export-btn').addEventListener('click', function() {
+  var data = CommissionData.getSpotlight();
+  var blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  var url  = URL.createObjectURL(blob);
+  var a    = document.createElement('a');
+  a.href = url; a.download = 'spotlight-' + Date.now() + '.json'; a.click();
+  URL.revokeObjectURL(url);
+});
+
+document.getElementById('spotlight-clear-btn').addEventListener('click', function() {
+  if (!confirm('Clear all Spotlight artwork view data? This cannot be undone.')) return;
+  CommissionData.clearSpotlight();
+  renderSpotlightTab();
+  toast('Spotlight data cleared.');
+});
 </script>
 
 </body>
