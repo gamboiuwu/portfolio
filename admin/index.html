@@ -1211,6 +1211,12 @@
 				</div>
 
 				<div class="admin-card">
+					<h3>Artwork Engagement</h3>
+					<p class="hint">Tiles visitors hovered over for 1+ seconds — a proxy for genuine interest in a piece.</p>
+					<ul id="analytics-tile-hovers" class="top-clicks-list"></ul>
+				</div>
+
+				<div class="admin-card">
 					<h3>Click Heatmap</h3>
 					<p class="hint">Select a page to visualize where visitors click. Each dot represents a click — brighter and larger means higher density.</p>
 					<div class="field-row" style="margin-bottom:1em">
@@ -2768,6 +2774,25 @@ function renderAnalyticsTab() {
       '<div class="tc-bar-wrap"><div class="tc-bar" style="width:' + pct + '%"></div></div>' +
       '<span class="tc-count">' + elCounts[k] + '</span></li>';
   }).join('') || '<li style="color:#444;padding:1em 0">No click data yet.</li>';
+
+  /* Artwork tile hover engagement */
+  var hoverEvents = events.filter(function(e){ return e.type === 'tile_hover'; });
+  var hoverCounts = {};
+  hoverEvents.forEach(function(e){
+    var key = e.title || '(untitled)';
+    hoverCounts[key] = (hoverCounts[key] || 0) + 1;
+  });
+  var topHovers    = Object.keys(hoverCounts).sort(function(a,b){ return hoverCounts[b]-hoverCounts[a]; }).slice(0, 8);
+  var maxHoverCount = topHovers.length ? hoverCounts[topHovers[0]] : 1;
+  var thEl = document.getElementById('analytics-tile-hovers');
+  if (thEl) {
+    thEl.innerHTML = topHovers.map(function(k) {
+      var pct = Math.round((hoverCounts[k] / maxHoverCount) * 100);
+      return '<li><span class="tc-label">' + escHtml(k.slice(0,28)) + '</span>' +
+        '<div class="tc-bar-wrap"><div class="tc-bar" style="width:' + pct + '%;background:#c9a87c"></div></div>' +
+        '<span class="tc-count">' + hoverCounts[k] + '</span></li>';
+    }).join('') || '<li style="color:#444;padding:1em 0">No hover data yet — visit the site and hover over tiles.</li>';
+  }
 
   /* Recent sessions */
   var sessionMap = {};
