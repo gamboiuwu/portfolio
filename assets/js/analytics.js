@@ -40,8 +40,15 @@
   var ref       = document.referrer ? document.referrer.replace(/^https?:\/\/[^/]+/, '') || 'direct' : 'direct';
   var pageStart = Date.now();
 
+  /* ── Device fingerprint for pageview ── */
+  var ua  = navigator.userAgent || '';
+  var dev = /Mobi|Android|iPhone|iPad|iPod/i.test(ua) ? 'mobile' : 'desktop';
+  if (/iPad|Tablet/i.test(ua)) dev = 'tablet';
+  var sw  = window.screen ? window.screen.width  : 0;
+  var sh  = window.screen ? window.screen.height : 0;
+
   /* ── Pageview ── */
-  push({ sid: sid, type: 'pv', page: page, ref: ref, ts: pageStart });
+  push({ sid: sid, type: 'pv', page: page, ref: ref, dev: dev, sw: sw, sh: sh, ts: pageStart });
 
   /* ── Click tracking ── */
   document.addEventListener('click', function (e) {

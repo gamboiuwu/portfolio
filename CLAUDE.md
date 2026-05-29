@@ -125,7 +125,7 @@ Each event is a flat object:
 
 | Type      | Extra Fields                                   |
 |-----------|------------------------------------------------|
-| `pv`      | `ref` (referrer or "direct")                   |
+| `pv`      | `ref` (referrer or "direct"), `dev` (mobile/tablet/desktop), `sw`/`sh` (screen size) |
 | `click`   | `el` (tag.class), `text`, `href`, `xp`, `yp`  |
 | `scroll`  | `depth` (25 / 50 / 75 / 100)                   |
 | `exit`    | `ms` (milliseconds on page)                    |
@@ -161,6 +161,7 @@ Password-protected (SHA-256 hash in localStorage, 5-attempt lockout). Session tr
 | Analytics   | Site visitor stats, session list, click heatmap visualizer     |
 | Palette     | Color palette extractor — sample dominant colors from artwork  |
 | Queue       | Internal commission work-order tracker (new, see below)        |
+| Revenue     | Financial analytics dashboard — earnings charts, type breakdown, top clients |
 
 ---
 
@@ -182,6 +183,27 @@ Admin-only tool for extracting and saving color palettes from artwork.
 - Canvas pixel access requires same-origin or CORS-enabled images
 - Data-URI images (uploaded) always work
 - External URLs may fail silently due to CORS; the tool shows a friendly warning
+
+---
+
+## Revenue Dashboard (Admin → Revenue tab) — NEW TOOL
+
+Financial analytics layer on top of the Commission Queue. Reads from `_gam_queue_v1` — no new storage key required.
+
+**What it shows:**
+- **Total Earned**: Sum of price for all `done` queue items
+- **Pipeline Value**: Sum of price for all active (non-done, non-cancelled) items
+- **Avg. Commission**: Total earned ÷ completed count
+- **Completion Rate**: Completed ÷ (total − cancelled) as a percentage
+- **Monthly Earnings Chart**: Canvas bar chart of the past 12 months, derived from `updatedAt` timestamps on done items
+- **Revenue by Type**: Canvas donut chart showing earnings split by commission type (Character Art, Stickers, etc.)
+- **Top Clients Table**: Sorted by total revenue with per-client commission count and average value
+
+**Technical notes:**
+- All data derives from existing `_gam_queue_v1` storage — no new storage key
+- Charts use Canvas 2D API, consistent with the heatmap in the Analytics tab
+- Color palette uses warm amber/gold tones (`rgba(201,168,124,...)`) matching existing admin aesthetic
+- Tab renders lazily (only when clicked), same pattern as Queue and Analytics tabs
 
 ---
 
@@ -297,4 +319,4 @@ Stored in `_gam_prices_v1`. Three sections: `digital`, `stickers`, `animation`. 
 
 ---
 
-*Last updated: 2026-05-27*
+*Last updated: 2026-05-28*
