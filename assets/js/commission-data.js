@@ -15,7 +15,8 @@ window.CommissionData = (function () {
     feedback:  '_gam_feedback_v1',
     analytics: '_gam_analytics_v1',
     palettes:  '_gam_palettes_v1',
-    queue:     '_gam_queue_v1'
+    queue:     '_gam_queue_v1',
+    spotlight: '_gam_spotlight_v1'
   };
 
   var DEFAULTS = {
@@ -216,7 +217,7 @@ window.CommissionData = (function () {
       var imgClass  = it.src ? 'featured-img' : 'featured-img featured-img-empty';
       /* Stretched-link pattern: card keeps its flex layout intact;
          the <a> inside .featured-body gets a ::after that covers the whole card */
-      return '<article class="featured-card">' +
+      return '<article class="featured-card" data-index="' + String(realIdx + 1).padStart(2, '0') + '">' +
         '<div class="' + imgClass + '"' + imgStyle + '></div>' +
         '<div class="featured-body">' +
           (it.tagline   ? '<span class="featured-tagline">' + esc(it.tagline) + '</span>'  : '') +
@@ -383,6 +384,11 @@ window.CommissionData = (function () {
       try { return JSON.parse(localStorage.getItem(KEYS.analytics) || '[]'); } catch (e) { return []; }
     },
     clearAnalytics: function () { localStorage.removeItem(KEYS.analytics); },
+    /* Spotlight — artwork viewport-time tracking */
+    getSpotlight: function () {
+      try { return JSON.parse(localStorage.getItem(KEYS.spotlight) || '[]'); } catch (e) { return []; }
+    },
+    clearSpotlight: function () { localStorage.removeItem(KEYS.spotlight); },
     /* Palettes */
     getPalettes: function () {
       try { return JSON.parse(localStorage.getItem(KEYS.palettes) || '[]'); } catch (e) { return []; }

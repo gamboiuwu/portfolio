@@ -1,6 +1,7 @@
 /*!
  * analytics.js — lightweight client-side analytics for antryab.com
  * Events stored in localStorage._gam_analytics_v1 (max 3000, oldest rotated)
+ * Artwork viewport tracking stored in localStorage._gam_spotlight_v1
  * Exposes window.GamAnalytics for admin consumption.
  * Admin page (/admin/) is excluded automatically.
  */
@@ -8,7 +9,9 @@
   'use strict';
 
   var KEY       = '_gam_analytics_v1';
+  var SP_KEY    = '_gam_spotlight_v1';
   var MAX_EVTS  = 3000;
+  var MAX_SP    = 2000;
 
   /* Skip tracking on the admin page */
   if (location.pathname.indexOf('/admin') !== -1) return;
@@ -24,6 +27,16 @@
     try { localStorage.setItem(KEY, JSON.stringify(list)); } catch (e) {}
   }
 
+  function loadSpotlight() {
+    try { return JSON.parse(localStorage.getItem(SP_KEY) || '[]'); } catch (e) { return []; }
+  }
+  function pushSpotlight(evt) {
+    var list = loadSpotlight();
+    list.push(evt);
+    if (list.length > MAX_SP) list = list.slice(list.length - MAX_SP);
+    try { localStorage.setItem(SP_KEY, JSON.stringify(list)); } catch (e) {}
+  }
+
   /* ── Session ID (per browser tab) ── */
   var sid = sessionStorage.getItem('_gam_sid');
   if (!sid) {
@@ -34,18 +47,24 @@
   /* ── Normalise page path ── */
   var page = location.pathname
     .replace(/\/index\.html$/, '/')
-    .replace(/([^/])$/, '$1');   /* ensure no trailing noise */
+    .replace(/([^/])$/, '$1');
   if (!page) page = '/';
 
   var ref       = document.referrer ? document.referrer.replace(/^https?:\/\/[^/]+/, '') || 'direct' : 'direct';
   var pageStart = Date.now();
 
+  /* ── Device fingerprint for pageview ── */
+  var ua  = navigator.userAgent || '';
+  var dev = /Mobi|Android|iPhone|iPad|iPod/i.test(ua) ? 'mobile' : 'desktop';
+  if (/iPad|Tablet/i.test(ua)) dev = 'tablet';
+  var sw  = window.screen ? window.screen.width  : 0;
+  var sh  = window.screen ? window.screen.height : 0;
+
   /* ── Pageview ── */
-  push({ sid: sid, type: 'pv', page: page, ref: ref, ts: pageStart });
+  push({ sid: sid, type: 'pv', page: page, ref: ref, dev: dev, sw: sw, sh: sh, ts: pageStart });
 
   /* ── Click tracking ── */
   document.addEventListener('click', function (e) {
-    /* Walk up the DOM to find the most meaningful element (up to 5 levels) */
     var el = e.target;
     for (var i = 0; i < 5; i++) {
       if (!el || el === document.body) break;
@@ -94,6 +113,35 @@
     }, 250);
   }, { passive: true });
 
+  /* ── Artwork tile hover (fires after 1 s sustained hover) ── */
+  var hoverTimers = {};
+  function findTileArticle(el) {
+    for (var i = 0; i < 6; i++) {
+      if (!el || el === document.body) return null;
+      var par = el.parentElement;
+      if (el.tagName === 'ARTICLE' && par && par.className && par.className.indexOf('tiles') !== -1) return el;
+      el = par;
+    }
+    return null;
+  }
+  document.addEventListener('mouseover', function (e) {
+    var art = findTileArticle(e.target);
+    if (!art) return;
+    var key = art.className + '|' + (art.offsetTop || 0);
+    if (hoverTimers[key]) return;
+    hoverTimers[key] = setTimeout(function () {
+      var h2 = art.querySelector('h2');
+      push({ sid: sid, type: 'tile_hover', page: page, title: h2 ? h2.textContent.trim().slice(0, 60) : '', ts: Date.now() });
+      delete hoverTimers[key];
+    }, 1000);
+  }, { passive: true });
+  document.addEventListener('mouseout', function (e) {
+    var art = findTileArticle(e.target);
+    if (!art) return;
+    var key = art.className + '|' + (art.offsetTop || 0);
+    if (hoverTimers[key]) { clearTimeout(hoverTimers[key]); delete hoverTimers[key]; }
+  }, { passive: true });
+
   /* ── Exit event ── */
   var exitFired = false;
   function fireExit() {
@@ -106,11 +154,133 @@
     if (document.visibilityState === 'hidden') fireExit();
   });
 
+  /* ── Spotlight: artwork viewport-time tracker ── */
+  if ('IntersectionObserver' in window) {
+    var spTimers  = {};  /* artId -> entry timestamp */
+    var spCounted = {};  /* artId -> set of sessionIds already counted to avoid re-counting rapid flickers */
+
+    var artObserver = new IntersectionObserver(function (entries) {
+      entries.forEach(function (entry) {
+        var el    = entry.target;
+        var artId = el.dataset.spId || '';
+        if (!artId) return;
+
+        if (entry.isIntersecting) {
+          spTimers[artId] = Date.now();
+        } else if (spTimers[artId]) {
+          var ms = Date.now() - spTimers[artId];
+          delete spTimers[artId];
+          if (ms < 400) return; /* ignore rapid flickers < 400ms */
+          pushSpotlight({
+            sid:   sid,
+            artId: artId,
+            alt:   el.dataset.spAlt  || '',
+            label: el.dataset.spLabel || '',
+            page:  page,
+            ms:    ms,
+            ts:    Date.now()
+          });
+        }
+      });
+    }, { threshold: 0.25 }); /* fire when 25% of element is visible */
+
+    /* Assign IDs and observe artwork elements */
+    function observeArtworks() {
+      var counter = 0;
+
+      /* Featured cards (.featured-card) */
+      document.querySelectorAll('.featured-card').forEach(function (card) {
+        if (card.dataset.spId) return;
+        var titleEl = card.querySelector('.featured-title');
+        var tagEl   = card.querySelector('.featured-tagline');
+        var label   = (titleEl ? titleEl.textContent.trim() : '') ||
+                      (tagEl   ? tagEl.textContent.trim()   : '') ||
+                      'featured-' + (++counter);
+        card.dataset.spId    = 'feat::' + label.slice(0, 50);
+        card.dataset.spLabel = label.slice(0, 60);
+        card.dataset.spAlt   = label.slice(0, 60);
+        artObserver.observe(card);
+      });
+
+      /* Project tiles (.tiles article) */
+      document.querySelectorAll('.tiles article').forEach(function (art) {
+        if (art.dataset.spId) return;
+        var h2 = art.querySelector('h2');
+        var label = (h2 ? h2.textContent.trim() : '') || 'tile-' + (++counter);
+        art.dataset.spId    = 'tile::' + label.slice(0, 50);
+        art.dataset.spLabel = label.slice(0, 60);
+        art.dataset.spAlt   = label.slice(0, 60);
+        artObserver.observe(art);
+      });
+
+      /* Commission gallery images */
+      document.querySelectorAll('.comm-gallery-item img').forEach(function (img) {
+        if (img.dataset.spId) return;
+        var label = img.getAttribute('alt') || img.src.split('/').pop() || 'comm-' + (++counter);
+        img.dataset.spId    = 'comm::' + label.slice(0, 50);
+        img.dataset.spLabel = label.slice(0, 60);
+        img.dataset.spAlt   = img.getAttribute('alt') || '';
+        artObserver.observe(img);
+      });
+
+      /* Sticker gallery images */
+      document.querySelectorAll('.sticker-gallery-item img').forEach(function (img) {
+        if (img.dataset.spId) return;
+        var label = img.getAttribute('alt') || img.src.split('/').pop() || 'sticker-' + (++counter);
+        img.dataset.spId    = 'sticker::' + label.slice(0, 50);
+        img.dataset.spLabel = label.slice(0, 60);
+        img.dataset.spAlt   = img.getAttribute('alt') || '';
+        artObserver.observe(img);
+      });
+
+      /* Expertise grid items */
+      document.querySelectorAll('.expertise-item').forEach(function (item) {
+        if (item.dataset.spId) return;
+        var titleEl = item.querySelector('.expertise-item-title');
+        var label   = (titleEl ? titleEl.textContent.trim() : '') || 'expertise-' + (++counter);
+        item.dataset.spId    = 'expertise::' + label.slice(0, 50);
+        item.dataset.spLabel = label.slice(0, 60);
+        item.dataset.spAlt   = label.slice(0, 60);
+        artObserver.observe(item);
+      });
+    }
+
+    /* Initial scan — also re-scan after dynamic content renders */
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', function () {
+        observeArtworks();
+        setTimeout(observeArtworks, 800);
+      });
+    } else {
+      observeArtworks();
+      setTimeout(observeArtworks, 800);
+    }
+
+    /* Flush any in-progress timers on page exit */
+    window.addEventListener('beforeunload', function () {
+      Object.keys(spTimers).forEach(function (artId) {
+        var ms = Date.now() - spTimers[artId];
+        if (ms < 400) return;
+        pushSpotlight({
+          sid:   sid,
+          artId: artId,
+          alt:   '',
+          label: artId.split('::')[1] || artId,
+          page:  page,
+          ms:    ms,
+          ts:    Date.now()
+        });
+      });
+    });
+  }
+
   /* ── Public API ── */
   window.GamAnalytics = {
-    get:    load,
-    clear:  function () { localStorage.removeItem(KEY); },
-    getKey: function () { return KEY; }
+    get:          load,
+    clear:        function () { localStorage.removeItem(KEY); },
+    getKey:       function () { return KEY; },
+    getSpotlight: loadSpotlight,
+    clearSpotlight: function () { localStorage.removeItem(SP_KEY); }
   };
 
 }());

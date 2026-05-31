@@ -6,27 +6,35 @@
 -->
 <html>
 	<head>
-		<title>gamboiuwu Art Commissions</title>
+		<title>Commissions — gamboiuwu | Anthony Ryabchikov</title>
 		<meta charset="utf-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+		<link rel="icon" type="image/png" href="../images/favicon.png" />
 		<link rel="preconnect" href="https://fonts.googleapis.com" />
 		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 		<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&display=swap" rel="stylesheet" />
 		<script src="../assets/js/analytics.js" defer></script>
+		<link rel="icon" type="image/png" href="../images/favicon.png" />
 		<link rel="stylesheet" href="../assets/css/main.css" />
 		<noscript><link rel="stylesheet" href="../assets/css/noscript.css" /></noscript>
 
-		<meta name="description" content="gamboiuwu's Commission Details">
-		<meta name="keywords" content="portfolio, artist, gamboiuwu, anthony, ryabchikov">
+		<meta name="description" content="Commission kemono and anthro character art, Telegram sticker packs, and 2D animation from gamboiuwu (Anthony Ryabchikov). New York-based freelance artist. Pricing, examples, and inquiry form.">
+		<meta name="keywords" content="commission, furry art, kemono, anthro, character design, telegram stickers, animation, gamboiuwu, anthony ryabchikov, protogen, open commissions, new york artist">
 		<meta name="author" content="Anthony Ryabchikov">
 		<meta name="theme-color" content="#2c2926">
-		<meta property="og:title" content="gamboiuwu Commission Details">
-		<meta property="og:site_name" content="Anthony Ryabchikov | Designer, Artist, and Creator">
-		<meta property="og:description" content="My furry art commissions are currently open! I do full prints, telegram stickers and more.">
-		<meta property="og:url" content="https://antryab.com/commissions">
-		<meta property="og:image" content="../images/2089_Preview.jpeg">
-		<meta name="twitter:image" content="../images/2089_Preview.jpeg" />
-		<meta property="og:image:alt" content="Preview of gamboiuwu's commission artwork">
+		<meta name="robots" content="index, follow" />
+		<meta property="og:title" content="Commissions — gamboiuwu">
+		<meta property="og:site_name" content="Anthony Ryabchikov | Artist &amp; Creator">
+		<meta property="og:description" content="Commission kemono and anthro character art, Telegram sticker packs, and 2D animation. Sketches from $19, full bodies from $54. Inquiry form available.">
+		<meta property="og:url" content="https://antryab.com/commissions/">
+		<meta property="og:image" content="https://antryab.com/images/2089_Preview.jpeg">
+		<meta property="og:image:alt" content="gamboiuwu commission artwork preview">
+		<meta name="twitter:card" content="summary_large_image" />
+		<meta name="twitter:site" content="@gamboiuwu" />
+		<meta name="twitter:creator" content="@gamboiuwu" />
+		<meta name="twitter:title" content="Commissions — gamboiuwu" />
+		<meta name="twitter:description" content="Kemono &amp; anthro character art, Telegram sticker packs, and 2D animation — sketches from $19. Inquiry form open." />
+		<meta name="twitter:image" content="https://antryab.com/images/2089_Preview.jpeg" />
 
 		<style>
 		/* ══════════════════════════════════════════════════
@@ -629,6 +637,93 @@
 			border-bottom: 1px solid rgba(44,41,38,0.5); border-right: 1px solid rgba(44,41,38,0.5); }
 		.comm-gallery-item:hover::before, .comm-gallery-item:hover::after { opacity: 1; }
 
+		/* ── SCROLL REVEAL ───────────────────────────── */
+		.reveal { opacity: 0; transform: translateY(16px); transition: opacity 0.5s ease, transform 0.5s ease; }
+		.reveal.visible { opacity: 1; transform: none; }
+		.reveal-stagger > * { opacity: 0; transform: translateY(12px); transition: opacity 0.4s ease, transform 0.4s ease; }
+		.reveal-stagger.visible > *:nth-child(1) { opacity:1; transform:none; transition-delay:0s; }
+		.reveal-stagger.visible > *:nth-child(2) { opacity:1; transform:none; transition-delay:0.08s; }
+		.reveal-stagger.visible > *:nth-child(3) { opacity:1; transform:none; transition-delay:0.16s; }
+		.reveal-stagger.visible > *:nth-child(4) { opacity:1; transform:none; transition-delay:0.24s; }
+		.reveal-stagger.visible > *:nth-child(5) { opacity:1; transform:none; transition-delay:0.32s; }
+
+		/* ── TRUST STRIP ────────────────────────────── */
+		.trust-strip {
+			display: flex;
+			flex-wrap: wrap;
+			border: 1px solid var(--rule-mid);
+			background: var(--paper2);
+			margin: 1.5em 0;
+		}
+		.trust-item {
+			flex: 1 1 80px;
+			padding: 0.85em 1em;
+			text-align: center;
+			border-right: 1px solid var(--rule);
+			transition: background 0.2s;
+		}
+		.trust-item:last-child { border-right: none; }
+		.trust-item:hover { background: rgba(44,41,38,0.04); }
+		.trust-icon {
+			font-family: 'Courier New', Courier, monospace;
+			font-size: 1.05em;
+			font-weight: 700;
+			color: var(--ink);
+			letter-spacing: 0.04em;
+			line-height: 1;
+		}
+		.trust-label {
+			font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif;
+			font-size: 0.6em;
+			font-weight: 400;
+			letter-spacing: 0.09em;
+			text-transform: uppercase;
+			color: var(--lite);
+			margin-top: 0.3em;
+		}
+		@media (max-width: 600px) {
+			.trust-strip { display: grid; grid-template-columns: repeat(3, 1fr); }
+			.trust-item { border-bottom: 1px solid var(--rule); }
+		}
+
+		/* ── PROCESS SECTION ─────────────────────────── */
+		.process-steps {
+			display: grid;
+			grid-template-columns: repeat(4, 1fr);
+			gap: 1px;
+			background: var(--rule);
+			border: 1px solid var(--rule);
+		}
+		@media (max-width: 800px) { .process-steps { grid-template-columns: repeat(2, 1fr); } }
+		@media (max-width: 480px) { .process-steps { grid-template-columns: 1fr; } }
+		.process-step {
+			background: var(--paper);
+			padding: 1.4em 1.5em 1.5em;
+			transition: background 0.2s;
+		}
+		.process-step:hover { background: var(--paper2); }
+		.process-step-num {
+			font-family: 'Courier New', Courier, monospace;
+			font-size: 0.58em;
+			letter-spacing: 0.14em;
+			color: var(--lite);
+			margin-bottom: 0.6em;
+		}
+		.process-step-title {
+			font-family: 'Cormorant Garamond', Georgia, serif;
+			font-size: 1.1em;
+			font-weight: 400;
+			color: var(--ink);
+			margin-bottom: 0.45em;
+			line-height: 1.3;
+		}
+		.process-step-desc {
+			font-size: 0.78em;
+			color: var(--lite);
+			line-height: 1.7;
+			margin: 0;
+		}
+
 		/* ══════════════════════════════════════════════════
 		   COMMISSION INQUIRY FORM
 		══════════════════════════════════════════════════ */
@@ -1070,11 +1165,12 @@
 				<section id="commission-prices">
 
 					<!-- 01 — Art (Digital) -->
+					<div class="reveal">
 					<span class="section-label" data-sys="// 01">Digital Art</span>
 					<h2 id="digital">Art (Digital)</h2>
 					<p class="section-starting" id="digital-starting">Starting from <strong>$19</strong></p>
 
-					<div class="comm-gallery" id="comm-gallery-container">
+					<div class="comm-gallery reveal-stagger" id="comm-gallery-container">
 						<figure class="comm-gallery-item">
 							<img src="../images/fullcomm/comm1.png" alt="Complex full body with environment example" />
 							<figcaption>Complex Full Body w/ Environment</figcaption>
@@ -1091,10 +1187,12 @@
 
 					<div id="digital-table-wrap"></div>
 					<div id="digital-addons-wrap"></div>
+					</div><!-- /.reveal digital -->
 
 					<hr class="section-divider">
 
 					<!-- 02 — Telegram Stickers -->
+					<div class="reveal">
 					<span class="section-label" data-sys="// 02">Telegram Stickers</span>
 					<h2 id="stickers">Telegram Stickers</h2>
 					<p class="section-starting" id="sticker-starting">Starting from <strong>$17</strong></p>
@@ -1110,15 +1208,18 @@
 
 					<div id="sticker-table-wrap"></div>
 					<div id="sticker-addons-wrap"></div>
+					</div><!-- /.reveal stickers -->
 
 					<hr class="section-divider">
 
 					<!-- 03 — Animation -->
+					<div class="reveal">
 					<span class="section-label" data-sys="// 03">Animation</span>
 					<h2 id="animation">Animation <span class="status-badge closed" id="animation-status-badge">Closed</span></h2>
 
 					<div id="animation-table-wrap"></div>
 					<div id="animation-addons-wrap"></div>
+					</div><!-- /.reveal animation -->
 
 					<!-- Contact + signature -->
 					<p class="contact-line">
@@ -1131,11 +1232,65 @@
 
 				</section>
 
+				<!-- ── Trust Signals ── -->
+				<div class="trust-strip reveal">
+					<div class="trust-item">
+						<div class="trust-icon">48h</div>
+						<div class="trust-label">Response time</div>
+					</div>
+					<div class="trust-item">
+						<div class="trust-icon">50%</div>
+						<div class="trust-label">Deposit to start</div>
+					</div>
+					<div class="trust-item">
+						<div class="trust-icon">PNG</div>
+						<div class="trust-label">High-res delivery</div>
+					</div>
+					<div class="trust-item">
+						<div class="trust-icon">2×</div>
+						<div class="trust-label">Free revisions</div>
+					</div>
+					<div class="trust-item">
+						<div class="trust-icon">10+</div>
+						<div class="trust-label">Years experience</div>
+					</div>
+				</div>
+
 				<!-- ── Commission Form CTA ── -->
 				<div class="bottom-cta-wrap">
 				  <p class="bottom-cta-text">Ready to commission? Fill out the inquiry form below.</p>
 				  <a href="#commission-form" class="button primary fit">Start Your Inquiry &darr;</a>
 				</div>
+
+<!-- ══════════════════════════════════════════════════
+     PROCESS SECTION
+══════════════════════════════════════════════════ -->
+<section class="process-section reveal" style="margin:3.5em 0 0;padding:2.5em 0;border-top:1px solid var(--rule);border-bottom:1px solid var(--rule)">
+  <span class="section-label" data-sys="// SYS.PROCESS">How It Works</span>
+  <h2 style="font-weight:300;font-size:1.7em;margin:0.3em 0 1.25em;color:var(--ink)">Commission Process</h2>
+  <div class="process-steps reveal-stagger">
+    <div class="process-step">
+      <div class="process-step-num">01</div>
+      <div class="process-step-title">Inquiry</div>
+      <p class="process-step-desc">Submit the form below with your character reference, commission type, and any specific details. I respond within 48 hours.</p>
+    </div>
+    <div class="process-step">
+      <div class="process-step-num">02</div>
+      <div class="process-step-title">Quote &amp; Agreement</div>
+      <p class="process-step-desc">I'll confirm the scope, pricing, and timeline. 50% deposit is required before work begins.</p>
+    </div>
+    <div class="process-step">
+      <div class="process-step-num">03</div>
+      <div class="process-step-title">Sketch Review</div>
+      <p class="process-step-desc">Rough sketches sent for your approval. Minor adjustments included — major changes may incur a revision fee.</p>
+    </div>
+    <div class="process-step">
+      <div class="process-step-num">04</div>
+      <div class="process-step-title">Final Delivery</div>
+      <p class="process-step-desc">Remaining balance due before delivery. Files sent as high-res PNG. Print-ready versions available for an add-on fee.</p>
+    </div>
+  </div>
+</section>
 
 <!-- ══════════════════════════════════════════════════
      COMMISSION INQUIRY FORM
@@ -1344,6 +1499,25 @@
 				CommissionData.renderStickers();
 				CommissionData.renderFeatured();
 				if (CommissionData.renderPriceTables) CommissionData.renderPriceTables();
+
+				/* Scroll-reveal */
+				if ('IntersectionObserver' in window) {
+					var io = new IntersectionObserver(function(entries) {
+						entries.forEach(function(entry) {
+							if (entry.isIntersecting) {
+								entry.target.classList.add('visible');
+								io.unobserve(entry.target);
+							}
+						});
+					}, { threshold: 0.06 });
+					document.querySelectorAll('.reveal, .reveal-stagger').forEach(function(el) {
+						io.observe(el);
+					});
+				} else {
+					document.querySelectorAll('.reveal, .reveal-stagger').forEach(function(el) {
+						el.classList.add('visible');
+					});
+				}
 			});
 		</script>
 		<script>
