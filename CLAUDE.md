@@ -185,6 +185,7 @@ Password-protected (SHA-256 hash in localStorage, 5-attempt lockout). Session tr
 | Queue       | Internal commission work-order tracker (see below)                                 |
 | Revenue     | Financial analytics dashboard — earnings charts, type breakdown, top clients       |
 | Spotlight   | Artwork attention tracker — viewport time per artwork/element                      |
+| Flow        | Visitor journey & funnel — entry/exit pages, navigation paths, conversion funnel    |
 
 ---
 
@@ -345,6 +346,34 @@ Admin-only tool that tracks how long individual artworks and portfolio elements 
 
 ---
 
+## Flow — Visitor Journey & Funnel (Admin → Flow tab) — NEW TOOL
+
+Admin-only tool that reconstructs each visitor's **path through the site** from the existing analytics stream. Answers: where do people enter, how do they move between pages, where do they click off, and how many reach the commission funnel. **No new storage key** — it derives everything live from `_gam_analytics_v1` (`pv` / `exit` / `click` events), so it complements (rather than duplicates) the Analytics tab (clicks/heatmap) and Spotlight tab (artwork viewport time).
+
+**How it works:**
+1. All analytics events are grouped by `sid` (session) and sorted by `ts`
+2. The ordered `pv` events become each session's page sequence (immediate repeats collapsed)
+3. Total time = summed `exit` durations, falling back to the timestamp span
+4. Conversion signals are flagged per session: `viewedComm` (visited a `/commissions` page) and `inquired` (a `click` whose text/href/el matches `submit|inquir|newcommission|…`)
+5. A time-window selector (24h / 7d / 30d / all) filters the event set before reconstruction
+
+**Sections:**
+- **Stats**: Sessions, Pages/Session, Bounce Rate (single-page sessions), Avg. Time on Site
+- **Entry Pages**: first page of each session, ranked, with % share of sessions
+- **Exit Pages**: last page of each session — *where visitors click off*
+- **Top Navigation Paths**: most common consecutive `pageA → pageB` steps
+- **Funnel to Commissions**: Landed → Viewed Commissions → Inquiry intent, each with count and % of landed
+- **Recent Journeys**: last 25 sessions as ordered page-path chips (exit step highlighted), with device, page count, and time on site
+- **Refresh / Export JSON** controls (export respects the selected window)
+
+**Technical notes:**
+- Pure derivation — no changes to `analytics.js` or `commission-data.js` were required
+- Renders lazily on tab click, same pattern as Analytics/Spotlight/Revenue
+- Reuses existing admin styling (`.analytics-stat-chip`, `.spotlight-board`/`.spotlight-row`/`.sp-bar`) plus warm amber accent (`#c9a87c`) — no blue/pink, consistent with the rest of the dashboard
+- Path/journey chips use monospace `.flow-step` pills; exit steps get a muted red tint
+
+---
+
 ## Commission System
 
 ### Pages
@@ -422,4 +451,4 @@ Stored in `_gam_prices_v1`. Three sections: `digital`, `stickers`, `animation`. 
 
 ---
 
-*Last updated: 2026-05-29*
+*Last updated: 2026-06-01*

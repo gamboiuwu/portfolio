@@ -789,6 +789,50 @@
 		.sp-views, .sp-sess {
 		  font-size: 0.65em; color: #555; white-space: nowrap;
 		}
+
+		/* ── Flow / Journey tab ── */
+		.flow-range-label {
+		  font-size: 0.7em; color: #777; text-transform: uppercase;
+		  letter-spacing: 0.08em; display: inline-flex; align-items: center; gap: 0.5em;
+		}
+		.flow-range-label select {
+		  font-size: 1em; text-transform: none; letter-spacing: 0;
+		  background: rgba(255,255,255,0.04); color: #ccc;
+		  border: 1px solid rgba(201,201,201,0.18); border-radius: 5px;
+		  padding: 0.35em 0.55em;
+		}
+		.flow-path {
+		  display: flex; flex-wrap: wrap; align-items: center; gap: 0.35em;
+		  font-family: 'Courier New', monospace; font-size: 0.78em;
+		}
+		.flow-step {
+		  background: rgba(201,168,124,0.10); border: 1px solid rgba(201,168,124,0.22);
+		  color: #d9c3a0; border-radius: 4px; padding: 0.1em 0.45em;
+		  max-width: 16em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+		}
+		.flow-step.flow-step-exit {
+		  background: rgba(192,96,96,0.10); border-color: rgba(192,96,96,0.25);
+		  color: #d49a9a;
+		}
+		.flow-arrow { color: #555; }
+		.flow-funnel-row {
+		  display: flex; align-items: center; gap: 0.75em; margin-bottom: 0.55em;
+		}
+		.flow-funnel-stage {
+		  font-size: 0.78em; color: #ccc; min-width: 11em; flex-shrink: 0;
+		}
+		.flow-funnel-bar-wrap {
+		  flex: 1; height: 22px; background: rgba(255,255,255,0.04);
+		  border-radius: 4px; overflow: hidden; position: relative;
+		}
+		.flow-funnel-bar {
+		  height: 100%; background: linear-gradient(to right, #8c887f, #c9a87c);
+		  border-radius: 4px; transition: width 0.4s ease; min-width: 2px;
+		}
+		.flow-funnel-meta {
+		  font-family: 'Courier New', monospace; font-size: 0.78em;
+		  color: #c9a87c; min-width: 6.5em; text-align: right; flex-shrink: 0;
+		}
 	</style>
 </head>
 <body class="is-preload">
@@ -862,6 +906,7 @@
 				<button class="admin-tab" data-tab="queue">Queue <span id="queue-badge" class="inq-badge" style="display:none"></span></button>
 				<button class="admin-tab" data-tab="revenue">Revenue</button>
 				<button class="admin-tab" data-tab="spotlight">Spotlight</button>
+				<button class="admin-tab" data-tab="flow">Flow</button>
 			</div>
 
 			<!-- ============ GALLERY TAB ============ -->
@@ -1459,6 +1504,60 @@
 					<h3>Recent Artwork Views</h3>
 					<p class="hint">Last 30 individual artwork viewport events.</p>
 					<div id="spotlight-recent"></div>
+				</div>
+
+			</div>
+
+			<div id="tab-flow" class="tab-content">
+
+				<div class="admin-card">
+					<h3>Flow — Visitor Journey &amp; Funnel</h3>
+					<p class="hint">Reconstructs each visitor's path through the site from pageview events: where they enter, how they navigate, and where they leave. Derived live from existing analytics data — no separate tracking. Use the window control to focus on a recent time range.</p>
+					<div style="display:flex;gap:0.6em;flex-wrap:wrap;align-items:center;margin-bottom:0.9em">
+						<label class="flow-range-label">Window
+							<select id="flow-range">
+								<option value="0">All time</option>
+								<option value="1">Last 24 hours</option>
+								<option value="7" selected>Last 7 days</option>
+								<option value="30">Last 30 days</option>
+							</select>
+						</label>
+					</div>
+					<div id="flow-stats" class="analytics-stats"></div>
+					<div style="display:flex;gap:0.5em;flex-wrap:wrap;margin-top:0.9em">
+						<button class="button small" id="flow-refresh-btn">Refresh</button>
+						<button class="button small" id="flow-export-btn">Export JSON</button>
+					</div>
+				</div>
+
+				<div class="admin-card">
+					<h3>Entry Pages</h3>
+					<p class="hint">Where sessions begin — the first page each visitor lands on. Bar length is share of all sessions.</p>
+					<div id="flow-entry"></div>
+				</div>
+
+				<div class="admin-card">
+					<h3>Exit Pages</h3>
+					<p class="hint">Where visitors click off — the last page of each session. A high exit share on a non-goal page is worth investigating.</p>
+					<div id="flow-exit"></div>
+				</div>
+
+				<div class="admin-card">
+					<h3>Top Navigation Paths</h3>
+					<p class="hint">The most common page-to-page steps visitors take within a single session.</p>
+					<div id="flow-paths"></div>
+				</div>
+
+				<div class="admin-card">
+					<h3>Funnel to Commissions</h3>
+					<p class="hint">How many sessions reach each conversion step: landed &rarr; viewed commissions &rarr; submitted an inquiry.</p>
+					<div id="flow-funnel"></div>
+				</div>
+
+				<div class="admin-card">
+					<h3>Recent Journeys</h3>
+					<p class="hint">Last 25 sessions as ordered page paths, with device and total time on site.</p>
+					<div id="flow-recent"></div>
 				</div>
 
 			</div>
@@ -2453,6 +2552,9 @@ document.addEventListener('click', function(e){
   }
   if (e.target.dataset && e.target.dataset.tab === 'spotlight') {
     renderSpotlightTab();
+  }
+  if (e.target.dataset && e.target.dataset.tab === 'flow') {
+    renderFlowTab();
   }
 });
 
@@ -3672,6 +3774,209 @@ document.getElementById('spotlight-clear-btn').addEventListener('click', functio
   CommissionData.clearSpotlight();
   renderSpotlightTab();
   toast('Spotlight data cleared.');
+});
+
+/* ================================================================
+   FLOW TAB — Visitor Journey & Funnel
+   Derived entirely from _gam_analytics_v1 (pv / exit / click / scroll).
+   No separate storage key.
+================================================================ */
+
+function flowFmtDur(ms) {
+  var s = Math.round(ms / 1000);
+  if (s < 60) return s + 's';
+  var m = Math.floor(s / 60), rs = s % 60;
+  if (m < 60) return m + 'm' + (rs ? ' ' + rs + 's' : '');
+  var h = Math.floor(m / 60), rm = m % 60;
+  return h + 'h' + (rm ? ' ' + rm + 'm' : '');
+}
+
+/* Build per-session journeys from the raw analytics stream. */
+function flowBuildSessions(events) {
+  var bySid = {};
+  events.forEach(function(e) {
+    if (!e.sid) return;
+    if (!bySid[e.sid]) bySid[e.sid] = [];
+    bySid[e.sid].push(e);
+  });
+
+  var sessions = [];
+  Object.keys(bySid).forEach(function(sid) {
+    var evts = bySid[sid].slice().sort(function(a, b){ return (a.ts || 0) - (b.ts || 0); });
+
+    /* Ordered page sequence from pageviews, collapsing immediate repeats */
+    var pages = [];
+    var device = '';
+    evts.forEach(function(e) {
+      if (e.type !== 'pv') return;
+      var pg = e.page || '/';
+      if (!pages.length || pages[pages.length - 1] !== pg) pages.push(pg);
+      if (!device && e.dev) device = e.dev;
+    });
+    if (!pages.length) return; /* a session with no pageview isn't a journey */
+
+    /* Total time: prefer summed exit durations, else span of timestamps */
+    var exitMs = 0, hasExit = false;
+    evts.forEach(function(e){ if (e.type === 'exit') { exitMs += (e.ms || 0); hasExit = true; } });
+    var span = (evts[evts.length - 1].ts || 0) - (evts[0].ts || 0);
+    var dur  = hasExit ? exitMs : span;
+
+    /* Conversion signals */
+    var viewedComm = pages.some(function(p){ return p.indexOf('/commissions') !== -1; });
+    var inquired   = evts.some(function(e) {
+      if (e.type !== 'click') return false;
+      var blob = ((e.text || '') + ' ' + (e.href || '') + ' ' + (e.el || '')).toLowerCase();
+      return /submit|send inquiry|newcommission|inquir|request a comm/.test(blob);
+    });
+
+    sessions.push({
+      sid: sid, pages: pages, device: device || 'desktop',
+      entry: pages[0], exit: pages[pages.length - 1],
+      count: pages.length, dur: dur,
+      lastTs: evts[evts.length - 1].ts || 0,
+      viewedComm: viewedComm, inquired: inquired
+    });
+  });
+  return sessions;
+}
+
+function flowRankBars(counts, denom, containerId, emptyMsg) {
+  var el = document.getElementById(containerId);
+  var rows = Object.keys(counts).sort(function(a, b){ return counts[b] - counts[a]; });
+  if (!rows.length) {
+    el.innerHTML = '<p style="color:#444;font-size:0.85em;padding:0.5em 0">' + emptyMsg + '</p>';
+    return;
+  }
+  var max = counts[rows[0]] || 1;
+  el.innerHTML = '<div class="spotlight-board">' + rows.slice(0, 12).map(function(key, idx) {
+    var n   = counts[key];
+    var pct = Math.round((n / max) * 100);
+    var share = denom ? Math.round((n / denom) * 100) : 0;
+    return '<div class="spotlight-row">' +
+      '<span class="sp-rank">' + (idx + 1) + '</span>' +
+      '<div class="sp-info">' +
+        '<div class="sp-label" title="' + escHtml(key) + '">' + escHtml(key) + '</div>' +
+        '<div class="sp-bar-wrap"><div class="sp-bar" style="width:' + pct + '%"></div></div>' +
+      '</div>' +
+      '<div class="sp-meta">' +
+        '<span class="sp-time">' + n + '</span>' +
+        '<span class="sp-views">' + share + '% of sessions</span>' +
+      '</div>' +
+    '</div>';
+  }).join('') + '</div>';
+}
+
+function renderFlowTab() {
+  var rangeSel = document.getElementById('flow-range');
+  var days = rangeSel ? parseInt(rangeSel.value, 10) : 7;
+  var all  = CommissionData.getAnalytics();
+  var cutoff = days > 0 ? Date.now() - days * 86400000 : 0;
+  var events = all.filter(function(e){ return !cutoff || (e.ts || 0) >= cutoff; });
+
+  var sessions = flowBuildSessions(events);
+  var total = sessions.length;
+
+  /* ── Stats ── */
+  function statChip(num, label) {
+    return '<div class="analytics-stat-chip"><span class="asc-num">' + num +
+      '</span><span class="asc-label">' + label + '</span></div>';
+  }
+  var totalPages  = sessions.reduce(function(s, x){ return s + x.count; }, 0);
+  var bounces     = sessions.filter(function(x){ return x.count <= 1; }).length;
+  var totalDur    = sessions.reduce(function(s, x){ return s + (x.dur || 0); }, 0);
+  var avgPages    = total ? (totalPages / total).toFixed(1) : '0';
+  var bounceRate  = total ? Math.round((bounces / total) * 100) + '%' : '0%';
+  var avgDur      = total ? flowFmtDur(totalDur / total) : '0s';
+
+  document.getElementById('flow-stats').innerHTML =
+    statChip(total,      'Sessions')        +
+    statChip(avgPages,   'Pages / Session') +
+    statChip(bounceRate, 'Bounce Rate')     +
+    statChip(avgDur,     'Avg. Time on Site');
+
+  /* ── Entry pages ── */
+  var entry = {};
+  sessions.forEach(function(x){ entry[x.entry] = (entry[x.entry] || 0) + 1; });
+  flowRankBars(entry, total, 'flow-entry', 'No session data in this window yet.');
+
+  /* ── Exit pages ── */
+  var exit = {};
+  sessions.forEach(function(x){ exit[x.exit] = (exit[x.exit] || 0) + 1; });
+  flowRankBars(exit, total, 'flow-exit', 'No session data in this window yet.');
+
+  /* ── Top navigation paths (consecutive page pairs) ── */
+  var paths = {};
+  sessions.forEach(function(x) {
+    for (var i = 0; i < x.pages.length - 1; i++) {
+      var key = x.pages[i] + '  →  ' + x.pages[i + 1];
+      paths[key] = (paths[key] || 0) + 1;
+    }
+  });
+  var pathTransitions = Object.values(paths).reduce(function(s, n){ return s + n; }, 0);
+  flowRankBars(paths, pathTransitions, 'flow-paths',
+    'No multi-page journeys yet — every session so far was a single page.');
+
+  /* ── Funnel ── */
+  var landed   = total;
+  var reached  = sessions.filter(function(x){ return x.viewedComm; }).length;
+  var inquired = sessions.filter(function(x){ return x.inquired; }).length;
+  var funnelEl = document.getElementById('flow-funnel');
+  var stages = [
+    { name: 'Landed on site',     n: landed   },
+    { name: 'Viewed Commissions', n: reached  },
+    { name: 'Inquiry intent',     n: inquired }
+  ];
+  if (!total) {
+    funnelEl.innerHTML = '<p style="color:#444;font-size:0.85em;padding:0.5em 0">No session data in this window yet.</p>';
+  } else {
+    funnelEl.innerHTML = stages.map(function(st) {
+      var pct = landed ? Math.round((st.n / landed) * 100) : 0;
+      return '<div class="flow-funnel-row">' +
+        '<span class="flow-funnel-stage">' + escHtml(st.name) + '</span>' +
+        '<div class="flow-funnel-bar-wrap"><div class="flow-funnel-bar" style="width:' + pct + '%"></div></div>' +
+        '<span class="flow-funnel-meta">' + st.n + ' · ' + pct + '%</span>' +
+      '</div>';
+    }).join('');
+  }
+
+  /* ── Recent journeys ── */
+  var recentEl = document.getElementById('flow-recent');
+  var recent = sessions.slice().sort(function(a, b){ return b.lastTs - a.lastTs; }).slice(0, 25);
+  if (!recent.length) {
+    recentEl.innerHTML = '<p style="color:#444;font-size:0.85em;padding:0.5em 0">No journeys in this window yet.</p>';
+  } else {
+    recentEl.innerHTML = recent.map(function(x) {
+      var steps = x.pages.map(function(p, i) {
+        var isLast = (i === x.pages.length - 1);
+        return '<span class="flow-step' + (isLast && x.count > 1 ? ' flow-step-exit' : '') + '">' + escHtml(p) + '</span>';
+      }).join('<span class="flow-arrow">→</span>');
+      return '<div class="session-item">' +
+        '<div class="flow-path" style="margin-bottom:0.35em">' + steps + '</div>' +
+        '<div class="session-meta">' +
+          new Date(x.lastTs).toLocaleString() + ' &nbsp;·&nbsp; ' +
+          escHtml(x.device) + ' &nbsp;·&nbsp; ' + x.count + ' page' + (x.count !== 1 ? 's' : '') +
+          ' &nbsp;·&nbsp; ' + flowFmtDur(x.dur || 0) + ' on site' +
+          (x.inquired ? ' &nbsp;·&nbsp; <span style="color:#c9a87c">inquiry intent</span>' : '') +
+        '</div>' +
+      '</div>';
+    }).join('');
+  }
+}
+
+document.getElementById('flow-refresh-btn').addEventListener('click', renderFlowTab);
+document.getElementById('flow-range').addEventListener('change', renderFlowTab);
+document.getElementById('flow-export-btn').addEventListener('click', function() {
+  var rangeSel = document.getElementById('flow-range');
+  var days = rangeSel ? parseInt(rangeSel.value, 10) : 7;
+  var all = CommissionData.getAnalytics();
+  var cutoff = days > 0 ? Date.now() - days * 86400000 : 0;
+  var events = all.filter(function(e){ return !cutoff || (e.ts || 0) >= cutoff; });
+  var data = flowBuildSessions(events);
+  var blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  var url  = URL.createObjectURL(blob);
+  var a    = document.createElement('a');
+  a.href = url; a.download = 'flow-journeys-' + Date.now() + '.json'; a.click();
+  URL.revokeObjectURL(url);
 });
 </script>
 
