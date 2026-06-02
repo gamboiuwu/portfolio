@@ -163,6 +163,9 @@ In addition to `_gam_analytics_v1`, a second storage key `_gam_spotlight_v1` sto
 ### Artwork Engagement (Admin → Analytics tab)
 Bar chart of `tile_hover` events grouped by artwork title. A `tile_hover` fires after a visitor sustains a mouseover on a `.tiles article` for ≥1 second. Provides a qualitative engagement signal per portfolio piece beyond raw click counts.
 
+### Visitor Flow (Admin → Journeys tab)
+Session-level reconstruction of the same `pv`/`click`/`exit` event stream into ordered page paths: entry pages, exit pages (click-off points), navigation transitions, bounce rate, and a commission conversion funnel. See the dedicated **Journeys** section below.
+
 ---
 
 ## Admin Dashboard (`/admin/`)
@@ -185,6 +188,7 @@ Password-protected (SHA-256 hash in localStorage, 5-attempt lockout). Session tr
 | Queue       | Internal commission work-order tracker (see below)                                 |
 | Revenue     | Financial analytics dashboard — earnings charts, type breakdown, top clients       |
 | Spotlight   | Artwork attention tracker — viewport time per artwork/element                      |
+| Journeys    | Visitor flow & conversion funnel — entry/exit pages, navigation paths, drop-off    |
 
 ---
 
@@ -345,6 +349,33 @@ Admin-only tool that tracks how long individual artworks and portfolio elements 
 
 ---
 
+## Journeys — Visitor Flow & Conversion Funnel (Admin → Journeys tab) — NEW TOOL
+
+Admin-only tool that reconstructs each visitor's **session journey** — how often people enter the site, the path they take between pages, and the page they click off from. Answers "where do visitors go, and where do they drop off?"
+
+**No new storage key.** Derives entirely from the existing `_gam_analytics_v1` event stream (`pv`, `click`, `exit`), the same pattern as the Revenue dashboard reading from `_gam_queue_v1`.
+
+**How it works:**
+1. All analytics events are grouped by `sid` and sorted chronologically
+2. Consecutive duplicate pageviews are collapsed into a single step, producing an ordered page path per session
+3. The first page is the **entry page**; the last is the **exit page** (where they clicked off)
+4. Adjacent page pairs become **navigation path** transitions (`A → B`)
+5. `exit` event `ms` values are summed per session for time-on-site
+
+**Tab sections:**
+- **Overview**: sessions, avg pages/visit, bounce rate (single-page sessions ÷ total), avg time on site
+- **Conversion Funnel**: Landed on site → Viewed commissions → Clicked a commission CTA, with % of visits and per-stage drop-off. CTA detection matches click `href`/`text` containing `commission`, `newcommission`, `notion`, `mailto`, `inquire`, or `request`
+- **Entry Pages / Exit Pages**: ranked bar lists of where sessions begin and end
+- **Top Navigation Paths**: most common page-to-page transitions (top 12)
+- **Recent Session Journeys**: last 20 multi-step sessions as ordered page paths with duration
+- **Refresh / Export JSON** controls
+
+**Derived signals:** Bounce rate flags weak landing pages; exit-page ranking surfaces where interest is lost; the funnel quantifies how many visitors actually reach and act on the commission CTA.
+
+**API:** Reads `localStorage._gam_analytics_v1` directly (via the internal `buildJourneys()` helper). No new `CommissionData` methods required.
+
+---
+
 ## Commission System
 
 ### Pages
@@ -422,4 +453,4 @@ Stored in `_gam_prices_v1`. Three sections: `digital`, `stickers`, `animation`. 
 
 ---
 
-*Last updated: 2026-05-29*
+*Last updated: 2026-06-02*
