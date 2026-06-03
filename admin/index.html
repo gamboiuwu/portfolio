@@ -789,6 +789,43 @@
 		.sp-views, .sp-sess {
 		  font-size: 0.65em; color: #555; white-space: nowrap;
 		}
+
+		/* Journey tab */
+		.journey-select {
+		  background: rgba(255,255,255,0.03);
+		  border: 1px solid rgba(201,201,201,0.18);
+		  color: #ccc; border-radius: 5px;
+		  padding: 0.5em 0.7em; font-size: 0.82em;
+		  font-family: 'Courier New', monospace; max-width: 100%;
+		}
+		.journey-paths { display: flex; flex-direction: column; gap: 0.5em; }
+		.journey-path-row {
+		  display: flex; align-items: center; gap: 0.75em;
+		  background: rgba(255,255,255,0.02);
+		  border: 1px solid rgba(201,201,201,0.07);
+		  border-radius: 5px; padding: 0.55em 0.75em;
+		}
+		.journey-path-row:hover { border-color: rgba(201,201,201,0.18); }
+		.jp-seq {
+		  flex: 1; min-width: 0;
+		  font-family: 'Courier New', monospace;
+		  font-size: 0.74em; color: #cfcfcf; line-height: 1.5;
+		  word-break: break-word;
+		}
+		.jp-bar-wrap {
+		  width: 70px; flex-shrink: 0;
+		  height: 4px; background: rgba(255,255,255,0.07);
+		  border-radius: 2px; overflow: hidden;
+		}
+		.jp-bar {
+		  height: 100%; background: linear-gradient(to right, #8c887f, #c9a87c);
+		  border-radius: 2px; min-width: 2px;
+		}
+		.jp-count {
+		  font-family: 'Courier New', monospace;
+		  font-size: 0.78em; color: #c9a87c;
+		  flex-shrink: 0; min-width: 2.4em; text-align: right;
+		}
 	</style>
 </head>
 <body class="is-preload">
@@ -862,6 +899,7 @@
 				<button class="admin-tab" data-tab="queue">Queue <span id="queue-badge" class="inq-badge" style="display:none"></span></button>
 				<button class="admin-tab" data-tab="revenue">Revenue</button>
 				<button class="admin-tab" data-tab="spotlight">Spotlight</button>
+				<button class="admin-tab" data-tab="journey">Journey</button>
 			</div>
 
 			<!-- ============ GALLERY TAB ============ -->
@@ -1459,6 +1497,45 @@
 					<h3>Recent Artwork Views</h3>
 					<p class="hint">Last 30 individual artwork viewport events.</p>
 					<div id="spotlight-recent"></div>
+				</div>
+
+			</div>
+
+			<div id="tab-journey" class="tab-content">
+
+				<div class="admin-card">
+					<h3>Journey — Visitor Flow &amp; Drop-off Map</h3>
+					<p class="hint">Reconstructs each visitor's path through the site from pageview &amp; exit events. See where people enter, how they move between pages, and where they click off. Derived live from analytics data — no extra tracking.</p>
+					<div id="journey-stats" class="analytics-stats" style="margin-bottom:1em"></div>
+					<div style="display:flex;gap:0.5em;flex-wrap:wrap">
+						<button class="button small" id="journey-refresh-btn">Refresh</button>
+						<button class="button small" id="journey-export-btn">Export JSON</button>
+					</div>
+				</div>
+
+				<div class="admin-card">
+					<h3>Entry Pages</h3>
+					<p class="hint">The first page of each session — where visitors land. Higher bars mean more sessions begin here.</p>
+					<div id="journey-entry"></div>
+				</div>
+
+				<div class="admin-card">
+					<h3>Exit Pages &amp; Drop-off</h3>
+					<p class="hint">The last page of each session — where visitors leave. A high drop-off on a key page (like commissions) is worth investigating.</p>
+					<div id="journey-exit"></div>
+				</div>
+
+				<div class="admin-card">
+					<h3>Top Paths</h3>
+					<p class="hint">The most common page sequences, start to finish. <code>&rarr; exit</code> marks where the session ended.</p>
+					<div id="journey-paths"></div>
+				</div>
+
+				<div class="admin-card">
+					<h3>Flow Explorer</h3>
+					<p class="hint">Pick a page to see where visitors go <em>next</em> — including leaving the site.</p>
+					<select id="journey-flow-select" class="journey-select"></select>
+					<div id="journey-flow" style="margin-top:0.85em"></div>
 				</div>
 
 			</div>
@@ -2453,6 +2530,9 @@ document.addEventListener('click', function(e){
   }
   if (e.target.dataset && e.target.dataset.tab === 'spotlight') {
     renderSpotlightTab();
+  }
+  if (e.target.dataset && e.target.dataset.tab === 'journey') {
+    renderJourneyTab();
   }
 });
 
@@ -3672,6 +3752,208 @@ document.getElementById('spotlight-clear-btn').addEventListener('click', functio
   CommissionData.clearSpotlight();
   renderSpotlightTab();
   toast('Spotlight data cleared.');
+});
+
+/* ================================================================
+   JOURNEY TAB — Visitor Flow & Drop-off Map
+   Derived live from _gam_analytics_v1 (pv + exit events).
+   No new storage key — same pattern as the Revenue dashboard.
+================================================================ */
+
+/* Rebuild per-session navigation paths from raw analytics events. */
+function buildJourneys() {
+  var events = CommissionData.getAnalytics();
+  var bySid  = {};
+  events.forEach(function(e) {
+    if (!e.sid) return;
+    (bySid[e.sid] = bySid[e.sid] || []).push(e);
+  });
+
+  var sessions = [];
+  Object.keys(bySid).forEach(function(sid) {
+    var evts = bySid[sid].slice().sort(function(a, b){ return (a.ts || 0) - (b.ts || 0); });
+
+    /* Ordered pageview sequence, collapsing immediate repeats */
+    var seq = [];
+    var pvCount = 0;
+    var firstTs = null, lastTs = null, exitMs = 0;
+    evts.forEach(function(e) {
+      if (firstTs === null) firstTs = e.ts;
+      lastTs = e.ts;
+      if (e.type === 'pv') {
+        pvCount++;
+        var pg = e.page || '/';
+        if (!seq.length || seq[seq.length - 1] !== pg) seq.push(pg);
+      }
+      if (e.type === 'exit' && (e.ms || 0) > exitMs) exitMs = e.ms;
+    });
+
+    if (!seq.length) return; /* sessions with no pageview are ignored */
+    sessions.push({
+      sid:     sid,
+      seq:     seq,
+      pvCount: pvCount,
+      entry:   seq[0],
+      exit:    seq[seq.length - 1],
+      bounced: pvCount <= 1,
+      durMs:   Math.max((lastTs || 0) - (firstTs || 0), exitMs)
+    });
+  });
+  return sessions;
+}
+
+function jFmtDur(ms) {
+  var s = Math.round((ms || 0) / 1000);
+  if (s < 60) return s + 's';
+  var m = Math.floor(s / 60), rs = s % 60;
+  if (m < 60) return m + 'm' + (rs ? ' ' + rs + 's' : '');
+  var h = Math.floor(m / 60); m = m % 60;
+  return h + 'h' + (m ? ' ' + m + 'm' : '');
+}
+
+/* Compact, consistent label for a page path */
+function jPageLabel(pg) {
+  if (!pg) return '/';
+  if (pg === '/') return '/ (home)';
+  return pg;
+}
+
+/* Render a ranked horizontal-bar list using the spotlight bar styles. */
+function jBarList(rows, total, opts) {
+  opts = opts || {};
+  if (!rows.length) {
+    return '<p style="color:#444;font-size:0.85em;padding:0.5em 0">No data yet. Browse the public pages and the path tracker will populate automatically.</p>';
+  }
+  var max = rows.reduce(function(m, r){ return Math.max(m, r.count); }, 1);
+  return '<div class="spotlight-board">' + rows.map(function(r) {
+    var pct   = Math.round((r.count / max) * 100);
+    var share = total ? Math.round((r.count / total) * 100) : 0;
+    var sub   = opts.suffix ? opts.suffix(r, share) : (share + '% of sessions');
+    return '<div class="spotlight-row">' +
+      '<div class="sp-info">' +
+        '<div class="sp-label" title="' + escHtml(r.label) + '">' + escHtml(r.label) + '</div>' +
+        '<div class="sp-bar-wrap"><div class="sp-bar" style="width:' + pct + '%"></div></div>' +
+      '</div>' +
+      '<div class="sp-meta">' +
+        '<span class="sp-time">' + r.count + '</span>' +
+        '<span class="sp-views">' + sub + '</span>' +
+      '</div>' +
+    '</div>';
+  }).join('') + '</div>';
+}
+
+function renderJourneyTab() {
+  var sessions = buildJourneys();
+  var total    = sessions.length;
+
+  /* ── Stats ── */
+  var totalPv  = sessions.reduce(function(s, j){ return s + j.pvCount; }, 0);
+  var bounced  = sessions.filter(function(j){ return j.bounced; }).length;
+  var durSum   = sessions.reduce(function(s, j){ return s + (j.durMs || 0); }, 0);
+  var avgPages = total ? (totalPv / total) : 0;
+  var bounceRt = total ? Math.round((bounced / total) * 100) : 0;
+  var avgDur   = total ? (durSum / total) : 0;
+
+  function statChip(num, label) {
+    return '<div class="analytics-stat-chip"><span class="asc-num">' + num +
+      '</span><span class="asc-label">' + label + '</span></div>';
+  }
+  document.getElementById('journey-stats').innerHTML =
+    statChip(total,                  'Sessions')       +
+    statChip(avgPages.toFixed(1),    'Pages / Session') +
+    statChip(bounceRt + '%',         'Bounce Rate')     +
+    statChip(jFmtDur(avgDur),        'Avg. Duration');
+
+  /* ── Entry pages ── */
+  var entryMap = {};
+  sessions.forEach(function(j){ entryMap[j.entry] = (entryMap[j.entry] || 0) + 1; });
+  var entryRows = Object.keys(entryMap).map(function(p){
+    return { label: jPageLabel(p), count: entryMap[p] };
+  }).sort(function(a, b){ return b.count - a.count; });
+  document.getElementById('journey-entry').innerHTML = jBarList(entryRows, total);
+
+  /* ── Exit pages & drop-off ── */
+  var exitMap = {};
+  sessions.forEach(function(j){ exitMap[j.exit] = (exitMap[j.exit] || 0) + 1; });
+  var exitRows = Object.keys(exitMap).map(function(p){
+    return { label: jPageLabel(p), count: exitMap[p] };
+  }).sort(function(a, b){ return b.count - a.count; });
+  document.getElementById('journey-exit').innerHTML = jBarList(exitRows, total, {
+    suffix: function(r, share){ return share + '% drop-off'; }
+  });
+
+  /* ── Top paths ── */
+  var pathMap = {};
+  sessions.forEach(function(j){
+    var key = j.seq.map(jPageLabel).join(' → ') + ' → exit';
+    pathMap[key] = (pathMap[key] || 0) + 1;
+  });
+  var pathRows = Object.keys(pathMap).map(function(k){
+    return { path: k, count: pathMap[k] };
+  }).sort(function(a, b){ return b.count - a.count; }).slice(0, 10);
+  var pathsEl = document.getElementById('journey-paths');
+  if (!pathRows.length) {
+    pathsEl.innerHTML = '<p style="color:#444;font-size:0.85em;padding:0.5em 0">No path data yet.</p>';
+  } else {
+    var maxPath = pathRows[0].count;
+    pathsEl.innerHTML = '<div class="journey-paths">' + pathRows.map(function(r) {
+      var pct = Math.round((r.count / maxPath) * 100);
+      return '<div class="journey-path-row">' +
+        '<div class="jp-seq">' + escHtml(r.path) + '</div>' +
+        '<div class="jp-bar-wrap"><div class="jp-bar" style="width:' + pct + '%"></div></div>' +
+        '<div class="jp-count">' + r.count + '×</div>' +
+      '</div>';
+    }).join('') + '</div>';
+  }
+
+  /* ── Flow explorer (page → next-step distribution) ── */
+  /* Transitions: for every adjacent pair in a session, count from→to;
+     the final page of each session transitions to a synthetic "exit". */
+  var trans = {};   /* fromPage -> { toPage -> count } */
+  var fromTotals = {};
+  sessions.forEach(function(j){
+    for (var i = 0; i < j.seq.length; i++) {
+      var from = j.seq[i];
+      var to   = (i < j.seq.length - 1) ? j.seq[i + 1] : '✕ exit';
+      trans[from] = trans[from] || {};
+      trans[from][to] = (trans[from][to] || 0) + 1;
+      fromTotals[from] = (fromTotals[from] || 0) + 1;
+    }
+  });
+
+  var sel = document.getElementById('journey-flow-select');
+  var fromPages = Object.keys(fromTotals).sort(function(a, b){ return fromTotals[b] - fromTotals[a]; });
+  var prev = sel.value;
+  sel.innerHTML = fromPages.map(function(p){
+    return '<option value="' + escHtml(p) + '">' + escHtml(jPageLabel(p)) + ' (' + fromTotals[p] + ')</option>';
+  }).join('');
+  if (prev && fromPages.indexOf(prev) !== -1) sel.value = prev;
+
+  function drawFlow() {
+    var from = sel.value;
+    var el   = document.getElementById('journey-flow');
+    if (!from || !trans[from]) { el.innerHTML = '<p style="color:#444;font-size:0.85em">No data.</p>'; return; }
+    var tot  = fromTotals[from];
+    var rows = Object.keys(trans[from]).map(function(to){
+      return { label: to === '✕ exit' ? '✕ exit (left site)' : jPageLabel(to), count: trans[from][to] };
+    }).sort(function(a, b){ return b.count - a.count; });
+    el.innerHTML = jBarList(rows, tot, {
+      suffix: function(r, share){ return share + '% of visits to this page'; }
+    });
+  }
+  sel.onchange = drawFlow;
+  drawFlow();
+}
+
+document.getElementById('journey-refresh-btn').addEventListener('click', renderJourneyTab);
+
+document.getElementById('journey-export-btn').addEventListener('click', function() {
+  var data = buildJourneys();
+  var blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  var url  = URL.createObjectURL(blob);
+  var a    = document.createElement('a');
+  a.href = url; a.download = 'journey-' + Date.now() + '.json'; a.click();
+  URL.revokeObjectURL(url);
 });
 </script>
 

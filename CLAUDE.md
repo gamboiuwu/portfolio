@@ -185,6 +185,7 @@ Password-protected (SHA-256 hash in localStorage, 5-attempt lockout). Session tr
 | Queue       | Internal commission work-order tracker (see below)                                 |
 | Revenue     | Financial analytics dashboard — earnings charts, type breakdown, top clients       |
 | Spotlight   | Artwork attention tracker — viewport time per artwork/element                      |
+| Journey     | Visitor flow & drop-off map — entry/exit pages, page-to-page paths, flow explorer  |
 
 ---
 
@@ -345,6 +346,34 @@ Admin-only tool that tracks how long individual artworks and portfolio elements 
 
 ---
 
+## Journey — Visitor Flow & Drop-off Map (Admin → Journey tab) — NEW TOOL
+
+Reconstructs each visitor's path through the site and surfaces where people land, how they move between pages, and where they leave. Answers the "how often someone enters, where they go, and where they click off" question directly.
+
+**No new storage key** — derived live from `_gam_analytics_v1` (the same `pv` and `exit` events analytics already records), the same pattern as the Revenue dashboard reading from the queue.
+
+**How it works:**
+1. `buildJourneys()` groups all events by `sid`, sorts each session by `ts`
+2. Builds an ordered pageview sequence per session (collapsing immediate repeats)
+3. Derives per session: `entry` (first page), `exit` (last page), `pvCount`, `bounced` (≤1 pageview), `durMs` (span of session / longest exit `ms`)
+4. The tab aggregates these into the sections below
+
+**Admin tab sections:**
+- **Stats**: Sessions, Pages/Session, Bounce Rate, Avg. Duration
+- **Entry Pages**: ranked bars of first-page landings per session
+- **Exit Pages & Drop-off**: ranked bars of last pages, labelled as % drop-off
+- **Top Paths**: most common full page sequences, terminated with `→ exit`
+- **Flow Explorer**: pick any page → see the next-step distribution (including `✕ exit` = left site)
+
+**Derived journey schema (per session, for export):**
+```js
+{ sid, seq:[page,…], pvCount, entry, exit, bounced, durMs }
+```
+
+**API:** none new — uses `CommissionData.getAnalytics()`. Logic lives in `renderJourneyTab()` / `buildJourneys()` inside `admin/index.html`.
+
+---
+
 ## Commission System
 
 ### Pages
@@ -422,4 +451,4 @@ Stored in `_gam_prices_v1`. Three sections: `digital`, `stickers`, `animation`. 
 
 ---
 
-*Last updated: 2026-05-29*
+*Last updated: 2026-06-03*
