@@ -2629,6 +2629,13 @@ function escHtml(s) {
   return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
+/* Shared date formatter — used by the Feedback log (and safe for any tab).
+   renderInquiries keeps its own local copy; this top-level one ensures
+   renderFeedbackTab can format createdAt without a ReferenceError. */
+function fmtDate(iso) {
+  try { return new Date(iso).toLocaleString(); } catch (e) { return iso; }
+}
+
 // Feedback form submit
 document.getElementById('fb-form').addEventListener('submit', function(e) {
   e.preventDefault();
