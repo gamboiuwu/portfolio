@@ -186,6 +186,7 @@ Password-protected (SHA-256 hash in localStorage, 5-attempt lockout). Session tr
 | Revenue     | Financial analytics dashboard — earnings charts, type breakdown, top clients       |
 | Spotlight   | Artwork attention tracker — viewport time per artwork/element                      |
 | Journey     | Visitor flow & drop-off map — entry/exit pages, page-to-page paths, flow explorer  |
+| Cadence     | Traffic rhythm — week×hour heatmap, by-hour/by-day visit timing, 14-day daily volume |
 
 ---
 
@@ -374,6 +375,34 @@ Reconstructs each visitor's path through the site and surfaces where people land
 
 ---
 
+## Cadence — Traffic Rhythm & Visit Timing (Admin → Cadence tab) — NEW TOOL
+
+Answers *when* visitors arrive — the temporal companion to Journey (which answers *where* they go). Surfaces the hour-of-day and day-of-week your portfolio actually gets traffic, plus recent daily volume, so the artist can time launches, social posts, and commission openings for peak attention.
+
+**No new storage key** — derived live from `_gam_analytics_v1` `pv` (pageview) events, the same read-only pattern as Journey and Revenue. Times are computed in the admin device's local timezone from each event's `ts`.
+
+**How it works:**
+1. `buildCadence()` walks all `pv` events, converting each `ts` to a `Date`
+2. Buckets each visit into a `[weekday][hour]` matrix, plus `byHour[24]`, `byDay[7]`, and a `daily` map keyed `YYYY-MM-DD`
+3. The tab aggregates these into the sections below
+
+**Admin tab sections:**
+- **Stats**: Total Visits, Peak Hour, Peak Day, Avg Visits / Active Day
+- **Week × Hour Heatmap**: 7×24 CSS-grid matrix, amber cell intensity scaled to the busiest slot; hover any cell for the exact count
+- **By Hour of Day**: ranked bars, 00–23, all days combined
+- **By Day of Week**: ranked bars, Sunday–Saturday
+- **Daily Volume — Last 14 Days**: per-day visit counts (gaps = no visits)
+- **Refresh / Export JSON** controls
+
+**Derived shape (for export):**
+```js
+{ total, matrix:[7][24], byHour:[24], byDay:[7], daily:{ 'YYYY-MM-DD': count } }
+```
+
+**API:** none new — uses `CommissionData.getAnalytics()`. Logic lives in `renderCadenceTab()` / `buildCadence()` inside `admin/index.html`. Heatmap styles use the warm amber accent (`rgba(201,168,124,…)`), consistent with Revenue/Spotlight — no blue/pink.
+
+---
+
 ## Commission System
 
 ### Pages
@@ -451,4 +480,4 @@ Stored in `_gam_prices_v1`. Three sections: `digital`, `stickers`, `animation`. 
 
 ---
 
-*Last updated: 2026-06-03*
+*Last updated: 2026-06-04*

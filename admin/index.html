@@ -475,6 +475,31 @@
 		  width: 120px; height: 8px; border-radius: 4px;
 		  background: linear-gradient(to right, #1a3a8f, #4488ff, #44dd88, #ffcc00, #ff3300);
 		}
+		/* Cadence — week × hour heatmap */
+		.cadence-heatmap-wrap { overflow-x: auto; padding-bottom: 0.3em; }
+		.cadence-grid {
+		  display: grid;
+		  grid-template-columns: 2.6em repeat(24, 1fr);
+		  gap: 2px; min-width: 540px;
+		}
+		.cad-corner { }
+		.cad-hhead {
+		  font-family: 'Courier New', monospace; font-size: 0.6em; color: #666;
+		  text-align: center; padding-bottom: 0.2em;
+		}
+		.cad-dhead {
+		  font-family: 'Courier New', monospace; font-size: 0.66em; color: #999;
+		  display: flex; align-items: center;
+		}
+		.cad-cell {
+		  aspect-ratio: 1 / 1; border-radius: 2px;
+		  border: 1px solid rgba(255,255,255,0.03); transition: outline 0.1s;
+		}
+		.cad-cell:hover { outline: 1px solid rgba(201,168,124,0.85); }
+		.cad-legend-bar {
+		  width: 110px; height: 8px; border-radius: 4px;
+		  background: linear-gradient(to right, rgba(201,168,124,0.12), rgba(201,168,124,0.9));
+		}
 		.analytics-page-table {
 		  width: 100%; border-collapse: collapse; font-size: 0.82em;
 		}
@@ -900,6 +925,7 @@
 				<button class="admin-tab" data-tab="revenue">Revenue</button>
 				<button class="admin-tab" data-tab="spotlight">Spotlight</button>
 				<button class="admin-tab" data-tab="journey">Journey</button>
+				<button class="admin-tab" data-tab="cadence">Cadence</button>
 			</div>
 
 			<!-- ============ GALLERY TAB ============ -->
@@ -1539,6 +1565,44 @@
 				</div>
 
 			</div>
+
+				<div id="tab-cadence" class="tab-content">
+
+					<div class="admin-card">
+						<h3>Cadence — Traffic Rhythm &amp; Visit Timing</h3>
+						<p class="hint">When visitors actually arrive. Shows the hour-of-day and day-of-week your portfolio draws traffic, plus recent daily volume — so you can time launches, social posts, and commission openings for peak attention. Derived live from pageview events; no extra tracking, no new storage key.</p>
+						<div id="cadence-stats" class="analytics-stats" style="margin-bottom:1em"></div>
+						<div style="display:flex;gap:0.5em;flex-wrap:wrap">
+							<button class="button small" id="cadence-refresh-btn">Refresh</button>
+							<button class="button small" id="cadence-export-btn">Export JSON</button>
+						</div>
+					</div>
+
+					<div class="admin-card">
+						<h3>Week &times; Hour Heatmap</h3>
+						<p class="hint">Every cell is one weekday/hour slot; darker amber means more visits landed then. Hover a cell for the exact count. Times use this device's local timezone.</p>
+						<div id="cadence-heatmap" class="cadence-heatmap-wrap"></div>
+					</div>
+
+					<div class="admin-card">
+						<h3>By Hour of Day</h3>
+						<p class="hint">Total visits in each hour (00–23), all days combined — your strongest posting windows.</p>
+						<div id="cadence-byhour"></div>
+					</div>
+
+					<div class="admin-card">
+						<h3>By Day of Week</h3>
+						<p class="hint">Which weekdays draw the most traffic.</p>
+						<div id="cadence-byday"></div>
+					</div>
+
+					<div class="admin-card">
+						<h3>Daily Volume — Last 14 Days</h3>
+						<p class="hint">Recent visit frequency. Empty bars are days with no recorded visits.</p>
+						<div id="cadence-daily"></div>
+					</div>
+
+				</div>
 
 		</div><!-- /#admin-dash -->
 		<input type="file" id="img-file-input" accept="image/*" style="display:none" />
@@ -2533,6 +2597,9 @@ document.addEventListener('click', function(e){
   }
   if (e.target.dataset && e.target.dataset.tab === 'journey') {
     renderJourneyTab();
+  }
+  if (e.target.dataset && e.target.dataset.tab === 'cadence') {
+    renderCadenceTab();
   }
 });
 
@@ -3960,6 +4027,156 @@ document.getElementById('journey-export-btn').addEventListener('click', function
   var url  = URL.createObjectURL(blob);
   var a    = document.createElement('a');
   a.href = url; a.download = 'journey-' + Date.now() + '.json'; a.click();
+  URL.revokeObjectURL(url);
+});
+
+/* ================================================================
+   CADENCE TAB — traffic rhythm & visit timing
+   Derived live from _gam_analytics_v1 pageviews (no new storage key).
+================================================================ */
+
+var CAD_DAYS      = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+var CAD_DAYS_FULL = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
+function cadPad2(n) { n = String(n); return n.length < 2 ? '0' + n : n; }
+function cadDateKey(dt) {
+  return dt.getFullYear() + '-' + cadPad2(dt.getMonth() + 1) + '-' + cadPad2(dt.getDate());
+}
+function cadFmtHour(h) {
+  var ap = h < 12 ? 'am' : 'pm';
+  var hh = h % 12; if (hh === 0) hh = 12;
+  return hh + ap;
+}
+
+function buildCadence() {
+  var events = CommissionData.getAnalytics();
+  var matrix = [];                 /* [weekday 0-6][hour 0-23] -> count */
+  for (var d = 0; d < 7; d++) { matrix[d] = []; for (var h = 0; h < 24; h++) matrix[d][h] = 0; }
+  var byHour = []; for (var h2 = 0; h2 < 24; h2++) byHour[h2] = 0;
+  var byDay  = [0, 0, 0, 0, 0, 0, 0];
+  var daily  = {};                 /* 'YYYY-MM-DD' -> count */
+  var total  = 0;
+
+  events.forEach(function(e) {
+    if (e.type !== 'pv' || !e.ts) return;
+    var dt = new Date(e.ts);
+    if (isNaN(dt.getTime())) return;
+    var d = dt.getDay(), h = dt.getHours();
+    matrix[d][h]++; byHour[h]++; byDay[d]++; total++;
+    var key = cadDateKey(dt);
+    daily[key] = (daily[key] || 0) + 1;
+  });
+
+  return { total: total, matrix: matrix, byHour: byHour, byDay: byDay, daily: daily };
+}
+
+/* Ranked bar list reusing the spotlight bar styles, with contextual empty text. */
+function cadBarRows(rows, opts) {
+  opts = opts || {};
+  var hasData = rows.some(function(r) { return r.count > 0; });
+  if (!rows.length || !hasData) {
+    return '<p style="color:#444;font-size:0.85em;padding:0.5em 0">No visit data yet. Pageviews populate this automatically as people browse the public pages.</p>';
+  }
+  var max = rows.reduce(function(m, r) { return Math.max(m, r.count); }, 1);
+  return '<div class="spotlight-board">' + rows.map(function(r) {
+    var pct = Math.round((r.count / max) * 100);
+    var sub = opts.suffix ? opts.suffix(r) : '';
+    return '<div class="spotlight-row">' +
+      '<div class="sp-info">' +
+        '<div class="sp-label" title="' + escHtml(r.label) + '">' + escHtml(r.label) + '</div>' +
+        '<div class="sp-bar-wrap"><div class="sp-bar" style="width:' + pct + '%"></div></div>' +
+      '</div>' +
+      '<div class="sp-meta">' +
+        '<span class="sp-time">' + r.count + '</span>' +
+        (sub ? '<span class="sp-views">' + escHtml(sub) + '</span>' : '') +
+      '</div>' +
+    '</div>';
+  }).join('') + '</div>';
+}
+
+function renderCadenceTab() {
+  var c = buildCadence();
+
+  function statChip(num, label) {
+    return '<div class="analytics-stat-chip"><span class="asc-num">' + num +
+      '</span><span class="asc-label">' + label + '</span></div>';
+  }
+
+  /* ── Peaks & averages ── */
+  var peakH = 0, peakHv = -1;
+  c.byHour.forEach(function(v, h) { if (v > peakHv) { peakHv = v; peakH = h; } });
+  var peakD = 0, peakDv = -1;
+  c.byDay.forEach(function(v, d) { if (v > peakDv) { peakDv = v; peakD = d; } });
+  var activeDays = Object.keys(c.daily).length;
+  var avgPerDay  = activeDays ? (c.total / activeDays) : 0;
+
+  document.getElementById('cadence-stats').innerHTML =
+    statChip(c.total,                              'Total Visits')           +
+    statChip(c.total ? cadFmtHour(peakH) : '—',    'Peak Hour')              +
+    statChip(c.total ? CAD_DAYS[peakD]   : '—',    'Peak Day')              +
+    statChip(avgPerDay ? avgPerDay.toFixed(1) : '0', 'Avg Visits / Active Day');
+
+  /* ── Week × hour heatmap ── */
+  var maxCell = 0;
+  for (var d = 0; d < 7; d++) for (var h = 0; h < 24; h++) maxCell = Math.max(maxCell, c.matrix[d][h]);
+  var hmEl = document.getElementById('cadence-heatmap');
+  if (!c.total) {
+    hmEl.innerHTML = '<p class="heatmap-empty" style="width:auto;height:auto;padding:2em 0">No visit data yet.</p>';
+  } else {
+    var html = '<div class="cadence-grid">';
+    html += '<div class="cad-corner"></div>';
+    for (var hh = 0; hh < 24; hh++) {
+      html += '<div class="cad-hhead">' + (hh % 3 === 0 ? hh : '') + '</div>';
+    }
+    for (var dd = 0; dd < 7; dd++) {
+      html += '<div class="cad-dhead">' + CAD_DAYS[dd] + '</div>';
+      for (var hr = 0; hr < 24; hr++) {
+        var v     = c.matrix[dd][hr];
+        var alpha = v ? (0.12 + 0.78 * (v / maxCell)) : 0;
+        var bg    = v ? 'rgba(201,168,124,' + alpha.toFixed(3) + ')' : 'rgba(255,255,255,0.02)';
+        var ttl   = CAD_DAYS[dd] + ' ' + cadFmtHour(hr) + ' — ' + v + ' visit' + (v === 1 ? '' : 's');
+        html += '<div class="cad-cell" style="background:' + bg + '" title="' + ttl + '"></div>';
+      }
+    }
+    html += '</div>';
+    html += '<div class="heatmap-legend"><span>less</span><div class="cad-legend-bar"></div><span>more (peak ' + maxCell + ')</span></div>';
+    hmEl.innerHTML = html;
+  }
+
+  /* ── By hour of day ── */
+  var hourRows = c.byHour.map(function(v, h) { return { label: cadFmtHour(h), count: v }; });
+  document.getElementById('cadence-byhour').innerHTML = cadBarRows(hourRows, {
+    suffix: function(r) { return c.total ? Math.round(r.count / c.total * 100) + '% of visits' : ''; }
+  });
+
+  /* ── By day of week ── */
+  var dayRows = c.byDay.map(function(v, d) { return { label: CAD_DAYS_FULL[d], count: v }; });
+  document.getElementById('cadence-byday').innerHTML = cadBarRows(dayRows, {
+    suffix: function(r) { return c.total ? Math.round(r.count / c.total * 100) + '% of visits' : ''; }
+  });
+
+  /* ── Daily volume, last 14 days ── */
+  var dailyRows = [];
+  var today = new Date(); today.setHours(0, 0, 0, 0);
+  for (var i = 13; i >= 0; i--) {
+    var dt  = new Date(today.getTime() - i * 86400000);
+    var key = cadDateKey(dt);
+    var lbl = (dt.getMonth() + 1) + '/' + dt.getDate() + ' · ' + CAD_DAYS[dt.getDay()];
+    dailyRows.push({ label: lbl, count: c.daily[key] || 0 });
+  }
+  document.getElementById('cadence-daily').innerHTML = cadBarRows(dailyRows, {
+    suffix: function(r) { return r.count === 1 ? '1 visit' : r.count + ' visits'; }
+  });
+}
+
+document.getElementById('cadence-refresh-btn').addEventListener('click', renderCadenceTab);
+
+document.getElementById('cadence-export-btn').addEventListener('click', function() {
+  var data = buildCadence();
+  var blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  var url  = URL.createObjectURL(blob);
+  var a    = document.createElement('a');
+  a.href = url; a.download = 'cadence-' + Date.now() + '.json'; a.click();
   URL.revokeObjectURL(url);
 });
 </script>
