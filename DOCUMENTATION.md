@@ -43,6 +43,8 @@ The tracking answers the questions the portfolio owner actually cares about:
 | What do they click on? | `click` (element, text, href, x/y) | Analytics → Heatmap |
 | Where do they go on the site? | `pv` sequence per session | **Journey → Top Paths / Flow Explorer** |
 | Where do they click off / leave? | last `pv` + `exit` | **Journey → Exit Pages & Drop-off** |
+| *When* do visits land (day/hour)? | `pv` timestamps | **Cadence → Visit Heatmap / Peak Hours** |
+| How many visitors come back? | `pv` grouped by `vid` | **Cadence → New vs Returning** |
 | How far do they scroll? | `scroll` (25/50/75/100%) | Analytics tab |
 | Which artworks hold attention? | `tile_hover`, spotlight viewport time | Artwork Engagement / Spotlight |
 
@@ -74,6 +76,17 @@ Inquiries, Feedback.
   - **Top paths** — most common full sequences, ending in `→ exit`
   - **Flow Explorer** — pick a page, see exactly where visitors go next (or leave)
   - Derived live from `_gam_analytics_v1` — no extra tracking, no new storage key.
+- **Cadence** *(newest)* — **traffic rhythm & visitor loyalty**. Answers *when* people
+  visit and *how often* they come back (the timing/frequency complement to Journey's
+  *where*). Sections:
+  - Stats: Unique Visitors, Peak Hour, Busiest Day, Returning Rate
+  - **Visit Heatmap (Day × Hour)** — a 7×24 amber grid; warmer cells = more visits land
+    then. Time commission openings and posts to your audience's real prime time.
+  - **Peak Hours** / **Busiest Days** — ranked bars
+  - **New vs Returning & Loyalty** — first-timers vs returners + sessions-per-visitor
+  - Derived live from `_gam_analytics_v1` `pv` events. Returning-visitor detection uses a
+    persistent visitor id (`localStorage._gam_vid`) set by `analytics.js`; no analytics
+    data leaves the browser.
 - **Revenue** — financial dashboard derived from the commission Queue: total earned,
   pipeline value, monthly earnings chart, revenue by type, top clients.
 - **Palette** — extract dominant colors from an uploaded artwork (k-means), save
@@ -104,4 +117,4 @@ Inquiries, Feedback.
 - `assets/js/analytics.js` owns all client-side event capture.
 - Keep the gallery light-mode and let the artwork lead; cyber accents stay subtle.
 
-*Last updated: 2026-06-03*
+*Last updated: 2026-06-05*

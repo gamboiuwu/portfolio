@@ -2,6 +2,7 @@
  * analytics.js — lightweight client-side analytics for antryab.com
  * Events stored in localStorage._gam_analytics_v1 (max 3000, oldest rotated)
  * Artwork viewport tracking stored in localStorage._gam_spotlight_v1
+ * Persistent visitor id stored in localStorage._gam_vid (powers Cadence returning-visitor analysis)
  * Exposes window.GamAnalytics for admin consumption.
  * Admin page (/admin/) is excluded automatically.
  */
@@ -44,6 +45,18 @@
     sessionStorage.setItem('_gam_sid', sid);
   }
 
+  /* ── Visitor ID (persistent across sessions — powers returning-visitor analysis) ── */
+  var vid    = null;
+  var isNew  = false;
+  try {
+    vid = localStorage.getItem('_gam_vid');
+    if (!vid) {
+      vid   = 'v' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+      isNew = true;
+      localStorage.setItem('_gam_vid', vid);
+    }
+  } catch (e) { vid = sid; }
+
   /* ── Normalise page path ── */
   var page = location.pathname
     .replace(/\/index\.html$/, '/')
@@ -61,7 +74,7 @@
   var sh  = window.screen ? window.screen.height : 0;
 
   /* ── Pageview ── */
-  push({ sid: sid, type: 'pv', page: page, ref: ref, dev: dev, sw: sw, sh: sh, ts: pageStart });
+  push({ sid: sid, vid: vid, "new": isNew, type: 'pv', page: page, ref: ref, dev: dev, sw: sw, sh: sh, ts: pageStart });
 
   /* ── Click tracking ── */
   document.addEventListener('click', function (e) {

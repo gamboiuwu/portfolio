@@ -131,13 +131,14 @@ Each event is a flat object:
 
 | Type         | Extra Fields                                                                          |
 |--------------|---------------------------------------------------------------------------------------|
-| `pv`         | `ref` (referrer or "direct"), `dev` (mobile/tablet/desktop), `sw`/`sh` (screen size)   |
+| `pv`         | `ref` (referrer or "direct"), `dev` (mobile/tablet/desktop), `sw`/`sh` (screen size), `vid` (persistent visitor id), `new` (first-ever visit bool) |
 | `click`      | `el` (tag.class), `text`, `href`, `xp`, `yp`                                          |
 | `scroll`     | `depth` (25 / 50 / 75 / 100)                                                           |
 | `exit`       | `ms` (milliseconds on page)                                                            |
 | `tile_hover` | `title` (h2 text of hovered `.tiles article`, up to 60 chars)                         |
 
 - **`sid`**: session ID (per tab, stored in sessionStorage)
+- **`vid`**: persistent visitor ID (stored in `localStorage._gam_vid`, survives across sessions — powers Cadence returning-visitor analysis). On `pv` events only.
 - **`page`**: URL pathname, normalized (trailing slash, no index.html)
 - **`ts`**: Unix timestamp (ms)
 - **`xp` / `yp`**: click position as 0–1 fraction of viewport width/height
@@ -186,6 +187,7 @@ Password-protected (SHA-256 hash in localStorage, 5-attempt lockout). Session tr
 | Revenue     | Financial analytics dashboard — earnings charts, type breakdown, top clients       |
 | Spotlight   | Artwork attention tracker — viewport time per artwork/element                      |
 | Journey     | Visitor flow & drop-off map — entry/exit pages, page-to-page paths, flow explorer  |
+| Cadence     | Traffic rhythm & visitor loyalty — day×hour visit heatmap, peak hours, new vs returning |
 
 ---
 
@@ -374,6 +376,42 @@ Reconstructs each visitor's path through the site and surfaces where people land
 
 ---
 
+## Cadence — Traffic Rhythm & Visitor Loyalty (Admin → Cadence tab) — NEW TOOL
+
+Answers *when* visitors come and *how often* they return — the temporal/frequency
+complement to Journey (which answers *where* they go). Surfaces the best windows to
+post, open commissions, or drop new work, and shows how much of the audience is loyal.
+
+**No new storage key** — derived live from `_gam_analytics_v1` `pv` events, same pattern
+as Revenue (reads the queue) and Journey (reads analytics). The only data addition is a
+persistent visitor id (`localStorage._gam_vid`) plus a `vid` / `new` field on each `pv`
+event, set by `analytics.js`.
+
+**How it works:**
+1. `buildCadence()` walks all `pv` events.
+2. Each event's `ts` is bucketed into a 7-day × 24-hour grid **in the admin viewer's local time** (`getDay()`/`getHours()`).
+3. Visitors are grouped by `vid`; the set of distinct `sid`s per `vid` gives session count → returning (>1 session) vs new.
+
+**Admin tab sections:**
+- **Stats**: Unique Visitors, Peak Hour, Busiest Day, Returning Rate
+- **Visit Heatmap (Day × Hour)**: 7×24 grid, amber intensity (warmer = more visits); hover a cell for the exact count
+- **Peak Hours**: top hours ranked as bars (`% of visits`)
+- **Busiest Days**: day-of-week ranked bars
+- **New vs Returning & Loyalty**: first-timers vs returners, plus a sessions-per-visitor distribution (1 / 2 / 3 / 4+)
+- **Refresh / Export JSON** controls
+
+**Derived model (for export):**
+```js
+{ grid:[[…24],…7], hourTotals:[…24], dayTotals:[…7], totalPv,
+  uniqueVisitors, returning, newVisitors, sessionDist:{ '1','2','3','4+' } }
+```
+
+**API:** none new — uses `CommissionData.getAnalytics()`. Logic lives in
+`renderCadenceTab()` / `buildCadence()` inside `admin/index.html`. Heatmap uses the
+warm amber palette (`rgba(201,168,124,…)`), consistent with Revenue — no blue/pink.
+
+---
+
 ## Commission System
 
 ### Pages
@@ -451,4 +489,4 @@ Stored in `_gam_prices_v1`. Three sections: `digital`, `stickers`, `animation`. 
 
 ---
 
-*Last updated: 2026-06-03*
+*Last updated: 2026-06-05*
