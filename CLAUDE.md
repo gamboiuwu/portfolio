@@ -186,6 +186,7 @@ Password-protected (SHA-256 hash in localStorage, 5-attempt lockout). Session tr
 | Revenue     | Financial analytics dashboard — earnings charts, type breakdown, top clients       |
 | Spotlight   | Artwork attention tracker — viewport time per artwork/element                      |
 | Journey     | Visitor flow & drop-off map — entry/exit pages, page-to-page paths, flow explorer  |
+| Cadence     | Traffic rhythm — when visitors arrive (hour×day heatmap, peak windows, best time to post) |
 
 ---
 
@@ -374,6 +375,40 @@ Reconstructs each visitor's path through the site and surfaces where people land
 
 ---
 
+## Cadence — Traffic Rhythm (Admin → Cadence tab) — NEW TOOL
+
+Answers the **"when do visitors actually show up?"** question that the other
+analytics tools don't: Analytics shows *what* gets clicked, Spotlight shows *which*
+artworks hold attention, Journey shows *where* people go — Cadence shows **when**.
+It maps the timestamp of every pageview across the week so the artist knows the best
+windows to post new work or open commission slots.
+
+**No new storage key** — derived live from `_gam_analytics_v1` (`pv` event `ts`),
+the same read-only pattern as Revenue (reads the Queue) and Journey (reads analytics).
+
+**How it works:**
+1. `buildCadence()` reads all `pv` events and bins each into a 7×24 matrix
+   `grid[day][hour]` (Mon=0…Sun=6, hour 0–23, **local timezone** via `Date.getHours()`/`getDay()`)
+2. Per-hour and per-day totals and the single peak cell are computed
+3. The tab renders the sections below; `renderCadenceTab()` is lazy (only on tab click)
+
+**Admin tab sections:**
+- **Stats**: Total Visits, Busiest Hour, Busiest Day, Peak Cell (max single hour-cell count)
+- **Best Time to Post**: plain-language insight — busiest day, peak hour, the contiguous
+  busy window (hours within 60% of the peak), and the quietest hour
+- **Week Heatmap**: 7×24 grid (day rows × hour columns), amber intensity = visit count,
+  per-cell hover tooltip with exact count
+- **By Hour of Day** / **By Day of Week**: ranked bar lists (reuse `jBarList`)
+- **Export CSV**: `day,hour,visits` rows
+
+**Color:** warm amber ramp (`rgba(201,168,124, …)` → `#e6c79a`), consistent with the
+Revenue charts — **no blue/pink**, per the palette rule.
+
+**API:** none new — uses `CommissionData.getAnalytics()`. Logic lives in
+`renderCadenceTab()` / `buildCadence()` inside `admin/index.html`.
+
+---
+
 ## Commission System
 
 ### Pages
@@ -451,4 +486,4 @@ Stored in `_gam_prices_v1`. Three sections: `digital`, `stickers`, `animation`. 
 
 ---
 
-*Last updated: 2026-06-03*
+*Last updated: 2026-06-08*
