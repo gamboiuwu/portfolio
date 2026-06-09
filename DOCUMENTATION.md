@@ -40,6 +40,7 @@ The tracking answers the questions the portfolio owner actually cares about:
 | Question | Event(s) that answer it | Where to read it |
 |----------|-------------------------|------------------|
 | How often does someone enter the site? | `pv` (pageview) | Analytics tab, Journey → Sessions |
+| *When* (what time / day) do they enter? | `pv` timestamp | **Pulse → Weekly Punchcard / Peak Hours** |
 | What do they click on? | `click` (element, text, href, x/y) | Analytics → Heatmap |
 | Where do they go on the site? | `pv` sequence per session | **Journey → Top Paths / Flow Explorer** |
 | Where do they click off / leave? | last `pv` + `exit` | **Journey → Exit Pages & Drop-off** |
@@ -74,6 +75,13 @@ Inquiries, Feedback.
   - **Top paths** — most common full sequences, ending in `→ exit`
   - **Flow Explorer** — pick a page, see exactly where visitors go next (or leave)
   - Derived live from `_gam_analytics_v1` — no extra tracking, no new storage key.
+- **Pulse** *(newest)* — **visitor cadence & traffic timing**. Where Journey shows
+  *where* visitors go, Pulse shows *when* they arrive. From `pv` timestamps it builds:
+  - Stats: total visits, busiest day, peak hour, active days
+  - **Weekly Punchcard** — a 7-day × 24-hour canvas heatmap; warmer cells are busier slots
+  - **Busiest Days** and **Peak Hours** ranked bars
+  - Lets the owner time commission openings / drops for when people are actually browsing.
+  - Derived live from `_gam_analytics_v1` — no extra tracking, no new storage key.
 - **Revenue** — financial dashboard derived from the commission Queue: total earned,
   pipeline value, monthly earnings chart, revenue by type, top clients.
 - **Palette** — extract dominant colors from an uploaded artwork (k-means), save
@@ -104,4 +112,4 @@ Inquiries, Feedback.
 - `assets/js/analytics.js` owns all client-side event capture.
 - Keep the gallery light-mode and let the artwork lead; cyber accents stay subtle.
 
-*Last updated: 2026-06-03*
+*Last updated: 2026-06-09*

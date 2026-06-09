@@ -186,6 +186,7 @@ Password-protected (SHA-256 hash in localStorage, 5-attempt lockout). Session tr
 | Revenue     | Financial analytics dashboard — earnings charts, type breakdown, top clients       |
 | Spotlight   | Artwork attention tracker — viewport time per artwork/element                      |
 | Journey     | Visitor flow & drop-off map — entry/exit pages, page-to-page paths, flow explorer  |
+| Pulse       | Visitor cadence & traffic timing — weekly punchcard, busiest days, peak hours       |
 
 ---
 
@@ -374,6 +375,37 @@ Reconstructs each visitor's path through the site and surfaces where people land
 
 ---
 
+## Pulse — Visitor Cadence & Traffic Timing (Admin → Pulse tab) — NEW TOOL
+
+Surfaces the **temporal rhythm** of site traffic — *when* during the week visitors actually arrive. Journey answers *where* people go; Pulse answers *when* they show up. Helpful for timing commission-slot openings, art drops, and social posts to land when the audience is already browsing.
+
+**No new storage key** — derived live from `_gam_analytics_v1` (`pv` event timestamps), the same read-only pattern as Revenue and Journey. Times use the visitor's local clock (`Date.getDay()` / `getHours()`).
+
+**How it works:**
+1. `buildPulse()` walks all `pv` events and buckets each into a `grid[dayOfWeek][hourOfDay]` count (7×24), plus `byDay` (7) and `byHour` (24) totals.
+2. Distinct calendar days with traffic are counted as **Active Days**; unique `sid`s give session count.
+3. The tab renders the aggregates into the sections below.
+
+**Admin tab sections:**
+- **Stats**: Total Visits, Busiest Day, Peak Hour, Active Days
+- **Weekly Punchcard**: canvas heatmap, 7 weekday rows × 24 hour columns; warmer amber cells = more visits land in that slot (GitHub-punchcard style)
+- **Busiest Days**: day-of-week ranked bar list (% of visits)
+- **Peak Hours**: top-12 hours ranked bar list (% of visits)
+
+**Derived schema (for export):**
+```js
+{ grid:[[…24],…7], byHour:[…24], byDay:[…7], total, activeDays, sessionCount }
+```
+
+**Technical notes:**
+- Canvas punchcard uses the warm amber palette (`rgba(201,168,124,α)`), α scaled by cell-max — consistent with the heatmap/Revenue charts. No blue/pink.
+- Reuses the shared `jBarList()` bar renderer and `analytics-stat-chip` styles.
+- Tab renders lazily on click, same pattern as Journey/Spotlight/Revenue.
+
+**API:** none new — uses `CommissionData.getAnalytics()`. Logic lives in `renderPulseTab()` / `buildPulse()` inside `admin/index.html`.
+
+---
+
 ## Commission System
 
 ### Pages
@@ -451,4 +483,4 @@ Stored in `_gam_prices_v1`. Three sections: `digital`, `stickers`, `animation`. 
 
 ---
 
-*Last updated: 2026-06-03*
+*Last updated: 2026-06-09*
