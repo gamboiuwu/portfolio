@@ -826,6 +826,10 @@
 		  font-size: 0.78em; color: #c9a87c;
 		  flex-shrink: 0; min-width: 2.4em; text-align: right;
 		}
+
+		/* Pulse tab */
+		.pulse-scroll { overflow-x: auto; padding-bottom: 0.25em; }
+		#pulse-canvas { display: block; }
 	</style>
 </head>
 <body class="is-preload">
@@ -900,6 +904,7 @@
 				<button class="admin-tab" data-tab="revenue">Revenue</button>
 				<button class="admin-tab" data-tab="spotlight">Spotlight</button>
 				<button class="admin-tab" data-tab="journey">Journey</button>
+				<button class="admin-tab" data-tab="pulse">Pulse</button>
 			</div>
 
 			<!-- ============ GALLERY TAB ============ -->
@@ -1536,6 +1541,38 @@
 					<p class="hint">Pick a page to see where visitors go <em>next</em> — including leaving the site.</p>
 					<select id="journey-flow-select" class="journey-select"></select>
 					<div id="journey-flow" style="margin-top:0.85em"></div>
+				</div>
+
+			</div>
+
+			<div id="tab-pulse" class="tab-content">
+
+				<div class="admin-card">
+					<h3>Pulse — Visitor Cadence &amp; Traffic Timing</h3>
+					<p class="hint">When do visitors actually show up? This reconstructs the weekly rhythm of site entries from pageview timestamps — peak hours, busiest days, and how often people arrive. Useful for timing commission openings, drops, and posts. Derived live from analytics data (visitor local time) — no extra tracking, no new storage key.</p>
+					<div id="pulse-stats" class="analytics-stats" style="margin-bottom:1em"></div>
+					<div style="display:flex;gap:0.5em;flex-wrap:wrap">
+						<button class="button small" id="pulse-refresh-btn">Refresh</button>
+						<button class="button small" id="pulse-export-btn">Export JSON</button>
+					</div>
+				</div>
+
+				<div class="admin-card">
+					<h3>Weekly Punchcard</h3>
+					<p class="hint">Each cell is one hour of one weekday. Warmer cells mean more visits land in that slot — your recurring traffic windows surface here.</p>
+					<div class="pulse-scroll"><div class="heatmap-wrap"><canvas id="pulse-canvas" width="548" height="178"></canvas></div></div>
+				</div>
+
+				<div class="admin-card">
+					<h3>Busiest Days</h3>
+					<p class="hint">Total site entries per day of the week.</p>
+					<div id="pulse-days"></div>
+				</div>
+
+				<div class="admin-card">
+					<h3>Peak Hours</h3>
+					<p class="hint">Hours of the day ranked by entries. The top rows are when your audience is most likely browsing.</p>
+					<div id="pulse-hours"></div>
 				</div>
 
 			</div>
@@ -2533,6 +2570,9 @@ document.addEventListener('click', function(e){
   }
   if (e.target.dataset && e.target.dataset.tab === 'journey') {
     renderJourneyTab();
+  }
+  if (e.target.dataset && e.target.dataset.tab === 'pulse') {
+    renderPulseTab();
   }
 });
 
@@ -3960,6 +4000,167 @@ document.getElementById('journey-export-btn').addEventListener('click', function
   var url  = URL.createObjectURL(blob);
   var a    = document.createElement('a');
   a.href = url; a.download = 'journey-' + Date.now() + '.json'; a.click();
+  URL.revokeObjectURL(url);
+});
+
+/* ================================================================
+   PULSE TAB — visitor cadence & traffic timing
+   Reconstructs the weekly rhythm of site entries from pageview
+   timestamps. No new storage key — derived from _gam_analytics_v1.
+================================================================ */
+
+var PULSE_DAYS_SHORT = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+var PULSE_DAYS_FULL  = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
+function pulseHourLabel(h) {
+  var ampm = h < 12 ? 'AM' : 'PM';
+  var hr   = h % 12; if (hr === 0) hr = 12;
+  return hr + ' ' + ampm;
+}
+
+function buildPulse() {
+  var events = CommissionData.getAnalytics();
+
+  /* grid[day 0=Sun..6=Sat][hour 0..23] = pageview count */
+  var grid = [];
+  for (var d = 0; d < 7; d++) {
+    var row = [];
+    for (var h = 0; h < 24; h++) row.push(0);
+    grid.push(row);
+  }
+  var byHour = []; for (var i = 0; i < 24; i++) byHour.push(0);
+  var byDay  = []; for (var j = 0; j < 7;  j++) byDay.push(0);
+
+  var dayKeys  = {};   /* YYYY-M-D -> count : distinct calendar days with traffic */
+  var sessions = {};
+  var total    = 0;
+
+  events.forEach(function(e) {
+    if (e.type !== 'pv' || !e.ts) return;
+    var dt = new Date(e.ts);
+    var dy = dt.getDay(), hr = dt.getHours();
+    grid[dy][hr]++; byHour[hr]++; byDay[dy]++; total++;
+    var dk = dt.getFullYear() + '-' + (dt.getMonth() + 1) + '-' + dt.getDate();
+    dayKeys[dk] = (dayKeys[dk] || 0) + 1;
+    if (e.sid) sessions[e.sid] = true;
+  });
+
+  return {
+    grid:         grid,
+    byHour:       byHour,
+    byDay:        byDay,
+    total:        total,
+    activeDays:   Object.keys(dayKeys).length,
+    sessionCount: Object.keys(sessions).length
+  };
+}
+
+function drawPulsePunchcard(p) {
+  var canvas = document.getElementById('pulse-canvas');
+  if (!canvas) return;
+  var ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  var leftPad = 40, topPad = 8, cell = 19, gap = 2;
+  var bottomPad = 20;
+
+  /* Empty state */
+  if (!p.total) {
+    ctx.fillStyle = '#444';
+    ctx.font = '12px -apple-system, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('No visits recorded yet.', canvas.width / 2, canvas.height / 2);
+    return;
+  }
+
+  /* Peak cell value for colour scaling */
+  var max = 1;
+  for (var d = 0; d < 7; d++) for (var h = 0; h < 24; h++) max = Math.max(max, p.grid[d][h]);
+
+  ctx.font = '10px "Courier New", monospace';
+  ctx.textBaseline = 'middle';
+
+  for (var dy = 0; dy < 7; dy++) {
+    var y = topPad + dy * (cell + gap);
+    /* Day label */
+    ctx.fillStyle = '#777';
+    ctx.textAlign = 'right';
+    ctx.fillText(PULSE_DAYS_SHORT[dy], leftPad - 6, y + cell / 2);
+
+    for (var hr = 0; hr < 24; hr++) {
+      var x = leftPad + hr * (cell + gap);
+      var v = p.grid[dy][hr];
+      if (v > 0) {
+        var a = 0.12 + 0.82 * (v / max);
+        ctx.fillStyle = 'rgba(201,168,124,' + a.toFixed(3) + ')';
+      } else {
+        ctx.fillStyle = 'rgba(255,255,255,0.025)';
+      }
+      ctx.fillRect(x, y, cell, cell);
+    }
+  }
+
+  /* Hour ticks every 3 hours */
+  ctx.fillStyle = '#666';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'top';
+  var labelY = topPad + 7 * (cell + gap) + 4;
+  for (var t = 0; t < 24; t += 3) {
+    var lx = leftPad + t * (cell + gap) + cell / 2;
+    ctx.fillText(pulseHourLabel(t).replace(' ', ''), lx, labelY);
+  }
+}
+
+function renderPulseTab() {
+  var p = buildPulse();
+
+  /* ── Stats ── */
+  var busyDayIdx = 0, busyDayMax = -1;
+  p.byDay.forEach(function(c, i){ if (c > busyDayMax) { busyDayMax = c; busyDayIdx = i; } });
+  var peakHourIdx = 0, peakHourMax = -1;
+  p.byHour.forEach(function(c, i){ if (c > peakHourMax) { peakHourMax = c; peakHourIdx = i; } });
+
+  function chip(num, label) {
+    return '<div class="analytics-stat-chip"><span class="asc-num">' + num +
+      '</span><span class="asc-label">' + label + '</span></div>';
+  }
+  document.getElementById('pulse-stats').innerHTML =
+    chip(p.total,                                         'Total Visits') +
+    chip(p.total ? PULSE_DAYS_SHORT[busyDayIdx] : '—',    'Busiest Day') +
+    chip(p.total ? pulseHourLabel(peakHourIdx) : '—',     'Peak Hour')   +
+    chip(p.activeDays,                                    'Active Days');
+
+  /* ── Punchcard ── */
+  drawPulsePunchcard(p);
+
+  /* ── Busiest days (bar list) ── */
+  var dayRows = p.byDay.map(function(c, i){
+    return { label: PULSE_DAYS_FULL[i], count: c };
+  }).filter(function(r){ return r.count > 0; })
+    .sort(function(a, b){ return b.count - a.count; });
+  document.getElementById('pulse-days').innerHTML = jBarList(dayRows, p.total, {
+    suffix: function(r, share){ return share + '% of visits'; }
+  });
+
+  /* ── Peak hours (top 12 bar list) ── */
+  var hourRows = p.byHour.map(function(c, i){
+    return { label: pulseHourLabel(i), count: c };
+  }).filter(function(r){ return r.count > 0; })
+    .sort(function(a, b){ return b.count - a.count; })
+    .slice(0, 12);
+  document.getElementById('pulse-hours').innerHTML = jBarList(hourRows, p.total, {
+    suffix: function(r, share){ return share + '% of visits'; }
+  });
+}
+
+document.getElementById('pulse-refresh-btn').addEventListener('click', renderPulseTab);
+
+document.getElementById('pulse-export-btn').addEventListener('click', function() {
+  var p = buildPulse();
+  var blob = new Blob([JSON.stringify(p, null, 2)], { type: 'application/json' });
+  var url  = URL.createObjectURL(blob);
+  var a    = document.createElement('a');
+  a.href = url; a.download = 'pulse-' + Date.now() + '.json'; a.click();
   URL.revokeObjectURL(url);
 });
 </script>
