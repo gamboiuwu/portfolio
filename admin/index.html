@@ -830,6 +830,14 @@
 		/* Pulse tab */
 		.pulse-scroll { overflow-x: auto; padding-bottom: 0.25em; }
 		#pulse-canvas { display: block; }
+
+		/* Compass tab */
+		.compass-donut-row { display: flex; gap: 1.4em; align-items: center; flex-wrap: wrap; }
+		#compass-donut { display: block; flex-shrink: 0; }
+		.compass-legend { display: flex; flex-direction: column; gap: 0.45em; min-width: 12em; }
+		.compass-legend-item { display: flex; align-items: center; gap: 0.55em; font-size: 0.85em; color: #b9b6b0; }
+		.compass-legend-swatch { width: 0.85em; height: 0.85em; border-radius: 2px; flex-shrink: 0; }
+		.compass-legend-val { margin-left: auto; font-family: 'Courier New', monospace; color: #c9a87c; font-size: 0.9em; }
 	</style>
 </head>
 <body class="is-preload">
@@ -905,6 +913,7 @@
 				<button class="admin-tab" data-tab="spotlight">Spotlight</button>
 				<button class="admin-tab" data-tab="journey">Journey</button>
 				<button class="admin-tab" data-tab="pulse">Pulse</button>
+				<button class="admin-tab" data-tab="compass">Compass</button>
 			</div>
 
 			<!-- ============ GALLERY TAB ============ -->
@@ -1573,6 +1582,47 @@
 					<h3>Peak Hours</h3>
 					<p class="hint">Hours of the day ranked by entries. The top rows are when your audience is most likely browsing.</p>
 					<div id="pulse-hours"></div>
+				</div>
+
+			</div>
+
+			<div id="tab-compass" class="tab-content">
+
+				<div class="admin-card">
+					<h3>Compass — Traffic Sources &amp; Acquisition</h3>
+					<p class="hint">Where does your audience actually come from? This groups every visit by its referrer into channels — social, search, direct, and other referrals — and surfaces your top referring sites and device mix. Useful for knowing which platform (X, Instagram, ArtStation, TikTok…) is sending real traffic so you can post where it lands. Derived live from analytics pageviews — no new storage key.</p>
+					<div id="compass-stats" class="analytics-stats" style="margin-bottom:1em"></div>
+					<div style="display:flex;gap:0.5em;flex-wrap:wrap">
+						<button class="button small" id="compass-refresh-btn">Refresh</button>
+						<button class="button small" id="compass-export-btn">Export JSON</button>
+					</div>
+				</div>
+
+				<div class="admin-card">
+					<h3>Channel Mix</h3>
+					<p class="hint">Every visit bucketed by acquisition channel. Direct = typed/bookmarked, Social = X/Instagram/TikTok/ArtStation/etc., Search = Google/Bing/etc., Referral = any other linking site.</p>
+					<div class="compass-donut-row">
+						<canvas id="compass-donut" width="180" height="180"></canvas>
+						<div id="compass-legend" class="compass-legend"></div>
+					</div>
+				</div>
+
+				<div class="admin-card">
+					<h3>Top Referrers</h3>
+					<p class="hint">The actual sites sending visitors, by hostname. <em>Direct</em> visits (no referrer) are listed too so you can see how much traffic is brand-driven.</p>
+					<div id="compass-referrers"></div>
+				</div>
+
+				<div class="admin-card">
+					<h3>Device Mix</h3>
+					<p class="hint">Desktop vs. mobile vs. tablet across all visits — a check that the portfolio reads well on whatever your audience actually uses.</p>
+					<div id="compass-devices"></div>
+				</div>
+
+				<div class="admin-card">
+					<h3>Top Screen Sizes</h3>
+					<p class="hint">Most common visitor screen resolutions, helpful for deciding which breakpoints to polish first.</p>
+					<div id="compass-screens"></div>
 				</div>
 
 			</div>
@@ -2573,6 +2623,9 @@ document.addEventListener('click', function(e){
   }
   if (e.target.dataset && e.target.dataset.tab === 'pulse') {
     renderPulseTab();
+  }
+  if (e.target.dataset && e.target.dataset.tab === 'compass') {
+    renderCompassTab();
   }
 });
 
@@ -4161,6 +4214,225 @@ document.getElementById('pulse-export-btn').addEventListener('click', function()
   var url  = URL.createObjectURL(blob);
   var a    = document.createElement('a');
   a.href = url; a.download = 'pulse-' + Date.now() + '.json'; a.click();
+  URL.revokeObjectURL(url);
+});
+
+/* ================================================================
+   COMPASS TAB — traffic sources & acquisition
+   Buckets every pageview by referrer into channels (social / search /
+   direct / referral), ranks referring hosts, and breaks down device +
+   screen mix. No new storage key — derived from _gam_analytics_v1.
+================================================================ */
+
+/* Own site hosts — visits referred from these are treated as internal navigation */
+var COMPASS_OWN_HOSTS = ['antryab.com', 'gamboiuwu.github.io'];
+
+var COMPASS_SOCIAL = [
+  'x.com', 't.co', 'twitter.com', 'instagram.com', 'l.instagram.com',
+  'tiktok.com', 'artstation.com', 'bandcamp.com', 't.me', 'telegram.org',
+  'telegram.me', 'facebook.com', 'm.facebook.com', 'l.facebook.com',
+  'reddit.com', 'out.reddit.com', 'youtube.com', 'youtu.be',
+  'bsky.app', 'bluesky.app', 'pinterest.com', 'tumblr.com',
+  'discord.com', 'discordapp.com', 'linkedin.com', 'lnkd.in', 'mastodon.social'
+];
+var COMPASS_SEARCH = [
+  'google.', 'bing.com', 'duckduckgo.com', 'search.brave.com', 'yahoo.com',
+  'ecosia.org', 'baidu.com', 'yandex.', 'startpage.com', 'qwant.com'
+];
+
+function compassClassify(host) {
+  if (!host || host === 'direct') return 'direct';
+  host = host.toLowerCase();
+  for (var i = 0; i < COMPASS_OWN_HOSTS.length; i++) {
+    if (host === COMPASS_OWN_HOSTS[i] || host.indexOf('.' + COMPASS_OWN_HOSTS[i]) !== -1) return 'internal';
+  }
+  for (var s = 0; s < COMPASS_SOCIAL.length; s++) {
+    if (host === COMPASS_SOCIAL[s] || host.indexOf('.' + COMPASS_SOCIAL[s]) !== -1) return 'social';
+  }
+  for (var k = 0; k < COMPASS_SEARCH.length; k++) {
+    if (host.indexOf(COMPASS_SEARCH[k]) !== -1) return 'search';
+  }
+  return 'referral';
+}
+
+/* Older pageviews predate refHost; fall back gracefully. */
+function compassHostOf(e) {
+  if (e.refHost) return e.refHost;
+  /* Legacy events only kept a path-only `ref`; we can only tell direct vs. unknown */
+  if (e.ref === 'direct' || !e.ref) return 'direct';
+  return 'unknown';
+}
+
+function buildCompass() {
+  var events = CommissionData.getAnalytics();
+
+  var channels = { direct: 0, social: 0, search: 0, referral: 0, internal: 0 };
+  var hosts    = {};   /* host -> count */
+  var devices  = {};   /* dev -> count */
+  var screens  = {};   /* "WxH" -> count */
+  var total    = 0;
+
+  events.forEach(function(e) {
+    if (e.type !== 'pv') return;
+    total++;
+
+    var host = compassHostOf(e);
+    var ch   = compassClassify(host);
+    /* Internal navigation still has a host; count it as direct for the channel mix
+       (it's the same visitor moving through the site) but keep the host out of
+       the "top referrers" list so it doesn't drown real sources. */
+    if (ch === 'internal') {
+      channels.direct++;
+    } else {
+      channels[ch]++;
+      var hKey = (host === 'direct') ? 'Direct (no referrer)' : host;
+      hosts[hKey] = (hosts[hKey] || 0) + 1;
+    }
+
+    var dev = e.dev || 'unknown';
+    devices[dev] = (devices[dev] || 0) + 1;
+
+    if (e.sw && e.sh) {
+      var sKey = e.sw + '×' + e.sh;
+      screens[sKey] = (screens[sKey] || 0) + 1;
+    }
+  });
+
+  return { channels: channels, hosts: hosts, devices: devices, screens: screens, total: total };
+}
+
+/* Warm amber/sand palette — consistent with the rest of the admin charts. */
+var COMPASS_COLORS = {
+  direct:   'rgba(201,168,124,0.92)',
+  social:   'rgba(176,122,74,0.92)',
+  search:   'rgba(150,168,110,0.90)',
+  referral: 'rgba(214,190,150,0.92)'
+};
+var COMPASS_CH_LABELS = { direct: 'Direct', social: 'Social', search: 'Search', referral: 'Referral' };
+var COMPASS_CH_ORDER  = ['direct', 'social', 'search', 'referral'];
+
+function drawCompassDonut(c) {
+  var canvas = document.getElementById('compass-donut');
+  if (!canvas) return;
+  var ctx = canvas.getContext('2d');
+  var W = canvas.width, H = canvas.height;
+  ctx.clearRect(0, 0, W, H);
+  var cx = W / 2, cy = H / 2, rOut = 78, rIn = 46;
+
+  var visTotal = COMPASS_CH_ORDER.reduce(function(s, k){ return s + c.channels[k]; }, 0);
+  if (!visTotal) {
+    ctx.fillStyle = '#444';
+    ctx.font = '12px -apple-system, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('No visits yet.', cx, cy);
+    return;
+  }
+
+  var start = -Math.PI / 2;
+  COMPASS_CH_ORDER.forEach(function(k) {
+    var v = c.channels[k];
+    if (!v) return;
+    var ang = (v / visTotal) * Math.PI * 2;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.arc(cx, cy, rOut, start, start + ang);
+    ctx.closePath();
+    ctx.fillStyle = COMPASS_COLORS[k];
+    ctx.fill();
+    start += ang;
+  });
+
+  /* Punch the centre to make it a donut */
+  ctx.globalCompositeOperation = 'destination-out';
+  ctx.beginPath();
+  ctx.arc(cx, cy, rIn, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.globalCompositeOperation = 'source-over';
+
+  /* Centre total */
+  ctx.fillStyle = '#c9a87c';
+  ctx.font = 'bold 22px -apple-system, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(visTotal, cx, cy - 6);
+  ctx.fillStyle = '#8c887f';
+  ctx.font = '10px "Courier New", monospace';
+  ctx.fillText('VISITS', cx, cy + 12);
+}
+
+function renderCompassTab() {
+  var c = buildCompass();
+
+  var visTotal = COMPASS_CH_ORDER.reduce(function(s, k){ return s + c.channels[k]; }, 0);
+  var directPct = visTotal ? Math.round((c.channels.direct / visTotal) * 100) : 0;
+
+  /* Top channel (excluding direct, since that's brand traffic not "acquisition") */
+  var topCh = '—', topChMax = -1;
+  ['social', 'search', 'referral'].forEach(function(k) {
+    if (c.channels[k] > topChMax) { topChMax = c.channels[k]; topCh = COMPASS_CH_LABELS[k]; }
+  });
+  if (topChMax <= 0) topCh = '—';
+
+  var mobileCount = (c.devices.mobile || 0) + (c.devices.tablet || 0);
+  var mobilePct   = c.total ? Math.round((mobileCount / c.total) * 100) : 0;
+
+  function chip(num, label) {
+    return '<div class="analytics-stat-chip"><span class="asc-num">' + num +
+      '</span><span class="asc-label">' + label + '</span></div>';
+  }
+  document.getElementById('compass-stats').innerHTML =
+    chip(c.total,            'Total Visits') +
+    chip(directPct + '%',    'Direct Share') +
+    chip(topCh,              'Top Channel')  +
+    chip(mobilePct + '%',    'Mobile Share');
+
+  /* ── Channel donut + legend ── */
+  drawCompassDonut(c);
+  var legendEl = document.getElementById('compass-legend');
+  legendEl.innerHTML = COMPASS_CH_ORDER.map(function(k) {
+    var v = c.channels[k];
+    var share = visTotal ? Math.round((v / visTotal) * 100) : 0;
+    return '<div class="compass-legend-item">' +
+      '<span class="compass-legend-swatch" style="background:' + COMPASS_COLORS[k] + '"></span>' +
+      '<span>' + COMPASS_CH_LABELS[k] + '</span>' +
+      '<span class="compass-legend-val">' + v + ' · ' + share + '%</span>' +
+    '</div>';
+  }).join('');
+
+  /* ── Top referrers ── */
+  var refRows = Object.keys(c.hosts).map(function(h){
+    return { label: h, count: c.hosts[h] };
+  }).sort(function(a, b){ return b.count - a.count; }).slice(0, 15);
+  document.getElementById('compass-referrers').innerHTML = jBarList(refRows, c.total, {
+    suffix: function(r, share){ return share + '% of visits'; }
+  });
+
+  /* ── Device mix ── */
+  var devLabels = { desktop: 'Desktop', mobile: 'Mobile', tablet: 'Tablet', unknown: 'Unknown' };
+  var devRows = Object.keys(c.devices).map(function(d){
+    return { label: devLabels[d] || d, count: c.devices[d] };
+  }).sort(function(a, b){ return b.count - a.count; });
+  document.getElementById('compass-devices').innerHTML = jBarList(devRows, c.total, {
+    suffix: function(r, share){ return share + '% of visits'; }
+  });
+
+  /* ── Top screen sizes ── */
+  var scrRows = Object.keys(c.screens).map(function(s){
+    return { label: s, count: c.screens[s] };
+  }).sort(function(a, b){ return b.count - a.count; }).slice(0, 10);
+  document.getElementById('compass-screens').innerHTML = jBarList(scrRows, c.total, {
+    suffix: function(r, share){ return share + '% of visits'; }
+  });
+}
+
+document.getElementById('compass-refresh-btn').addEventListener('click', renderCompassTab);
+
+document.getElementById('compass-export-btn').addEventListener('click', function() {
+  var c = buildCompass();
+  var blob = new Blob([JSON.stringify(c, null, 2)], { type: 'application/json' });
+  var url  = URL.createObjectURL(blob);
+  var a    = document.createElement('a');
+  a.href = url; a.download = 'compass-' + Date.now() + '.json'; a.click();
   URL.revokeObjectURL(url);
 });
 </script>

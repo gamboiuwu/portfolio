@@ -51,6 +51,12 @@
   if (!page) page = '/';
 
   var ref       = document.referrer ? document.referrer.replace(/^https?:\/\/[^/]+/, '') || 'direct' : 'direct';
+  /* Full referrer host (kept alongside the path-only `ref` for the Compass acquisition tool) */
+  var refHost   = 'direct';
+  if (document.referrer) {
+    var rm = document.referrer.match(/^https?:\/\/([^/]+)/);
+    if (rm) refHost = rm[1].replace(/^www\./i, '').toLowerCase();
+  }
   var pageStart = Date.now();
 
   /* ── Device fingerprint for pageview ── */
@@ -61,7 +67,7 @@
   var sh  = window.screen ? window.screen.height : 0;
 
   /* ── Pageview ── */
-  push({ sid: sid, type: 'pv', page: page, ref: ref, dev: dev, sw: sw, sh: sh, ts: pageStart });
+  push({ sid: sid, type: 'pv', page: page, ref: ref, refHost: refHost, dev: dev, sw: sw, sh: sh, ts: pageStart });
 
   /* ── Click tracking ── */
   document.addEventListener('click', function (e) {
