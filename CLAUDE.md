@@ -131,7 +131,7 @@ Each event is a flat object:
 
 | Type         | Extra Fields                                                                          |
 |--------------|---------------------------------------------------------------------------------------|
-| `pv`         | `ref` (referrer or "direct"), `dev` (mobile/tablet/desktop), `sw`/`sh` (screen size)   |
+| `pv`         | `ref` (referrer path or "direct"), `refHost` (full referrer hostname, www-stripped, or "direct"), `dev` (mobile/tablet/desktop), `sw`/`sh` (screen size) |
 | `click`      | `el` (tag.class), `text`, `href`, `xp`, `yp`                                          |
 | `scroll`     | `depth` (25 / 50 / 75 / 100)                                                           |
 | `exit`       | `ms` (milliseconds on page)                                                            |
@@ -187,6 +187,7 @@ Password-protected (SHA-256 hash in localStorage, 5-attempt lockout). Session tr
 | Spotlight   | Artwork attention tracker — viewport time per artwork/element                      |
 | Journey     | Visitor flow & drop-off map — entry/exit pages, page-to-page paths, flow explorer  |
 | Pulse       | Visitor cadence & traffic timing — weekly punchcard, busiest days, peak hours       |
+| Compass     | Traffic sources & acquisition — channel mix, top referrers, device & screen breakdown |
 
 ---
 
@@ -406,6 +407,43 @@ Surfaces the **temporal rhythm** of site traffic — *when* during the week visi
 
 ---
 
+## Compass — Traffic Sources & Acquisition (Admin → Compass tab) — NEW TOOL
+
+Answers *where* the audience comes from. Spotlight = which artwork holds attention, Journey = where visitors go, Pulse = when they show up, Revenue = money — **Compass = acquisition**: which platform or site delivered each visit. The single most actionable signal for an artist deciding where to post.
+
+**No new storage key** — derived live from `_gam_analytics_v1` `pv` events. To make this work, `analytics.js` now records a `refHost` field on every pageview (the full referrer hostname, www-stripped; `"direct"` when there is no referrer). The legacy path-only `ref` field is unchanged; old events without `refHost` are bucketed as `direct`/`unknown` so nothing breaks.
+
+**How it works:**
+1. `buildCompass()` walks every `pv` event and reads its `refHost`.
+2. `compassClassify(host)` buckets the host into a channel:
+   - **direct** — no referrer (typed/bookmarked)
+   - **internal** — referred from an own-site host (`antryab.com`, `gamboiuwu.github.io`); folded into *direct* for the channel mix and excluded from the referrer list so same-site navigation doesn't drown real sources
+   - **social** — X/`t.co`, Instagram, TikTok, ArtStation, Bandcamp, Telegram, Discord, Reddit, YouTube, Bluesky, Pinterest, Tumblr, Facebook, LinkedIn, Mastodon
+   - **search** — Google, Bing, DuckDuckGo, Brave, Yahoo, Ecosia, Yandex, Baidu, Startpage, Qwant
+   - **referral** — any other linking host
+3. Aggregates channel counts, per-host counts, device counts (`dev`), and screen-size buckets (`sw×sh`).
+
+**Admin tab sections:**
+- **Stats**: Total Visits, Direct Share %, Top Channel (excl. direct), Mobile Share %
+- **Channel Mix**: canvas donut + legend (direct / social / search / referral), centre shows total visits
+- **Top Referrers**: ranked bar list of referring hostnames (Direct shown explicitly)
+- **Device Mix**: desktop / mobile / tablet ranked bars
+- **Top Screen Sizes**: most common visitor resolutions
+
+**Derived schema (for export):**
+```js
+{ channels:{direct,social,search,referral,internal}, hosts:{host:count}, devices:{dev:count}, screens:{"WxH":count}, total }
+```
+
+**Technical notes:**
+- Donut + swatches use the warm amber/sand palette (`rgba(201,168,124…)`, plus muted clay/olive/sand variants) — no blue/pink.
+- Reuses the shared `jBarList()` renderer and `analytics-stat-chip` styles.
+- Tab renders lazily on click, same pattern as Journey/Pulse/Spotlight/Revenue.
+
+**API:** none new — uses `CommissionData.getAnalytics()`. Logic lives in `renderCompassTab()` / `buildCompass()` inside `admin/index.html`.
+
+---
+
 ## Commission System
 
 ### Pages
@@ -483,4 +521,4 @@ Stored in `_gam_prices_v1`. Three sections: `digital`, `stickers`, `animation`. 
 
 ---
 
-*Last updated: 2026-06-09*
+*Last updated: 2026-06-10*
