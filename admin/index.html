@@ -833,7 +833,7 @@
 
 		/* Compass tab */
 		.compass-donut-row { display: flex; gap: 1.4em; align-items: center; flex-wrap: wrap; }
-		#compass-donut { display: block; flex-shrink: 0; }
+		#compass-donut, #conduit-donut { display: block; flex-shrink: 0; }
 		.compass-legend { display: flex; flex-direction: column; gap: 0.45em; min-width: 12em; }
 		.compass-legend-item { display: flex; align-items: center; gap: 0.55em; font-size: 0.85em; color: #b9b6b0; }
 		.compass-legend-swatch { width: 0.85em; height: 0.85em; border-radius: 2px; flex-shrink: 0; }
@@ -914,6 +914,7 @@
 				<button class="admin-tab" data-tab="journey">Journey</button>
 				<button class="admin-tab" data-tab="pulse">Pulse</button>
 				<button class="admin-tab" data-tab="compass">Compass</button>
+				<button class="admin-tab" data-tab="conduit">Conduit</button>
 			</div>
 
 			<!-- ============ GALLERY TAB ============ -->
@@ -1623,6 +1624,53 @@
 					<h3>Top Screen Sizes</h3>
 					<p class="hint">Most common visitor screen resolutions, helpful for deciding which breakpoints to polish first.</p>
 					<div id="compass-screens"></div>
+				</div>
+
+			</div>
+
+			<div id="tab-conduit" class="tab-content">
+
+				<div class="admin-card">
+					<h3>Conduit — Outbound Clicks &amp; CTA Engagement</h3>
+					<p class="hint">Compass tells you where visitors come <em>from</em>; Conduit tells you where they click <em>to</em>. Every tracked link/button click is bucketed into CTA (commission funnel), Contact (email/Discord/Telegram), Outbound (external sites — your socials &amp; projects), or Internal navigation — so you can see which platform link gets clicked most and whether your "commission me" call-to-action is actually converting. Derived live from analytics click events — no new storage key.</p>
+					<div id="conduit-stats" class="analytics-stats" style="margin-bottom:1em"></div>
+					<div style="display:flex;gap:0.5em;flex-wrap:wrap">
+						<button class="button small" id="conduit-refresh-btn">Refresh</button>
+						<button class="button small" id="conduit-export-btn">Export JSON</button>
+					</div>
+				</div>
+
+				<div class="admin-card">
+					<h3>Click Type Mix</h3>
+					<p class="hint">Every tracked link/button click bucketed by intent. CTA = commission/hire links, Contact = email/Discord/Telegram, Outbound = external sites (your socials &amp; project links), Internal = same-site navigation.</p>
+					<div class="compass-donut-row">
+						<canvas id="conduit-donut" width="180" height="180"></canvas>
+						<div id="conduit-legend" class="compass-legend"></div>
+					</div>
+				</div>
+
+				<div class="admin-card">
+					<h3>Top Outbound Destinations</h3>
+					<p class="hint">The external sites visitors click out to, by hostname — your social platforms (X, Instagram, ArtStation, Bandcamp…) and project links (Yuka, NYFurs). Tells you which off-site link earns the most attention.</p>
+					<div id="conduit-destinations"></div>
+				</div>
+
+				<div class="admin-card">
+					<h3>Commission CTA Performance</h3>
+					<p class="hint">Clicks on commission-funnel links (Commissions page, "commission me" buttons, the Notion brief). The headline number you want trending up — it's the bridge between browsing and a paid inquiry.</p>
+					<div id="conduit-cta"></div>
+				</div>
+
+				<div class="admin-card">
+					<h3>Most-Clicked Links</h3>
+					<p class="hint">Individual links ranked by clicks, by their label text. A quick read on which specific buttons and links pull the most engagement.</p>
+					<div id="conduit-links"></div>
+				</div>
+
+				<div class="admin-card">
+					<h3>Link Engagement by Page</h3>
+					<p class="hint">Which pages generate the most link/button clicks — where visitors are most actively navigating rather than just reading.</p>
+					<div id="conduit-pages"></div>
 				</div>
 
 			</div>
@@ -2626,6 +2674,9 @@ document.addEventListener('click', function(e){
   }
   if (e.target.dataset && e.target.dataset.tab === 'compass') {
     renderCompassTab();
+  }
+  if (e.target.dataset && e.target.dataset.tab === 'conduit') {
+    renderConduitTab();
   }
 });
 
@@ -4433,6 +4484,244 @@ document.getElementById('compass-export-btn').addEventListener('click', function
   var url  = URL.createObjectURL(blob);
   var a    = document.createElement('a');
   a.href = url; a.download = 'compass-' + Date.now() + '.json'; a.click();
+  URL.revokeObjectURL(url);
+});
+
+/* ================================================================
+   CONDUIT TAB — outbound clicks & CTA engagement
+   Reads `click` events from _gam_analytics_v1. Classifies each click's
+   destination into CTA / Contact / Outbound / Internal so the owner can
+   see which off-site links pull attention and whether the commission CTA
+   actually converts. Distinct from Compass (inbound referrers) and
+   Journey (internal pageview paths). No new storage key.
+================================================================ */
+
+var CONDUIT_OWN_HOSTS = ['antryab.com', 'gamboiuwu.github.io'];
+
+/* Hosts that are really direct-contact channels rather than "browse" destinations */
+var CONDUIT_CONTACT_HOSTS = ['discord.gg', 'discord.com', 't.me', 'telegram.me', 'telegram.org'];
+
+/* Parse an href into { kind, host, dest } where kind is cta|contact|outbound|internal|skip */
+function conduitClassify(href, text) {
+  href = (href || '').trim();
+  text = (text || '').toLowerCase();
+  var low = href.toLowerCase();
+
+  /* Non-navigational clicks (buttons, anchors, JS handlers) — ignore */
+  if (!href || low === '#' || low.indexOf('javascript:') === 0) {
+    return { kind: 'skip' };
+  }
+
+  /* Contact intents: email / phone / messaging apps */
+  if (low.indexOf('mailto:') === 0) return { kind: 'contact', host: 'Email', dest: href.replace(/^mailto:/i, '') };
+  if (low.indexOf('tel:') === 0)    return { kind: 'contact', host: 'Phone', dest: href.replace(/^tel:/i, '') };
+
+  /* Resolve a hostname when the href is absolute */
+  var host = '';
+  var m = low.match(/^https?:\/\/([^/]+)/);
+  if (m) host = m[1].replace(/^www\./, '');
+
+  var isInternal = false;
+  if (!m) {
+    /* relative or hash link → internal */
+    isInternal = true;
+  } else {
+    for (var i = 0; i < CONDUIT_OWN_HOSTS.length; i++) {
+      if (host === CONDUIT_OWN_HOSTS[i] || host.indexOf('.' + CONDUIT_OWN_HOSTS[i]) !== -1) { isInternal = true; break; }
+    }
+  }
+
+  /* CTA: commission-funnel links (internal commission pages, or any link whose
+     text reads like a commission/hire call-to-action) */
+  var hrefIsCommish = low.indexOf('/commissions') !== -1 || low.indexOf('/newcommission') !== -1 ||
+                      low.indexOf('notion.so') !== -1 || low.indexOf('notion.site') !== -1;
+  var textIsCommish = /commiss|hire me|order|inquir|book|request a|get a quote|work with me/.test(text);
+  if (hrefIsCommish || (isInternal && textIsCommish)) {
+    return { kind: 'cta', host: 'Commission CTA', dest: href };
+  }
+
+  /* Messaging-app contact links */
+  for (var c = 0; c < CONDUIT_CONTACT_HOSTS.length; c++) {
+    if (host === CONDUIT_CONTACT_HOSTS[c] || host.indexOf('.' + CONDUIT_CONTACT_HOSTS[c]) !== -1) {
+      return { kind: 'contact', host: host, dest: href };
+    }
+  }
+
+  if (isInternal) return { kind: 'internal', host: 'On-site', dest: href };
+  return { kind: 'outbound', host: host || 'unknown', dest: href };
+}
+
+function buildConduit() {
+  var events = CommissionData.getAnalytics();
+
+  var kinds   = { cta: 0, contact: 0, outbound: 0, internal: 0 };
+  var dests   = {};   /* outbound host -> count */
+  var links   = {};   /* label -> count */
+  var ctas    = {};   /* cta label -> count */
+  var pages   = {};   /* page -> count */
+  var total   = 0;    /* total tracked navigational clicks */
+
+  events.forEach(function(e) {
+    if (e.type !== 'click') return;
+    var info = conduitClassify(e.href, e.text);
+    if (info.kind === 'skip') return;
+    total++;
+    kinds[info.kind]++;
+
+    var pg = e.page || '/';
+    pages[pg] = (pages[pg] || 0) + 1;
+
+    /* Human label for the most-clicked-links list */
+    var label = (e.text && e.text.trim()) ? e.text.trim() : (info.dest || info.host);
+    label = label.slice(0, 48);
+    links[label] = (links[label] || 0) + 1;
+
+    if (info.kind === 'outbound') {
+      dests[info.host] = (dests[info.host] || 0) + 1;
+    }
+    if (info.kind === 'cta') {
+      var cl = (e.text && e.text.trim()) ? e.text.trim().slice(0, 40) : (info.dest || 'Commission link');
+      ctas[cl] = (ctas[cl] || 0) + 1;
+    }
+  });
+
+  return { kinds: kinds, dests: dests, links: links, ctas: ctas, pages: pages, total: total };
+}
+
+/* Warm amber/sand palette — consistent with the Compass donut. No blue/pink. */
+var CONDUIT_COLORS = {
+  cta:      'rgba(201,168,124,0.92)',
+  contact:  'rgba(150,168,110,0.90)',
+  outbound: 'rgba(176,122,74,0.92)',
+  internal: 'rgba(214,190,150,0.92)'
+};
+var CONDUIT_KIND_LABELS = { cta: 'CTA', contact: 'Contact', outbound: 'Outbound', internal: 'Internal' };
+var CONDUIT_KIND_ORDER  = ['cta', 'contact', 'outbound', 'internal'];
+
+function drawConduitDonut(d) {
+  var canvas = document.getElementById('conduit-donut');
+  if (!canvas) return;
+  var ctx = canvas.getContext('2d');
+  var W = canvas.width, H = canvas.height;
+  ctx.clearRect(0, 0, W, H);
+  var cx = W / 2, cy = H / 2, rOut = 78, rIn = 46;
+
+  var tot = CONDUIT_KIND_ORDER.reduce(function(s, k){ return s + d.kinds[k]; }, 0);
+  if (!tot) {
+    ctx.fillStyle = '#444';
+    ctx.font = '12px -apple-system, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('No link clicks yet.', cx, cy);
+    return;
+  }
+
+  var start = -Math.PI / 2;
+  CONDUIT_KIND_ORDER.forEach(function(k) {
+    var v = d.kinds[k];
+    if (!v) return;
+    var ang = (v / tot) * Math.PI * 2;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.arc(cx, cy, rOut, start, start + ang);
+    ctx.closePath();
+    ctx.fillStyle = CONDUIT_COLORS[k];
+    ctx.fill();
+    start += ang;
+  });
+
+  ctx.globalCompositeOperation = 'destination-out';
+  ctx.beginPath();
+  ctx.arc(cx, cy, rIn, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.globalCompositeOperation = 'source-over';
+
+  ctx.fillStyle = '#c9a87c';
+  ctx.font = 'bold 22px -apple-system, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(tot, cx, cy - 6);
+  ctx.fillStyle = '#8c887f';
+  ctx.font = '10px "Courier New", monospace';
+  ctx.fillText('CLICKS', cx, cy + 12);
+}
+
+function renderConduitTab() {
+  var d = buildConduit();
+
+  var outboundCount = d.kinds.outbound;
+  var outboundPct   = d.total ? Math.round((outboundCount / d.total) * 100) : 0;
+
+  /* Top outbound destination host */
+  var topDest = '—', topDestMax = -1;
+  Object.keys(d.dests).forEach(function(h) {
+    if (d.dests[h] > topDestMax) { topDestMax = d.dests[h]; topDest = h; }
+  });
+  if (topDestMax <= 0) topDest = '—';
+
+  function chip(num, label) {
+    return '<div class="analytics-stat-chip"><span class="asc-num">' + num +
+      '</span><span class="asc-label">' + label + '</span></div>';
+  }
+  document.getElementById('conduit-stats').innerHTML =
+    chip(d.total,             'Link Clicks')   +
+    chip(outboundPct + '%',   'Outbound Rate') +
+    chip(d.kinds.cta,         'CTA Clicks')    +
+    chip(topDest,             'Top Destination');
+
+  /* ── Click-type donut + legend ── */
+  drawConduitDonut(d);
+  var tot = CONDUIT_KIND_ORDER.reduce(function(s, k){ return s + d.kinds[k]; }, 0);
+  document.getElementById('conduit-legend').innerHTML = CONDUIT_KIND_ORDER.map(function(k) {
+    var v = d.kinds[k];
+    var share = tot ? Math.round((v / tot) * 100) : 0;
+    return '<div class="compass-legend-item">' +
+      '<span class="compass-legend-swatch" style="background:' + CONDUIT_COLORS[k] + '"></span>' +
+      '<span>' + CONDUIT_KIND_LABELS[k] + '</span>' +
+      '<span class="compass-legend-val">' + v + ' · ' + share + '%</span>' +
+    '</div>';
+  }).join('');
+
+  /* ── Top outbound destinations ── */
+  var destRows = Object.keys(d.dests).map(function(h){
+    return { label: h, count: d.dests[h] };
+  }).sort(function(a, b){ return b.count - a.count; }).slice(0, 15);
+  document.getElementById('conduit-destinations').innerHTML = jBarList(destRows, d.total, {
+    suffix: function(r, share){ return share + '% of clicks'; }
+  });
+
+  /* ── Commission CTA performance ── */
+  var ctaRows = Object.keys(d.ctas).map(function(t){
+    return { label: t, count: d.ctas[t] };
+  }).sort(function(a, b){ return b.count - a.count; }).slice(0, 15);
+  document.getElementById('conduit-cta').innerHTML = jBarList(ctaRows, d.total, {
+    suffix: function(r, share){ return share + '% of clicks'; }
+  });
+
+  /* ── Most-clicked links ── */
+  var linkRows = Object.keys(d.links).map(function(t){
+    return { label: t, count: d.links[t] };
+  }).sort(function(a, b){ return b.count - a.count; }).slice(0, 15);
+  document.getElementById('conduit-links').innerHTML = jBarList(linkRows, d.total, {
+    suffix: function(r, share){ return share + '% of clicks'; }
+  });
+
+  /* ── Link engagement by page ── */
+  var pageRows = Object.keys(d.pages).map(function(p){
+    return { label: p, count: d.pages[p] };
+  }).sort(function(a, b){ return b.count - a.count; }).slice(0, 12);
+  document.getElementById('conduit-pages').innerHTML = jBarList(pageRows, d.total, {
+    suffix: function(r, share){ return share + '% of clicks'; }
+  });
+}
+
+document.getElementById('conduit-refresh-btn').addEventListener('click', renderConduitTab);
+
+document.getElementById('conduit-export-btn').addEventListener('click', function() {
+  var d = buildConduit();
+  var blob = new Blob([JSON.stringify(d, null, 2)], { type: 'application/json' });
+  var url  = URL.createObjectURL(blob);
+  var a    = document.createElement('a');
+  a.href = url; a.download = 'conduit-' + Date.now() + '.json'; a.click();
   URL.revokeObjectURL(url);
 });
 </script>

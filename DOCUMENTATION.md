@@ -42,6 +42,7 @@ The tracking answers the questions the portfolio owner actually cares about:
 | How often does someone enter the site? | `pv` (pageview) | Analytics tab, Journey → Sessions |
 | *When* (what time / day) do they enter? | `pv` timestamp | **Pulse → Weekly Punchcard / Peak Hours** |
 | What do they click on? | `click` (element, text, href, x/y) | Analytics → Heatmap |
+| Which links / CTAs do they click out to? | `click` (href, text) | **Conduit → Destinations / CTA Performance** |
 | Where do they go on the site? | `pv` sequence per session | **Journey → Top Paths / Flow Explorer** |
 | Where do they click off / leave? | last `pv` + `exit` | **Journey → Exit Pages & Drop-off** |
 | How far do they scroll? | `scroll` (25/50/75/100%) | Analytics tab |
@@ -82,6 +83,20 @@ Inquiries, Feedback.
   - **Busiest Days** and **Peak Hours** ranked bars
   - Lets the owner time commission openings / drops for when people are actually browsing.
   - Derived live from `_gam_analytics_v1` — no extra tracking, no new storage key.
+- **Compass** — **traffic sources & acquisition**. Where Pulse shows *when* visitors
+  arrive, Compass shows *where from*: groups every visit by referrer into channels
+  (direct / social / search / referral), ranks top referring sites, and breaks down
+  device + screen mix. Derived live from `pv` `refHost` — no new storage key.
+- **Conduit** *(newest)* — **outbound clicks & CTA engagement**. Compass shows where
+  visitors come *from*; Conduit shows where they click *to*. It buckets every tracked
+  link/button click into **CTA** (commission funnel), **Contact** (email/Discord/Telegram),
+  **Outbound** (external sites — socials & project links, ranked by host), or **Internal**
+  navigation, and surfaces:
+  - Stats: link clicks, outbound rate, CTA clicks, top destination
+  - **Click Type Mix** donut, **Top Outbound Destinations**, **Commission CTA Performance**,
+    **Most-Clicked Links**, and **Link Engagement by Page**
+  - Answers "which platform link gets clicked most" and "is my commission CTA converting."
+  - Derived live from `_gam_analytics_v1` `click` events — no extra tracking, no new storage key.
 - **Revenue** — financial dashboard derived from the commission Queue: total earned,
   pipeline value, monthly earnings chart, revenue by type, top clients.
 - **Palette** — extract dominant colors from an uploaded artwork (k-means), save
@@ -112,4 +127,4 @@ Inquiries, Feedback.
 - `assets/js/analytics.js` owns all client-side event capture.
 - Keep the gallery light-mode and let the artwork lead; cyber accents stay subtle.
 
-*Last updated: 2026-06-09*
+*Last updated: 2026-06-11*

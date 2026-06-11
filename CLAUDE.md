@@ -188,6 +188,7 @@ Password-protected (SHA-256 hash in localStorage, 5-attempt lockout). Session tr
 | Journey     | Visitor flow & drop-off map — entry/exit pages, page-to-page paths, flow explorer  |
 | Pulse       | Visitor cadence & traffic timing — weekly punchcard, busiest days, peak hours       |
 | Compass     | Traffic sources & acquisition — channel mix, top referrers, device & screen breakdown |
+| Conduit     | Outbound clicks & CTA engagement — click-type mix, top destinations, commission CTA performance |
 
 ---
 
@@ -444,6 +445,44 @@ Answers *where* the audience comes from. Spotlight = which artwork holds attenti
 
 ---
 
+## Conduit — Outbound Clicks & CTA Engagement (Admin → Conduit tab) — NEW TOOL
+
+The complement to Compass. Compass = where visitors come *from* (inbound referrers); **Conduit = where they click *to*** (outbound destinations) and whether the commission call-to-action actually converts. Spotlight = which artwork holds attention, Journey = internal pageview paths, Pulse = when they show up, Compass = acquisition, Revenue = money — **Conduit = click intent & off-site flow.**
+
+**No new storage key** — derived live from `_gam_analytics_v1` `click` events (each already carries `href`, `text`, `el`, `page`). No new tracking was added to `analytics.js`; the data was already captured but never surfaced by a dedicated tool. Same read-only pattern as Revenue/Journey/Pulse/Compass.
+
+**How it works:**
+1. `buildConduit()` walks every `click` event and runs `conduitClassify(href, text)` on it.
+2. `conduitClassify` buckets each click into one mutually-exclusive kind (priority order CTA → Contact → Outbound → Internal):
+   - **cta** — commission-funnel links: href contains `/commissions`, `/newcommission`, or a Notion brief host; or an internal link whose text reads like a commission/hire call-to-action (`commiss`, `hire me`, `order`, `inquir`, `book`, `request a`, `get a quote`, `work with me`)
+   - **contact** — `mailto:` / `tel:` links, or messaging-app hosts (Discord, Telegram)
+   - **outbound** — any external host (own hosts `antryab.com` / `gamboiuwu.github.io` excluded); grouped by hostname — these are the socials & project links
+   - **internal** — same-site / relative / hash navigation
+   - **skip** — non-navigational clicks (empty href, `#`, `javascript:`) are ignored so the totals reflect real link intent
+3. Aggregates kind counts, outbound host counts, CTA-label counts, per-link labels, and per-page click counts.
+
+**Admin tab sections:**
+- **Stats**: Link Clicks (total navigational), Outbound Rate %, CTA Clicks, Top Destination (host)
+- **Click Type Mix**: canvas donut + legend (CTA / Contact / Outbound / Internal), centre shows total clicks
+- **Top Outbound Destinations**: ranked bars of external hostnames visitors click out to (X, Instagram, ArtStation, Bandcamp, Yuka, NYFurs…)
+- **Commission CTA Performance**: ranked bars of commission-funnel link clicks — the browse → paid-inquiry bridge
+- **Most-Clicked Links**: individual links ranked by label text
+- **Link Engagement by Page**: which pages generate the most link/button clicks
+
+**Derived schema (for export):**
+```js
+{ kinds:{cta,contact,outbound,internal}, dests:{host:count}, ctas:{label:count}, links:{label:count}, pages:{page:count}, total }
+```
+
+**Technical notes:**
+- Donut + swatches reuse the warm amber/sand palette (`rgba(201,168,124…)`, clay/olive/sand variants) and the shared `.compass-donut-row` / `.compass-legend` styles — no blue/pink.
+- Reuses the shared `jBarList()` renderer and `analytics-stat-chip` styles.
+- Tab renders lazily on click, same pattern as Compass/Journey/Pulse/Spotlight/Revenue.
+
+**API:** none new — uses `CommissionData.getAnalytics()`. Logic lives in `renderConduitTab()` / `buildConduit()` / `conduitClassify()` inside `admin/index.html`.
+
+---
+
 ## Commission System
 
 ### Pages
@@ -521,4 +560,4 @@ Stored in `_gam_prices_v1`. Three sections: `digital`, `stickers`, `animation`. 
 
 ---
 
-*Last updated: 2026-06-10*
+*Last updated: 2026-06-11*
