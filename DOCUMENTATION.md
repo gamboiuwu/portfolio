@@ -46,6 +46,8 @@ The tracking answers the questions the portfolio owner actually cares about:
 | Where do they click off / leave? | last `pv` + `exit` | **Journey → Exit Pages & Drop-off** |
 | How far do they scroll? | `scroll` (25/50/75/100%) | Analytics tab |
 | Which artworks hold attention? | `tile_hover`, spotlight viewport time | Artwork Engagement / Spotlight |
+| Where did the visit come from? | `pv` `refHost` | **Compass → Channel Mix / Top Referrers** |
+| How many visits become inquiries? | `pv` + `scroll` + `click` sequence, inquiries store | **Funnel → Conversion Funnel** |
 
 See `CLAUDE.md` → Analytics System for the exact event field schema.
 
@@ -67,7 +69,7 @@ Inquiries, Feedback.
 - **Spotlight** — passive attention tracker. Uses `IntersectionObserver` to record
   how long each artwork / featured card / project tile is actually visible in
   viewports. Leaderboard ranks artworks by total view time.
-- **Journey** *(newest)* — **visitor flow & drop-off map**. Reconstructs each
+- **Journey** — **visitor flow & drop-off map**. Reconstructs each
   session's page-by-page path from analytics events and shows:
   - Sessions, pages/session, bounce rate, average duration
   - **Entry pages** (where sessions begin)
@@ -75,13 +77,22 @@ Inquiries, Feedback.
   - **Top paths** — most common full sequences, ending in `→ exit`
   - **Flow Explorer** — pick a page, see exactly where visitors go next (or leave)
   - Derived live from `_gam_analytics_v1` — no extra tracking, no new storage key.
-- **Pulse** *(newest)* — **visitor cadence & traffic timing**. Where Journey shows
+- **Pulse** — **visitor cadence & traffic timing**. Where Journey shows
   *where* visitors go, Pulse shows *when* they arrive. From `pv` timestamps it builds:
   - Stats: total visits, busiest day, peak hour, active days
   - **Weekly Punchcard** — a 7-day × 24-hour canvas heatmap; warmer cells are busier slots
   - **Busiest Days** and **Peak Hours** ranked bars
   - Lets the owner time commission openings / drops for when people are actually browsing.
   - Derived live from `_gam_analytics_v1` — no extra tracking, no new storage key.
+- **Compass** — **traffic sources & acquisition**. Buckets every visit by its
+  referrer into channels (direct / social / search / referral), ranks top referring
+  hosts, and breaks down device and screen mix — so you know which platform to post on.
+- **Funnel** *(newest)* — **commission conversion funnel**. The site's whole point is
+  turning visitors into inquiries; Funnel walks each session through five milestones —
+  Visited → Browsed Work → Reached Commissions → Engaged the Form → Clicked Submit —
+  and shows the drop-off at each step, which page feeds the funnel, and the realized
+  inquiry count beside it. Derived live from analytics events + the inquiries store —
+  no new storage key.
 - **Revenue** — financial dashboard derived from the commission Queue: total earned,
   pipeline value, monthly earnings chart, revenue by type, top clients.
 - **Palette** — extract dominant colors from an uploaded artwork (k-means), save
@@ -112,4 +123,4 @@ Inquiries, Feedback.
 - `assets/js/analytics.js` owns all client-side event capture.
 - Keep the gallery light-mode and let the artwork lead; cyber accents stay subtle.
 
-*Last updated: 2026-06-09*
+*Last updated: 2026-06-12*

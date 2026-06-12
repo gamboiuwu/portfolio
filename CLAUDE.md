@@ -188,6 +188,7 @@ Password-protected (SHA-256 hash in localStorage, 5-attempt lockout). Session tr
 | Journey     | Visitor flow & drop-off map — entry/exit pages, page-to-page paths, flow explorer  |
 | Pulse       | Visitor cadence & traffic timing — weekly punchcard, busiest days, peak hours       |
 | Compass     | Traffic sources & acquisition — channel mix, top referrers, device & screen breakdown |
+| Funnel      | Commission conversion funnel — visit → browse → commissions → form → submit, with per-step drop-off |
 
 ---
 
@@ -444,6 +445,46 @@ Answers *where* the audience comes from. Spotlight = which artwork holds attenti
 
 ---
 
+## Funnel — Commission Conversion Funnel (Admin → Funnel tab) — NEW TOOL
+
+The portfolio's reason to exist is converting interested visitors into commission inquiries. Spotlight = which artwork holds attention, Journey = *where* visitors go, Pulse = *when* they show up, Compass = *where they came from*, Revenue = money already earned — **Funnel = conversion**: how far each visit gets along the path to sending an inquiry, and where it falls out.
+
+**No new storage key** — derived live from `_gam_analytics_v1` (the `pv`, `scroll`, and `click` events analytics already records) plus the realized inquiry count from `_gam_inquiries_v1`. Same read-only pattern as Journey / Pulse / Compass.
+
+**The five milestones (each a strict superset of the next):**
+1. **Visited** — session has ≥1 pageview (the 100% base)
+2. **Browsed Work** — engaged beyond a bounce: ≥2 pageviews, OR a `scroll` event ≥50%, OR a `/featured` pageview
+3. **Reached Commissions** — a `pv` on `/commissions` or `/newcommission`, OR a `click` whose `href` contains `commission` (a CTA)
+4. **Engaged the Form** — a `click` on the commissions page hitting a form control (`el` contains `cif-`) or the submit text
+5. **Clicked Submit** — a `click` on `.cif-btn-submit` (or the "Submit Inquiry" text on the commissions page)
+
+**How it works:**
+1. `buildFunnel()` groups every event by `sid`, sorts each session by `ts`, and flags which milestones the session reached.
+2. Milestones are rolled up **monotonically** (reaching a deeper stage implies all earlier ones) so the funnel bars only ever narrow.
+3. For each session that reached commissions, the page it was on when intent first formed (the CTA's page, or the page before a direct commissions pageview) is tallied into **sources** — which page feeds the funnel.
+4. The realized inquiry count comes from `CommissionData.getInquiries()` and is shown alongside the session funnel as the true bottom-line conversion.
+
+**Admin tab sections:**
+- **Stats**: Sessions, Reached Commissions %, Form-Engage Rate %, Inquiries (realized)
+- **Conversion Funnel**: a narrowing-bar chart, one row per milestone, with the share of all sessions and the per-step drop-off (`X% continued · Y% dropped`); steps that lose ≥50% are flagged
+- **Realized Conversions**: sessions vs. inquiries on record, with overall conversion rate
+- **Where Intent Forms**: ranked bars of the feeder page where commission intent first appeared
+
+**Derived schema (for export):**
+```js
+{ stages:[{key,name,count},…5], sessions, inquiries, sources:{page:count} }
+```
+
+**Technical notes:**
+- Funnel bars use the warm amber/clay gradient (`rgba(176,122,74…)` → `rgba(201,168,124…)`) — no blue/pink.
+- Reuses the shared `jBarList()` renderer and `analytics-stat-chip` styles.
+- Tab renders lazily on click, same pattern as Journey / Pulse / Compass.
+- Inquiries are not session-linked, so the funnel's stages 1–5 are session-derived signals while the realized inquiry count is the ground-truth outcome shown beside them.
+
+**API:** none new — uses `CommissionData.getAnalytics()` + `CommissionData.getInquiries()`. Logic lives in `renderFunnelTab()` / `buildFunnel()` inside `admin/index.html`.
+
+---
+
 ## Commission System
 
 ### Pages
@@ -521,4 +562,4 @@ Stored in `_gam_prices_v1`. Three sections: `digital`, `stickers`, `animation`. 
 
 ---
 
-*Last updated: 2026-06-10*
+*Last updated: 2026-06-12*
