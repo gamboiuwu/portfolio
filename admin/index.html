@@ -838,6 +838,13 @@
 		.compass-legend-item { display: flex; align-items: center; gap: 0.55em; font-size: 0.85em; color: #b9b6b0; }
 		.compass-legend-swatch { width: 0.85em; height: 0.85em; border-radius: 2px; flex-shrink: 0; }
 		.compass-legend-val { margin-left: auto; font-family: 'Courier New', monospace; color: #c9a87c; font-size: 0.9em; }
+		.funnel-callout {
+			margin-top: 0.4em; padding: 0.85em 1em; border-radius: 6px;
+			background: rgba(201,168,124,0.10); border-left: 3px solid rgba(201,168,124,0.9);
+			color: #cfc7ba; font-size: 0.86em; line-height: 1.5;
+		}
+		.funnel-callout strong { color: #e7c89a; }
+		.funnel-callout .fc-pct { font-family: 'Courier New', monospace; color: #e7c89a; }
 	</style>
 </head>
 <body class="is-preload">
@@ -914,6 +921,7 @@
 				<button class="admin-tab" data-tab="journey">Journey</button>
 				<button class="admin-tab" data-tab="pulse">Pulse</button>
 				<button class="admin-tab" data-tab="compass">Compass</button>
+				<button class="admin-tab" data-tab="funnel">Funnel</button>
 			</div>
 
 			<!-- ============ GALLERY TAB ============ -->
@@ -1623,6 +1631,45 @@
 					<h3>Top Screen Sizes</h3>
 					<p class="hint">Most common visitor screen resolutions, helpful for deciding which breakpoints to polish first.</p>
 					<div id="compass-screens"></div>
+				</div>
+
+			</div>
+
+			<div id="tab-funnel" class="tab-content">
+
+				<div class="admin-card">
+					<h3>Funnel — Commission Conversion</h3>
+					<p class="hint">The portfolio exists to turn visitors into commission inquiries. This traces every session along that path — Visit &rarr; Reached Commissions &rarr; Read the page &rarr; Conversion intent (a submit / "start a commission" / contact click) — and shows exactly where people fall out. Where Journey maps free browsing and Compass maps where traffic comes from, Funnel measures the one goal that pays. Derived live from analytics — no new storage key.</p>
+					<div id="funnel-stats" class="analytics-stats" style="margin-bottom:1em"></div>
+					<div style="display:flex;gap:0.5em;flex-wrap:wrap">
+						<button class="button small" id="funnel-refresh-btn">Refresh</button>
+						<button class="button small" id="funnel-export-btn">Export JSON</button>
+					</div>
+				</div>
+
+				<div class="admin-card">
+					<h3>The Funnel</h3>
+					<p class="hint">Sessions reaching each stage. Bars narrow as visitors drop off; the percentage is share of all visitors, and <code>&darr;</code> marks the drop from the previous stage.</p>
+					<div id="funnel-steps"></div>
+					<div id="funnel-leak"></div>
+				</div>
+
+				<div class="admin-card">
+					<h3>Conversions by Source</h3>
+					<p class="hint">Which acquisition channel the converting sessions originally arrived from. Tells you where the visitors who actually inquire come from — post more where they convert, not just where clicks are cheap.</p>
+					<div id="funnel-source"></div>
+				</div>
+
+				<div class="admin-card">
+					<h3>Conversions by Device</h3>
+					<p class="hint">Desktop vs. mobile vs. tablet among converting sessions. If mobile traffic is high but converts poorly, the mobile commission flow needs work.</p>
+					<div id="funnel-device"></div>
+				</div>
+
+				<div class="admin-card">
+					<h3>Recent Conversion Signals</h3>
+					<p class="hint">The latest sessions that showed intent — the page they were on, where they came from, and what they clicked.</p>
+					<div id="funnel-recent"></div>
 				</div>
 
 			</div>
@@ -2626,6 +2673,9 @@ document.addEventListener('click', function(e){
   }
   if (e.target.dataset && e.target.dataset.tab === 'compass') {
     renderCompassTab();
+  }
+  if (e.target.dataset && e.target.dataset.tab === 'funnel') {
+    renderFunnelTab();
   }
 });
 
@@ -4433,6 +4483,223 @@ document.getElementById('compass-export-btn').addEventListener('click', function
   var url  = URL.createObjectURL(blob);
   var a    = document.createElement('a');
   a.href = url; a.download = 'compass-' + Date.now() + '.json'; a.click();
+  URL.revokeObjectURL(url);
+});
+
+/* ================================================================
+   FUNNEL TAB — Commission conversion funnel
+   Goal-oriented complement to Journey (free flow) and Compass
+   (acquisition). Traces each session toward a commission inquiry:
+     Visit → Reached Commissions → Read page → Conversion intent.
+   Derived live from _gam_analytics_v1 — no new storage key.
+================================================================ */
+
+/* Matches /commissions/ and /newcommission/ pages. */
+var FUNNEL_COMMISSION_RE = /\/(commissions|newcommission)/i;
+
+/* A click that signals real intent to commission: a navigation toward a
+   commission/contact destination anywhere, or a submit/CTA click while on a
+   commission page. Heuristic but page-gated to keep false positives down. */
+function funnelIsConversionClick(e) {
+  if (e.type !== 'click') return false;
+  var href = (e.href || '').toLowerCase();
+  var text = (e.text || '').toLowerCase();
+  var el   = (e.el   || '').toLowerCase();
+  /* 1) Navigation toward a commission / contact destination — strong intent from anywhere */
+  if (/newcommission|notion\.so|notion\.site|notion\.com|web3forms|tally\.so|forms\.gle/.test(href)) return true;
+  if (href.indexOf('mailto:') === 0) return true;
+  /* 2) On a commission page: a submit / call-to-action click */
+  if (FUNNEL_COMMISSION_RE.test(e.page || '')) {
+    if (/\b(send|submit|inquire|inquiry|request|book|order|quote|start)\b/.test(text)) return true;
+    if (/(button|input)/.test(el) && /(submit|send|comm|cta|primary|inquire)/.test(el)) return true;
+  }
+  return false;
+}
+
+function buildFunnel() {
+  var events = CommissionData.getAnalytics();
+
+  var bySid = {};
+  events.forEach(function(e){
+    if (!e.sid) return;
+    (bySid[e.sid] = bySid[e.sid] || []).push(e);
+  });
+
+  var counts  = { visit: 0, reached: 0, read: 0, converted: 0 };
+  var convBySource = {};   /* channel -> count */
+  var convByDevice = {};   /* dev -> count */
+  var recent = [];         /* {page, host, text, ts} */
+
+  Object.keys(bySid).forEach(function(sid){
+    var evs = bySid[sid];
+    var pvs = evs.filter(function(e){ return e.type === 'pv'; });
+    if (!pvs.length) return;
+
+    pvs.sort(function(a,b){ return a.ts - b.ts; });
+    var firstPv = pvs[0];
+    var host = firstPv.refHost || (firstPv.ref === 'direct' ? 'direct' : (firstPv.ref ? 'unknown' : 'direct'));
+    var dev  = firstPv.dev || 'unknown';
+
+    var onCommPv = pvs.some(function(e){ return FUNNEL_COMMISSION_RE.test(e.page || ''); });
+
+    var commScroll50 = false, commClick = false, commDwell = false;
+    var convEvt = null;
+    evs.forEach(function(e){
+      var onComm = FUNNEL_COMMISSION_RE.test(e.page || '');
+      if (e.type === 'scroll' && onComm && (e.depth || 0) >= 50) commScroll50 = true;
+      if (e.type === 'exit'   && onComm && (e.ms || 0)    >= 10000) commDwell  = true;
+      if (e.type === 'click'  && onComm) commClick = true;
+      if (!convEvt && funnelIsConversionClick(e)) convEvt = e;
+    });
+
+    /* Nested funnel: a deeper stage necessarily implies the shallower ones. */
+    var s2 = onCommPv;
+    var s3 = s2 && (commScroll50 || commClick || commDwell);
+    var s4 = !!convEvt;
+    if (s4) { s2 = true; s3 = true; }
+    else if (s3) { s2 = true; }
+
+    counts.visit++;
+    if (s2) counts.reached++;
+    if (s3) counts.read++;
+    if (s4) {
+      counts.converted++;
+      var ch = compassClassify(host);
+      if (ch === 'internal') ch = 'direct';
+      convBySource[ch] = (convBySource[ch] || 0) + 1;
+      convByDevice[dev] = (convByDevice[dev] || 0) + 1;
+      recent.push({ page: convEvt.page, host: host, text: convEvt.text || '', ts: convEvt.ts });
+    }
+  });
+
+  recent.sort(function(a,b){ return b.ts - a.ts; });
+
+  return {
+    counts: counts,
+    sessions: Object.keys(bySid).length,
+    convBySource: convBySource,
+    convByDevice: convByDevice,
+    recent: recent
+  };
+}
+
+function renderFunnelTab() {
+  var f = buildFunnel();
+  var c = f.counts;
+
+  var inquiries = (typeof CommissionData.getInquiries === 'function')
+    ? CommissionData.getInquiries().length : 0;
+  var convRate = c.visit ? Math.round((c.converted / c.visit) * 1000) / 10 : 0;
+
+  function chip(num, label) {
+    return '<div class="analytics-stat-chip"><span class="asc-num">' + num +
+      '</span><span class="asc-label">' + label + '</span></div>';
+  }
+  document.getElementById('funnel-stats').innerHTML =
+    chip(c.visit,              'Sessions')           +
+    chip(c.reached,            'Reached Commissions') +
+    chip(convRate + '%',       'Conversion Rate')    +
+    chip(inquiries,            'Inquiries Logged');
+
+  /* ── Funnel steps (each gets drop-off vs. the previous stage) ── */
+  var defs = [
+    { key: 'visit',     label: 'Site Visit' },
+    { key: 'reached',   label: 'Reached Commissions' },
+    { key: 'read',      label: 'Read Commissions Page' },
+    { key: 'converted', label: 'Conversion Intent' }
+  ];
+  var top = c.visit || 0;
+  var rows = defs.map(function(d, i){
+    var count = c[d.key];
+    var prev  = i === 0 ? count : c[defs[i-1].key];
+    var drop  = prev > 0 ? Math.round(((prev - count) / prev) * 100) : 0;
+    return { label: d.label, count: count, drop: i === 0 ? null : drop };
+  });
+  document.getElementById('funnel-steps').innerHTML = jBarList(rows, top, {
+    suffix: function(r, share){
+      var s = share + '% of visitors';
+      if (r.drop !== null) s += ' · ↓' + r.drop + '% drop';
+      return s;
+    }
+  });
+
+  /* ── Biggest leak callout ── */
+  var leakEl = document.getElementById('funnel-leak');
+  if (!top) {
+    leakEl.innerHTML = '';
+  } else {
+    var biggest = null;
+    for (var i = 1; i < defs.length; i++) {
+      var prev = c[defs[i-1].key], cur = c[defs[i].key];
+      if (prev <= 0) continue;
+      var dPct = (prev - cur) / prev * 100;
+      var lost = prev - cur;
+      if (!biggest || dPct > biggest.pct) {
+        biggest = { from: defs[i-1].label, to: defs[i].label, pct: Math.round(dPct), lost: lost };
+      }
+    }
+    if (biggest && biggest.lost > 0) {
+      leakEl.innerHTML = '<div class="funnel-callout">Biggest drop-off: <strong>' +
+        escHtml(biggest.from) + ' → ' + escHtml(biggest.to) + '</strong> — ' +
+        '<span class="fc-pct">' + biggest.pct + '%</span> of visitors (' + biggest.lost +
+        ' session' + (biggest.lost === 1 ? '' : 's') + ') leave here. This is where to focus next.</div>';
+    } else {
+      leakEl.innerHTML = '';
+    }
+  }
+
+  /* ── Conversions by source channel ── */
+  var srcLabels = { direct: 'Direct', social: 'Social', search: 'Search', referral: 'Referral', unknown: 'Unknown' };
+  var srcRows = Object.keys(f.convBySource).map(function(k){
+    return { label: srcLabels[k] || k, count: f.convBySource[k] };
+  }).sort(function(a,b){ return b.count - a.count; });
+  document.getElementById('funnel-source').innerHTML = jBarList(srcRows, c.converted, {
+    suffix: function(r, share){ return share + '% of conversions'; }
+  });
+
+  /* ── Conversions by device ── */
+  var devLabels = { desktop: 'Desktop', mobile: 'Mobile', tablet: 'Tablet', unknown: 'Unknown' };
+  var devRows = Object.keys(f.convByDevice).map(function(k){
+    return { label: devLabels[k] || k, count: f.convByDevice[k] };
+  }).sort(function(a,b){ return b.count - a.count; });
+  document.getElementById('funnel-device').innerHTML = jBarList(devRows, c.converted, {
+    suffix: function(r, share){ return share + '% of conversions'; }
+  });
+
+  /* ── Recent conversion signals ── */
+  var recentEl = document.getElementById('funnel-recent');
+  if (!f.recent.length) {
+    recentEl.innerHTML = '<p style="color:#444;font-size:0.85em;padding:0.5em 0">No conversion signals yet. They appear once a visitor clicks a commission CTA, the inquiry submit, or a contact link.</p>';
+  } else {
+    recentEl.innerHTML = '<div class="spotlight-board">' + f.recent.slice(0, 12).map(function(r){
+      var when = new Date(r.ts);
+      var whenStr = isNaN(when) ? '' : when.toLocaleDateString() + ' ' +
+        when.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      var src = (r.host && r.host !== 'direct') ? r.host : 'direct';
+      var txt = (r.text || '').trim();
+      var detail = (txt ? '“' + txt.slice(0, 40) + '”' : 'CTA') + ' · via ' + src;
+      return '<div class="spotlight-row">' +
+        '<div class="sp-info">' +
+          '<div class="sp-label" title="' + escHtml(r.page) + '">' + escHtml(r.page) + '</div>' +
+          '<div class="sp-bar-wrap"><div class="sp-bar" style="width:100%"></div></div>' +
+        '</div>' +
+        '<div class="sp-meta">' +
+          '<span class="sp-time">' + escHtml(whenStr) + '</span>' +
+          '<span class="sp-views">' + escHtml(detail) + '</span>' +
+        '</div>' +
+      '</div>';
+    }).join('') + '</div>';
+  }
+}
+
+document.getElementById('funnel-refresh-btn').addEventListener('click', renderFunnelTab);
+
+document.getElementById('funnel-export-btn').addEventListener('click', function() {
+  var f = buildFunnel();
+  var blob = new Blob([JSON.stringify(f, null, 2)], { type: 'application/json' });
+  var url  = URL.createObjectURL(blob);
+  var a    = document.createElement('a');
+  a.href = url; a.download = 'funnel-' + Date.now() + '.json'; a.click();
   URL.revokeObjectURL(url);
 });
 </script>

@@ -188,6 +188,7 @@ Password-protected (SHA-256 hash in localStorage, 5-attempt lockout). Session tr
 | Journey     | Visitor flow & drop-off map — entry/exit pages, page-to-page paths, flow explorer  |
 | Pulse       | Visitor cadence & traffic timing — weekly punchcard, busiest days, peak hours       |
 | Compass     | Traffic sources & acquisition — channel mix, top referrers, device & screen breakdown |
+| Funnel      | Commission conversion funnel — Visit → Reached → Read → Conversion intent, drop-off, conversions by source/device |
 
 ---
 
@@ -444,6 +445,43 @@ Answers *where* the audience comes from. Spotlight = which artwork holds attenti
 
 ---
 
+## Funnel — Commission Conversion (Admin → Funnel tab) — NEW TOOL
+
+The portfolio's whole purpose is to convert visitors into commission inquiries. Spotlight = which artwork holds attention, Journey = where visitors freely roam, Pulse = when they arrive, Compass = where they come from, Revenue = money already booked — **Funnel = the goal path itself**: how many visitors actually progress toward commissioning, and exactly which step loses them. It's the one report tied directly to the artist getting paid.
+
+**No new storage key** — derived live from `_gam_analytics_v1`, the same read-only pattern as Journey/Pulse/Compass. Uses `pv`, `click`, `scroll`, and `exit` events plus `_gam_inquiries_v1` length as a ground-truth anchor.
+
+**The four nested stages (each implies the one before):**
+1. **Site Visit** — any session with a pageview
+2. **Reached Commissions** — session viewed a `/commissions/` or `/newcommission/` page
+3. **Read Commissions Page** — on a commission page the session scrolled ≥50%, clicked, or dwelled ≥10s (genuine read, not an instant bounce)
+4. **Conversion Intent** — session fired a *conversion click*: a navigation toward a commission/contact destination (`/newcommission`, Notion form, Web3Forms, `mailto:`) **anywhere**, or a submit/CTA click while on a commission page
+
+Because deeper stages imply shallower ones, the funnel is strictly monotonic (each bar ≤ the one above), so drop-off percentages are always meaningful.
+
+**Conversion-click detection** lives in `funnelIsConversionClick(e)` — heuristic but page-gated (generic "send"/"submit" text only counts on a commission page) to keep false positives down.
+
+**Admin tab sections:**
+- **Stats**: Sessions, Reached Commissions, Conversion Rate %, Inquiries Logged (real submissions from `_gam_inquiries_v1`)
+- **The Funnel**: ranked bars per stage (reuses `jBarList`), each showing share of all visitors and `↓ drop%` from the previous stage, plus a **Biggest drop-off** callout identifying the leakiest transition
+- **Conversions by Source**: converting sessions bucketed by acquisition channel (reuses `compassClassify`) — *where the people who actually inquire come from*
+- **Conversions by Device**: converting sessions by desktop/mobile/tablet
+- **Recent Conversion Signals**: last 12 intent events with page, source host, and clicked text
+
+**Derived schema (for export):**
+```js
+{ counts:{visit,reached,read,converted}, sessions, convBySource:{channel:count}, convByDevice:{dev:count}, recent:[{page,host,text,ts}] }
+```
+
+**Technical notes:**
+- Warm amber palette callout (`rgba(201,168,124,…)`) — no blue/pink, consistent with the other charts.
+- Reuses `jBarList()`, `escHtml()`, `compassClassify()`, and `analytics-stat-chip` styles.
+- Tab renders lazily on click, same pattern as Journey/Pulse/Compass/Spotlight/Revenue.
+
+**API:** none new — uses `CommissionData.getAnalytics()` + `CommissionData.getInquiries()`. Logic lives in `renderFunnelTab()` / `buildFunnel()` inside `admin/index.html`.
+
+---
+
 ## Commission System
 
 ### Pages
@@ -521,4 +559,4 @@ Stored in `_gam_prices_v1`. Three sections: `digital`, `stickers`, `animation`. 
 
 ---
 
-*Last updated: 2026-06-10*
+*Last updated: 2026-06-15*

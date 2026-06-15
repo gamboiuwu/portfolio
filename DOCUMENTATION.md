@@ -46,6 +46,8 @@ The tracking answers the questions the portfolio owner actually cares about:
 | Where do they click off / leave? | last `pv` + `exit` | **Journey → Exit Pages & Drop-off** |
 | How far do they scroll? | `scroll` (25/50/75/100%) | Analytics tab |
 | Which artworks hold attention? | `tile_hover`, spotlight viewport time | Artwork Engagement / Spotlight |
+| Where do visitors come from? | `pv` referrer host | **Compass → Channel Mix / Top Referrers** |
+| Do they convert into inquiries? | `pv` + `click` + `scroll` toward commissions | **Funnel → The Funnel / Drop-off** |
 
 See `CLAUDE.md` → Analytics System for the exact event field schema.
 
@@ -75,13 +77,28 @@ Inquiries, Feedback.
   - **Top paths** — most common full sequences, ending in `→ exit`
   - **Flow Explorer** — pick a page, see exactly where visitors go next (or leave)
   - Derived live from `_gam_analytics_v1` — no extra tracking, no new storage key.
-- **Pulse** *(newest)* — **visitor cadence & traffic timing**. Where Journey shows
+- **Pulse** — **visitor cadence & traffic timing**. Where Journey shows
   *where* visitors go, Pulse shows *when* they arrive. From `pv` timestamps it builds:
   - Stats: total visits, busiest day, peak hour, active days
   - **Weekly Punchcard** — a 7-day × 24-hour canvas heatmap; warmer cells are busier slots
   - **Busiest Days** and **Peak Hours** ranked bars
   - Lets the owner time commission openings / drops for when people are actually browsing.
   - Derived live from `_gam_analytics_v1` — no extra tracking, no new storage key.
+- **Compass** — **traffic sources & acquisition**. Buckets every visit by referrer
+  into channels (direct / social / search / referral), with a channel-mix donut, top
+  referring hosts, device mix, and common screen sizes. Answers *where the audience
+  comes from* so the owner posts where it lands. Derived live from `_gam_analytics_v1`.
+- **Funnel** *(newest)* — **commission conversion funnel**. The one report tied to
+  getting paid: it traces every session along the goal path —
+  **Visit → Reached Commissions → Read the page → Conversion intent** (a submit /
+  "start a commission" / contact click) — and shows exactly where people fall out.
+  - Stats: sessions, reached-commissions count, conversion rate %, real inquiries logged
+  - **The Funnel** — monotonic ranked bars per stage with `↓ drop%` from the previous,
+    plus a callout naming the biggest leak
+  - **Conversions by Source / Device** — where the visitors who actually inquire come
+    from, and on what device
+  - **Recent Conversion Signals** — the latest intent events (page, source, clicked text)
+  - Derived live from `_gam_analytics_v1` (+ inquiry count) — no extra tracking, no new storage key.
 - **Revenue** — financial dashboard derived from the commission Queue: total earned,
   pipeline value, monthly earnings chart, revenue by type, top clients.
 - **Palette** — extract dominant colors from an uploaded artwork (k-means), save
@@ -112,4 +129,4 @@ Inquiries, Feedback.
 - `assets/js/analytics.js` owns all client-side event capture.
 - Keep the gallery light-mode and let the artwork lead; cyber accents stay subtle.
 
-*Last updated: 2026-06-09*
+*Last updated: 2026-06-15*
