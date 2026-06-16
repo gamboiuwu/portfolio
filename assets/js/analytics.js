@@ -10,6 +10,7 @@
 
   var KEY       = '_gam_analytics_v1';
   var SP_KEY    = '_gam_spotlight_v1';
+  var VID_KEY   = '_gam_vid_v1';
   var MAX_EVTS  = 3000;
   var MAX_SP    = 2000;
 
@@ -39,10 +40,27 @@
 
   /* ── Session ID (per browser tab) ── */
   var sid = sessionStorage.getItem('_gam_sid');
+  var newSession = false;
   if (!sid) {
     sid = 's' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
     sessionStorage.setItem('_gam_sid', sid);
+    newSession = true;
   }
+
+  /* ── Persistent visitor record (survives across sessions/tabs) ──
+     Powers the Loyalty tool: distinguishes new vs returning visitors and
+     counts how often each person comes back. A "visit" == one new session. */
+  var vrec;
+  try { vrec = JSON.parse(localStorage.getItem(VID_KEY) || 'null'); } catch (e) { vrec = null; }
+  var nowTs = Date.now();
+  if (!vrec || !vrec.vid) {
+    vrec = { vid: 'v' + nowTs.toString(36) + Math.random().toString(36).slice(2, 7),
+             firstSeen: nowTs, lastSeen: nowTs, visits: 1 };
+  } else if (newSession) {
+    vrec.visits = (vrec.visits || 1) + 1;
+  }
+  vrec.lastSeen = nowTs;
+  try { localStorage.setItem(VID_KEY, JSON.stringify(vrec)); } catch (e) {}
 
   /* ── Normalise page path ── */
   var page = location.pathname
@@ -67,7 +85,8 @@
   var sh  = window.screen ? window.screen.height : 0;
 
   /* ── Pageview ── */
-  push({ sid: sid, type: 'pv', page: page, ref: ref, refHost: refHost, dev: dev, sw: sw, sh: sh, ts: pageStart });
+  push({ sid: sid, type: 'pv', page: page, ref: ref, refHost: refHost, dev: dev, sw: sw, sh: sh,
+         vid: vrec.vid, vnum: vrec.visits, vfirst: vrec.firstSeen, ts: pageStart });
 
   /* ── Click tracking ── */
   document.addEventListener('click', function (e) {

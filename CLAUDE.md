@@ -79,6 +79,7 @@ Single IIFE that exposes `window.CommissionData`. All persistent data is stored 
 | `_gam_palettes_v1`     | Array   | Saved color palettes (from Palette Extractor)   |
 | `_gam_queue_v1`        | Array   | Commission work-order queue (internal tracker)  |
 | `_gam_spotlight_v1`    | Array   | Artwork viewport-time events (Spotlight tracker)|
+| `_gam_vid_v1`          | Object  | Persistent anonymous visitor record (Loyalty)   |
 
 ### Public API
 ```js
@@ -131,7 +132,7 @@ Each event is a flat object:
 
 | Type         | Extra Fields                                                                          |
 |--------------|---------------------------------------------------------------------------------------|
-| `pv`         | `ref` (referrer path or "direct"), `refHost` (full referrer hostname, www-stripped, or "direct"), `dev` (mobile/tablet/desktop), `sw`/`sh` (screen size) |
+| `pv`         | `ref` (referrer path or "direct"), `refHost` (full referrer hostname, www-stripped, or "direct"), `dev` (mobile/tablet/desktop), `sw`/`sh` (screen size), `vid` (persistent anonymous visitor id), `vnum` (this visitor's running visit count), `vfirst` (visitor first-seen timestamp) |
 | `click`      | `el` (tag.class), `text`, `href`, `xp`, `yp`                                          |
 | `scroll`     | `depth` (25 / 50 / 75 / 100)                                                           |
 | `exit`       | `ms` (milliseconds on page)                                                            |
@@ -188,6 +189,7 @@ Password-protected (SHA-256 hash in localStorage, 5-attempt lockout). Session tr
 | Journey     | Visitor flow & drop-off map — entry/exit pages, page-to-page paths, flow explorer  |
 | Pulse       | Visitor cadence & traffic timing — weekly punchcard, busiest days, peak hours       |
 | Compass     | Traffic sources & acquisition — channel mix, top referrers, device & screen breakdown |
+| Loyalty     | Returning-visitor & retention tracker — new vs returning, visit frequency, recency, loyal-visitor leaderboard |
 
 ---
 
@@ -444,6 +446,45 @@ Answers *where* the audience comes from. Spotlight = which artwork holds attenti
 
 ---
 
+## Loyalty — Returning Visitors & Retention (Admin → Loyalty tab) — NEW TOOL
+
+Answers *whether traffic sticks*. Compass = where visitors come from, Pulse = when they show up, Journey = where they go, Spotlight = what holds their attention, Revenue = money — **Loyalty = retention**: does the same person come back, and how often? The most direct read on whether the portfolio is memorable enough to build an audience rather than just catch one-off clicks.
+
+**Persistent visitor record (one small storage addition).** Unlike the per-tab `sid`, `analytics.js` now keeps a persistent anonymous record in `localStorage._gam_vid_v1`:
+```js
+{ vid, firstSeen, lastSeen, visits }
+```
+- `vid` — random anonymous id (no PII, no third-party cookie); survives across tabs/sessions on that browser
+- `visits` — incremented by 1 each time a **new session** starts (new `sid`)
+- Every `pv` event now also carries `vid`, `vnum` (the visitor's running visit count at that pageview), and `vfirst` (first-seen timestamp)
+- Because `visits` persists independently of the 3000-event rotation cap, the **max `vnum`** ever stamped is the true lifetime visit count even after old events age out
+- Legacy pageviews predating this field have no `vid`; each such session is bucketed as a one-visit "legacy" visitor so totals degrade gracefully
+
+**How it works:**
+1. `buildLoyalty()` walks all `pv` events and aggregates per `vid`: `visits` (max `vnum`), `firstSeen`, `lastSeen`, distinct sessions, pageview count.
+2. The tab classifies each visitor as **new** (1 visit) or **returning** (2+), buckets visit frequency and recency, and ranks the most loyal visitors.
+
+**Admin tab sections:**
+- **Stats**: Unique Visitors, Returning, Returning Rate %, Avg. Visits per visitor
+- **New vs. Returning**: canvas donut + legend (returning = clay, new = sand), centre shows unique-visitor total
+- **Visit Frequency**: ranked bars bucketed 1 / 2 / 3 / 4–5 / 6+ visits
+- **Recency — Last Seen**: visitors bucketed Today / This week / This month / Over a month
+- **Most Loyal Visitors**: top 12 by visit count, with anonymized id and last-seen age
+
+**Derived schema (for export):**
+```js
+{ visitors:[{ vid, visits, firstSeen, lastSeen, sessions:{}, pv, legacy }], pvTotal }
+```
+
+**Technical notes:**
+- Donut + bars reuse the warm amber/clay/sand palette (`rgba(201,168,124…)`) and the shared `jBarList()` renderer — no blue/pink.
+- Tab renders lazily on click, same pattern as Journey/Pulse/Compass/Spotlight/Revenue.
+- No cookies, no external service — the visitor id lives only in that browser's `localStorage`.
+
+**API:** none new on `CommissionData` — uses `CommissionData.getAnalytics()` plus the `_gam_vid_v1` record written by `analytics.js`. Logic lives in `renderLoyaltyTab()` / `buildLoyalty()` inside `admin/index.html`.
+
+---
+
 ## Commission System
 
 ### Pages
@@ -521,4 +562,4 @@ Stored in `_gam_prices_v1`. Three sections: `digital`, `stickers`, `animation`. 
 
 ---
 
-*Last updated: 2026-06-10*
+*Last updated: 2026-06-16*

@@ -914,6 +914,7 @@
 				<button class="admin-tab" data-tab="journey">Journey</button>
 				<button class="admin-tab" data-tab="pulse">Pulse</button>
 				<button class="admin-tab" data-tab="compass">Compass</button>
+				<button class="admin-tab" data-tab="loyalty">Loyalty</button>
 			</div>
 
 			<!-- ============ GALLERY TAB ============ -->
@@ -1623,6 +1624,47 @@
 					<h3>Top Screen Sizes</h3>
 					<p class="hint">Most common visitor screen resolutions, helpful for deciding which breakpoints to polish first.</p>
 					<div id="compass-screens"></div>
+				</div>
+
+			</div>
+
+			<div id="tab-loyalty" class="tab-content">
+
+				<div class="admin-card">
+					<h3>Loyalty — Returning Visitors &amp; Retention</h3>
+					<p class="hint">How often do people actually come back? Every visitor gets a persistent anonymous ID, so this separates first-time arrivals from returning fans and counts how many times each person has visited. Compass tells you <em>where</em> traffic comes from; Loyalty tells you whether it <em>sticks</em>. Derived from analytics pageviews plus the persistent visitor record — no personal data, no cookies.</p>
+					<div id="loyalty-stats" class="analytics-stats" style="margin-bottom:1em"></div>
+					<div style="display:flex;gap:0.5em;flex-wrap:wrap">
+						<button class="button small" id="loyalty-refresh-btn">Refresh</button>
+						<button class="button small" id="loyalty-export-btn">Export JSON</button>
+					</div>
+				</div>
+
+				<div class="admin-card">
+					<h3>New vs. Returning</h3>
+					<p class="hint">Share of visitors who have been here exactly once (new) versus more than once (returning). A healthy returning share means the work is memorable enough to bring people back.</p>
+					<div class="compass-donut-row">
+						<canvas id="loyalty-donut" width="180" height="180"></canvas>
+						<div id="loyalty-legend" class="compass-legend"></div>
+					</div>
+				</div>
+
+				<div class="admin-card">
+					<h3>Visit Frequency</h3>
+					<p class="hint">How many visitors fall into each return-count bucket. The long tail to the right is your most loyal audience.</p>
+					<div id="loyalty-frequency"></div>
+				</div>
+
+				<div class="admin-card">
+					<h3>Recency — Last Seen</h3>
+					<p class="hint">When your visitors most recently stopped by. A cluster in "Today / This week" means traffic is live and warm right now.</p>
+					<div id="loyalty-recency"></div>
+				</div>
+
+				<div class="admin-card">
+					<h3>Most Loyal Visitors</h3>
+					<p class="hint">Top returning visitors ranked by visit count. IDs are anonymous — they only let you see that the <em>same</em> person keeps coming back.</p>
+					<div id="loyalty-leaderboard"></div>
 				</div>
 
 			</div>
@@ -2626,6 +2668,9 @@ document.addEventListener('click', function(e){
   }
   if (e.target.dataset && e.target.dataset.tab === 'compass') {
     renderCompassTab();
+  }
+  if (e.target.dataset && e.target.dataset.tab === 'loyalty') {
+    renderLoyaltyTab();
   }
 });
 
@@ -4433,6 +4478,195 @@ document.getElementById('compass-export-btn').addEventListener('click', function
   var url  = URL.createObjectURL(blob);
   var a    = document.createElement('a');
   a.href = url; a.download = 'compass-' + Date.now() + '.json'; a.click();
+  URL.revokeObjectURL(url);
+});
+
+/* ================================================================
+   LOYALTY TAB — returning visitors & retention
+   Derived from analytics `pv` events. Each pageview carries a
+   persistent visitor id (`vid`), the visitor's running visit count
+   (`vnum`), and their first-seen timestamp (`vfirst`). Events that
+   predate visitor tracking have no `vid`; each such session is
+   treated as a one-visit legacy visitor so totals stay sane.
+================================================================ */
+
+function buildLoyalty() {
+  var events = CommissionData.getAnalytics();
+  var visitors = {};   /* vid -> { vid, visits, firstSeen, lastSeen, sessions:{}, pv } */
+  var pvTotal = 0;
+
+  events.forEach(function(e) {
+    if (e.type !== 'pv') return;
+    pvTotal++;
+    var vid   = e.vid || ('legacy:' + e.sid);
+    var vnum  = e.vnum || 1;
+    var first = e.vfirst || e.ts;
+    var v = visitors[vid];
+    if (!v) {
+      v = visitors[vid] = { vid: vid, visits: 1, firstSeen: first, lastSeen: e.ts, sessions: {}, pv: 0, legacy: !e.vid };
+    }
+    /* vnum is cumulative & persists in localStorage, so the max we ever
+       saw is the true visit count even after older events rotate out. */
+    v.visits    = Math.max(v.visits, vnum);
+    v.firstSeen = Math.min(v.firstSeen, first);
+    v.lastSeen  = Math.max(v.lastSeen, e.ts);
+    if (e.sid) v.sessions[e.sid] = true;
+    v.pv++;
+  });
+
+  var list = Object.keys(visitors).map(function(k){ return visitors[k]; });
+  return { visitors: list, pvTotal: pvTotal };
+}
+
+var LOYALTY_COLORS = {
+  returning: 'rgba(176,122,74,0.92)',   /* clay  */
+  fresh:     'rgba(214,190,150,0.92)'    /* sand  */
+};
+
+function drawLoyaltyDonut(newCount, retCount) {
+  var canvas = document.getElementById('loyalty-donut');
+  if (!canvas) return;
+  var ctx = canvas.getContext('2d');
+  var W = canvas.width, H = canvas.height;
+  ctx.clearRect(0, 0, W, H);
+  var cx = W / 2, cy = H / 2, rOut = 78, rIn = 46;
+  var tot = newCount + retCount;
+
+  if (!tot) {
+    ctx.fillStyle = '#444';
+    ctx.font = '12px -apple-system, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('No visitors yet.', cx, cy);
+    return;
+  }
+
+  var segs = [
+    { v: retCount, c: LOYALTY_COLORS.returning },
+    { v: newCount, c: LOYALTY_COLORS.fresh }
+  ];
+  var start = -Math.PI / 2;
+  segs.forEach(function(s) {
+    if (!s.v) return;
+    var ang = (s.v / tot) * Math.PI * 2;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.arc(cx, cy, rOut, start, start + ang);
+    ctx.closePath();
+    ctx.fillStyle = s.c;
+    ctx.fill();
+    start += ang;
+  });
+
+  ctx.globalCompositeOperation = 'destination-out';
+  ctx.beginPath();
+  ctx.arc(cx, cy, rIn, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.globalCompositeOperation = 'source-over';
+
+  ctx.fillStyle = '#c9a87c';
+  ctx.font = 'bold 22px -apple-system, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(tot, cx, cy - 6);
+  ctx.fillStyle = '#8c887f';
+  ctx.font = '10px "Courier New", monospace';
+  ctx.fillText('VISITORS', cx, cy + 12);
+}
+
+function renderLoyaltyTab() {
+  var data     = buildLoyalty();
+  var visitors = data.visitors;
+  var unique   = visitors.length;
+  var returning = visitors.filter(function(v){ return v.visits > 1; }).length;
+  var fresh     = unique - returning;
+  var retRate   = unique ? Math.round((returning / unique) * 100) : 0;
+  var totalVisits = visitors.reduce(function(s, v){ return s + v.visits; }, 0);
+  var avgVisits = unique ? (Math.round((totalVisits / unique) * 10) / 10) : 0;
+
+  function chip(num, label) {
+    return '<div class="analytics-stat-chip"><span class="asc-num">' + num +
+      '</span><span class="asc-label">' + label + '</span></div>';
+  }
+  document.getElementById('loyalty-stats').innerHTML =
+    chip(unique,           'Unique Visitors') +
+    chip(returning,        'Returning')       +
+    chip(retRate + '%',    'Returning Rate')  +
+    chip(avgVisits,        'Avg. Visits');
+
+  /* ── New vs returning donut ── */
+  drawLoyaltyDonut(fresh, returning);
+  var legendEl = document.getElementById('loyalty-legend');
+  var rows = [
+    { key: 'returning', label: 'Returning (2+ visits)', v: returning },
+    { key: 'fresh',     label: 'New (1 visit)',         v: fresh }
+  ];
+  legendEl.innerHTML = rows.map(function(r) {
+    var share = unique ? Math.round((r.v / unique) * 100) : 0;
+    return '<div class="compass-legend-item">' +
+      '<span class="compass-legend-swatch" style="background:' + LOYALTY_COLORS[r.key] + '"></span>' +
+      '<span>' + r.label + '</span>' +
+      '<span class="compass-legend-val">' + r.v + ' · ' + share + '%</span>' +
+    '</div>';
+  }).join('');
+
+  /* ── Visit frequency buckets ── */
+  var buckets = [
+    { label: '1 visit',     test: function(n){ return n === 1; },        count: 0 },
+    { label: '2 visits',    test: function(n){ return n === 2; },        count: 0 },
+    { label: '3 visits',    test: function(n){ return n === 3; },        count: 0 },
+    { label: '4–5 visits',  test: function(n){ return n >= 4 && n <= 5; }, count: 0 },
+    { label: '6+ visits',   test: function(n){ return n >= 6; },         count: 0 }
+  ];
+  visitors.forEach(function(v) {
+    for (var i = 0; i < buckets.length; i++) {
+      if (buckets[i].test(v.visits)) { buckets[i].count++; break; }
+    }
+  });
+  document.getElementById('loyalty-frequency').innerHTML = jBarList(
+    buckets.filter(function(b){ return b.count > 0; }), unique,
+    { suffix: function(r, share){ return share + '% of visitors'; } }
+  );
+
+  /* ── Recency: last-seen buckets ── */
+  var now = Date.now();
+  var DAY = 86400000;
+  var rec = [
+    { label: 'Today',        test: function(d){ return d < 1; },            count: 0 },
+    { label: 'This week',    test: function(d){ return d >= 1 && d < 7; },  count: 0 },
+    { label: 'This month',   test: function(d){ return d >= 7 && d < 30; }, count: 0 },
+    { label: 'Over a month', test: function(d){ return d >= 30; },          count: 0 }
+  ];
+  visitors.forEach(function(v) {
+    var days = (now - v.lastSeen) / DAY;
+    for (var i = 0; i < rec.length; i++) {
+      if (rec[i].test(days)) { rec[i].count++; break; }
+    }
+  });
+  document.getElementById('loyalty-recency').innerHTML = jBarList(
+    rec.filter(function(b){ return b.count > 0; }), unique,
+    { suffix: function(r, share){ return share + '% of visitors'; } }
+  );
+
+  /* ── Most loyal visitors leaderboard ── */
+  var top = visitors.slice().sort(function(a, b){ return b.visits - a.visits; }).slice(0, 12);
+  var lbRows = top.map(function(v) {
+    var days = Math.max(0, Math.round((now - v.lastSeen) / DAY));
+    var seen = days < 1 ? 'today' : (days === 1 ? '1 day ago' : days + ' days ago');
+    var idShort = v.vid.replace(/^v/, '').replace(/^legacy:s?/, 'legacy ').slice(0, 10);
+    return { label: '#' + idShort + ' · last seen ' + seen, count: v.visits };
+  });
+  document.getElementById('loyalty-leaderboard').innerHTML = jBarList(lbRows, null, {
+    suffix: function(r){ return r.count === 1 ? '1 visit' : r.count + ' visits'; }
+  });
+}
+
+document.getElementById('loyalty-refresh-btn').addEventListener('click', renderLoyaltyTab);
+
+document.getElementById('loyalty-export-btn').addEventListener('click', function() {
+  var blob = new Blob([JSON.stringify(buildLoyalty(), null, 2)], { type: 'application/json' });
+  var url  = URL.createObjectURL(blob);
+  var a    = document.createElement('a');
+  a.href = url; a.download = 'loyalty-' + Date.now() + '.json'; a.click();
   URL.revokeObjectURL(url);
 });
 </script>
