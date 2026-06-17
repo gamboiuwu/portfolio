@@ -136,6 +136,8 @@ Each event is a flat object:
 | `scroll`     | `depth` (25 / 50 / 75 / 100)                                                           |
 | `exit`       | `ms` (milliseconds on page)                                                            |
 | `tile_hover` | `title` (h2 text of hovered `.tiles article`, up to 60 chars)                         |
+| `form_start` | *(commissions page)* fired once on first interaction with the `#cif-form` inquiry form |
+| `form_step`  | *(commissions page)* `step` (wizard step revealed: `1` / `2` / `3` / `success`)        |
 
 - **`sid`**: session ID (per tab, stored in sessionStorage)
 - **`page`**: URL pathname, normalized (trailing slash, no index.html)
@@ -188,6 +190,7 @@ Password-protected (SHA-256 hash in localStorage, 5-attempt lockout). Session tr
 | Journey     | Visitor flow & drop-off map — entry/exit pages, page-to-page paths, flow explorer  |
 | Pulse       | Visitor cadence & traffic timing — weekly punchcard, busiest days, peak hours       |
 | Compass     | Traffic sources & acquisition — channel mix, top referrers, device & screen breakdown |
+| Funnel      | Commission conversion funnel — visit → commissions → form start → contact → submit drop-off |
 
 ---
 
@@ -444,6 +447,46 @@ Answers *where* the audience comes from. Spotlight = which artwork holds attenti
 
 ---
 
+## Funnel — Commission Conversion (Admin → Funnel tab) — NEW TOOL
+
+Answers the single most important business question the portfolio exists to serve: *of everyone who shows up, how many actually become a commission inquiry — and where do the rest fall out?* Compass = where they come from, Journey = where they roam, Pulse = when, Spotlight = what holds their eye, Revenue = money booked — **Funnel = conversion**: the goal-oriented path from arrival to submitted inquiry.
+
+This is **distinct from Journey**: Journey maps *generic* page-to-page flow; Funnel measures fixed, business-defined goal stages and the step-over-step survival/drop between them.
+
+**No new storage key** — derived live from `_gam_analytics_v1`, the same read-only pattern as Revenue/Journey/Pulse/Compass. To make the form steps measurable, `analytics.js` now emits two new event types on the commissions page only:
+- **`form_start`** — fired once when the visitor first interacts with the `#cif-form` inquiry form (focus / input / change).
+- **`form_step`** — fired with `step` (`1` / `2` / `3` / `success`) each time the multi-step wizard reveals a step. Captured via a `MutationObserver` on the `hidden` attribute of `.cif-step[data-step]` elements, so it stays decoupled from the form's own JS. `step: "success"` = a completed, submitted inquiry.
+
+**How it works:**
+1. `buildFunnel()` groups all events by `sid` into per-session signals: visited commissions (`pv` to `/commissions…`), started form (`form_start`), and the furthest wizard step reached (`form_step`).
+2. Stages are computed as session counts, each a subset of the one above:
+   - Visited the site (all sessions)
+   - Viewed commissions page
+   - Started the inquiry form
+   - Reached character step (step 2)
+   - Reached contact step (step 3)
+   - Submitted an inquiry (step `success`)
+3. Step-over-step kept % and dropped % (and absolute lost count) are computed against the previous stage.
+
+**Admin tab sections:**
+- **Stats**: Sessions, Inquiries Submitted, Visit → Inquiry rate %, Form Completion rate % (submitted ÷ started)
+- **Conversion Funnel**: stacked horizontal bars (share of all sessions per stage) with a per-step kept/dropped note between stages
+- **Biggest Drop-off**: the single stage transition that loses the most sessions — the highest-leverage place to improve
+
+**Derived schema (for export):**
+```js
+{ total, stages: [ { key, label, count }, … ] }
+```
+
+**Technical notes:**
+- Bars/accents use the warm amber palette; the loss figure uses a muted clay red (`#c98a7c`) and retention a muted olive (`#96a86e`) — no blue/pink.
+- Reuses `analytics-stat-chip` styles; funnel-specific CSS (`.funnel-*`) lives in the admin `<style>` block.
+- Tab renders lazily on click, same pattern as Compass/Journey/Pulse/Spotlight/Revenue.
+
+**API:** none new — uses `CommissionData.getAnalytics()`. Logic lives in `renderFunnelTab()` / `buildFunnel()` inside `admin/index.html`.
+
+---
+
 ## Commission System
 
 ### Pages
@@ -521,4 +564,4 @@ Stored in `_gam_prices_v1`. Three sections: `digital`, `stickers`, `animation`. 
 
 ---
 
-*Last updated: 2026-06-10*
+*Last updated: 2026-06-17*

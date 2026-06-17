@@ -838,6 +838,24 @@
 		.compass-legend-item { display: flex; align-items: center; gap: 0.55em; font-size: 0.85em; color: #b9b6b0; }
 		.compass-legend-swatch { width: 0.85em; height: 0.85em; border-radius: 2px; flex-shrink: 0; }
 		.compass-legend-val { margin-left: auto; font-family: 'Courier New', monospace; color: #c9a87c; font-size: 0.9em; }
+		/* Funnel tool */
+		.funnel-board { display: flex; flex-direction: column; gap: 0.4em; }
+		.funnel-stage {
+			border: 1px solid rgba(201,201,201,0.1);
+			border-radius: 6px;
+			padding: 0.7em 0.85em;
+			background: rgba(255,255,255,0.015);
+		}
+		.funnel-stage-top { display: flex; align-items: baseline; justify-content: space-between; gap: 0.75em; margin-bottom: 0.45em; }
+		.funnel-stage-label { font-size: 0.92em; color: #d8d5cf; }
+		.funnel-stage-num { font-family: 'Courier New', monospace; color: #c9a87c; font-size: 0.95em; white-space: nowrap; }
+		.funnel-stage-num .fs-share { color: #8c887f; font-size: 0.85em; margin-left: 0.4em; }
+		.funnel-bar-track { height: 12px; background: rgba(255,255,255,0.04); border-radius: 6px; overflow: hidden; }
+		.funnel-bar-fill { height: 100%; border-radius: 6px; background: linear-gradient(90deg, rgba(201,168,124,0.45), rgba(201,168,124,0.92)); transition: width 0.4s ease; }
+		.funnel-drop { font-size: 0.78em; color: #8c887f; margin: 0.15em 0 0.05em; display: flex; align-items: center; gap: 0.4em; }
+		.funnel-drop .fd-lost { color: #c98a7c; }
+		.funnel-drop .fd-keep { color: #96a86e; }
+		.funnel-connector { text-align: center; color: #57534c; font-size: 0.75em; line-height: 1; padding: 0.05em 0; }
 	</style>
 </head>
 <body class="is-preload">
@@ -914,6 +932,7 @@
 				<button class="admin-tab" data-tab="journey">Journey</button>
 				<button class="admin-tab" data-tab="pulse">Pulse</button>
 				<button class="admin-tab" data-tab="compass">Compass</button>
+				<button class="admin-tab" data-tab="funnel">Funnel</button>
 			</div>
 
 			<!-- ============ GALLERY TAB ============ -->
@@ -1623,6 +1642,32 @@
 					<h3>Top Screen Sizes</h3>
 					<p class="hint">Most common visitor screen resolutions, helpful for deciding which breakpoints to polish first.</p>
 					<div id="compass-screens"></div>
+				</div>
+
+			</div>
+
+		<div id="tab-funnel" class="tab-content">
+
+				<div class="admin-card">
+					<h3>Funnel — Commission Conversion</h3>
+					<p class="hint">The whole point of the portfolio is turning visitors into commission inquiries. This traces that exact path — site visit &rarr; commissions page &rarr; started the inquiry form &rarr; reached the contact step &rarr; submitted — and shows how many sessions survive each step, so you can see precisely where would-be clients drop off. Derived live from analytics events (incl. the form's <code>form_start</code> / <code>form_step</code> signals) — no new storage key.</p>
+					<div id="funnel-stats" class="analytics-stats" style="margin-bottom:1em"></div>
+					<div style="display:flex;gap:0.5em;flex-wrap:wrap">
+						<button class="button small" id="funnel-refresh-btn">Refresh</button>
+						<button class="button small" id="funnel-export-btn">Export JSON</button>
+					</div>
+				</div>
+
+				<div class="admin-card">
+					<h3>Conversion Funnel</h3>
+					<p class="hint">Each bar is the share of all sessions that reached that step. The note under each step shows how many were kept vs. lost from the previous step — the largest red number is where you're losing the most potential clients.</p>
+					<div id="funnel-board"></div>
+				</div>
+
+				<div class="admin-card">
+					<h3>Biggest Drop-off</h3>
+					<p class="hint">The single step transition that loses the largest share of sessions — your highest-leverage place to improve copy, pricing clarity, or form friction.</p>
+					<div id="funnel-leak"></div>
 				</div>
 
 			</div>
@@ -2626,6 +2671,9 @@ document.addEventListener('click', function(e){
   }
   if (e.target.dataset && e.target.dataset.tab === 'compass') {
     renderCompassTab();
+  }
+  if (e.target.dataset && e.target.dataset.tab === 'funnel') {
+    renderFunnelTab();
   }
 });
 
@@ -4433,6 +4481,144 @@ document.getElementById('compass-export-btn').addEventListener('click', function
   var url  = URL.createObjectURL(blob);
   var a    = document.createElement('a');
   a.href = url; a.download = 'compass-' + Date.now() + '.json'; a.click();
+  URL.revokeObjectURL(url);
+});
+
+/* ================================================================
+   FUNNEL TAB — commission conversion funnel
+   Goal-oriented (visit → commissions → started → contact → submitted),
+   distinct from Journey's generic page-flow. Derived live from
+   _gam_analytics_v1: pv pages per session + form_start / form_step events.
+================================================================ */
+
+function buildFunnel() {
+  var events = CommissionData.getAnalytics();
+
+  /* Collapse events into per-session signals */
+  var sess = {};
+  events.forEach(function(e) {
+    if (!e.sid) return;
+    var s = sess[e.sid] || (sess[e.sid] = { comm: false, started: false, steps: {} });
+    if (e.type === 'pv') {
+      if (e.page && e.page.indexOf('/commissions') === 0) s.comm = true;
+    } else if (e.type === 'form_start') {
+      s.started = true;
+      s.comm = true; /* the form only lives on the commissions page */
+    } else if (e.type === 'form_step') {
+      s.steps[String(e.step)] = true;
+      s.started = true;
+      s.comm = true;
+    }
+  });
+
+  var sessions = Object.keys(sess).map(function(k){ return sess[k]; });
+  var total = sessions.length;
+  function cnt(fn){ return sessions.filter(fn).length; }
+
+  var stages = [
+    { key: 'visit',   label: 'Visited the site',         count: total },
+    { key: 'comm',    label: 'Viewed commissions page',  count: cnt(function(s){ return s.comm; }) },
+    { key: 'start',   label: 'Started the inquiry form', count: cnt(function(s){ return s.started; }) },
+    { key: 'details', label: 'Reached character step',   count: cnt(function(s){ return s.steps['2'] || s.steps['3'] || s.steps['success']; }) },
+    { key: 'contact', label: 'Reached contact step',     count: cnt(function(s){ return s.steps['3'] || s.steps['success']; }) },
+    { key: 'submit',  label: 'Submitted an inquiry',     count: cnt(function(s){ return s.steps['success']; }) }
+  ];
+
+  return { total: total, stages: stages };
+}
+
+function renderFunnelTab() {
+  var f      = buildFunnel();
+  var total  = f.total;
+  var stages = f.stages;
+  var submitted   = stages[stages.length - 1].count;
+  var startedN    = stages[2].count;
+
+  var convRate = total      ? Math.round((submitted / total) * 100)      : 0;
+  var commToSub = stages[1].count ? Math.round((submitted / stages[1].count) * 100) : 0;
+  var formCompl = startedN  ? Math.round((submitted / startedN) * 100)   : 0;
+
+  function chip(num, label) {
+    return '<div class="analytics-stat-chip"><span class="asc-num">' + num +
+      '</span><span class="asc-label">' + label + '</span></div>';
+  }
+  document.getElementById('funnel-stats').innerHTML =
+    chip(total,            'Sessions')              +
+    chip(submitted,        'Inquiries Submitted')   +
+    chip(convRate + '%',   'Visit → Inquiry')       +
+    chip(formCompl + '%',  'Form Completion');
+
+  /* ── Funnel board ── */
+  var boardEl = document.getElementById('funnel-board');
+  if (!total) {
+    boardEl.innerHTML = '<p style="color:#444;font-size:0.85em;padding:0.5em 0">No sessions tracked yet. Browse the public pages (and the commissions form) and the funnel will populate.</p>';
+    document.getElementById('funnel-leak').innerHTML = '<p style="color:#444;font-size:0.85em;padding:0.5em 0">No data yet.</p>';
+    return;
+  }
+
+  var html = '<div class="funnel-board">';
+  stages.forEach(function(st, i) {
+    var share = total ? Math.round((st.count / total) * 100) : 0;
+    html += '<div class="funnel-stage">' +
+      '<div class="funnel-stage-top">' +
+        '<span class="funnel-stage-label">' + escHtml(st.label) + '</span>' +
+        '<span class="funnel-stage-num">' + st.count +
+          '<span class="fs-share">' + share + '% of all</span></span>' +
+      '</div>' +
+      '<div class="funnel-bar-track"><div class="funnel-bar-fill" style="width:' + share + '%"></div></div>';
+
+    if (i > 0) {
+      var prev = stages[i - 1].count;
+      var lost = prev - st.count;
+      var keepPct = prev ? Math.round((st.count / prev) * 100) : 0;
+      var lostPct = prev ? (100 - keepPct) : 0;
+      html += '<div class="funnel-drop">' +
+        '<span class="fd-keep">&#9654; ' + keepPct + '% kept</span>' +
+        '<span>·</span>' +
+        '<span class="fd-lost">&#9660; ' + lostPct + '% (' + lost + ') dropped from “' + escHtml(stages[i-1].label) + '”</span>' +
+      '</div>';
+    }
+    html += '</div>';
+    if (i < stages.length - 1) html += '<div class="funnel-connector">&#8595;</div>';
+  });
+  html += '</div>';
+  boardEl.innerHTML = html;
+
+  /* ── Biggest drop-off ── */
+  var worst = null;
+  for (var i = 1; i < stages.length; i++) {
+    var prev = stages[i - 1].count;
+    if (!prev) continue;
+    var lost = prev - stages[i].count;
+    var lostPct = Math.round((lost / prev) * 100);
+    if (!worst || lost > worst.lost) {
+      worst = { from: stages[i-1].label, to: stages[i].label, lost: lost, lostPct: lostPct };
+    }
+  }
+  var leakEl = document.getElementById('funnel-leak');
+  if (!worst || worst.lost <= 0) {
+    leakEl.innerHTML = '<p style="color:#96a86e;font-size:0.9em;padding:0.5em 0">No drop-off detected yet — every tracked session that started a step advanced. Keep collecting data.</p>';
+  } else {
+    leakEl.innerHTML =
+      '<div class="funnel-stage" style="border-color:rgba(201,138,124,0.35)">' +
+        '<div class="funnel-stage-top">' +
+          '<span class="funnel-stage-label">“' + escHtml(worst.from) + '” &rarr; “' + escHtml(worst.to) + '”</span>' +
+          '<span class="funnel-stage-num" style="color:#c98a7c">−' + worst.lost + '</span>' +
+        '</div>' +
+        '<p class="hint" style="margin:0.3em 0 0">' + worst.lostPct + '% of sessions that reached “' + escHtml(worst.from) +
+        '” never made it to “' + escHtml(worst.to) + '.” This is the highest-leverage step to tighten.</p>' +
+      '</div>';
+  }
+}
+
+document.getElementById('funnel-refresh-btn').addEventListener('click', renderFunnelTab);
+
+document.getElementById('funnel-export-btn').addEventListener('click', function() {
+  var f = buildFunnel();
+  var blob = new Blob([JSON.stringify(f, null, 2)], { type: 'application/json' });
+  var url  = URL.createObjectURL(blob);
+  var a    = document.createElement('a');
+  a.href = url; a.download = 'funnel-' + Date.now() + '.json'; a.click();
   URL.revokeObjectURL(url);
 });
 </script>

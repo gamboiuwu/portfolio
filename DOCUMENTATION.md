@@ -44,6 +44,7 @@ The tracking answers the questions the portfolio owner actually cares about:
 | What do they click on? | `click` (element, text, href, x/y) | Analytics → Heatmap |
 | Where do they go on the site? | `pv` sequence per session | **Journey → Top Paths / Flow Explorer** |
 | Where do they click off / leave? | last `pv` + `exit` | **Journey → Exit Pages & Drop-off** |
+| How many visitors become commission inquiries? | `pv` + `form_start` + `form_step` | **Funnel → Conversion Funnel** |
 | How far do they scroll? | `scroll` (25/50/75/100%) | Analytics tab |
 | Which artworks hold attention? | `tile_hover`, spotlight viewport time | Artwork Engagement / Spotlight |
 
@@ -82,6 +83,12 @@ Inquiries, Feedback.
   - **Busiest Days** and **Peak Hours** ranked bars
   - Lets the owner time commission openings / drops for when people are actually browsing.
   - Derived live from `_gam_analytics_v1` — no extra tracking, no new storage key.
+- **Funnel** *(newest)* — **commission conversion funnel**. Where Journey shows
+  generic flow, Funnel measures the one path that pays the bills: site visit →
+  commissions page → started the inquiry form → reached the contact step →
+  submitted. Shows how many sessions survive each step, the kept/dropped % between
+  stages, and the single **biggest drop-off** to fix first. Adds two new, form-only
+  analytics events (`form_start`, `form_step`); no new storage key.
 - **Revenue** — financial dashboard derived from the commission Queue: total earned,
   pipeline value, monthly earnings chart, revenue by type, top clients.
 - **Palette** — extract dominant colors from an uploaded artwork (k-means), save
@@ -112,4 +119,4 @@ Inquiries, Feedback.
 - `assets/js/analytics.js` owns all client-side event capture.
 - Keep the gallery light-mode and let the artwork lead; cyber accents stay subtle.
 
-*Last updated: 2026-06-09*
+*Last updated: 2026-06-17*

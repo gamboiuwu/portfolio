@@ -1,6 +1,7 @@
 /*!
  * analytics.js — lightweight client-side analytics for antryab.com
  * Events stored in localStorage._gam_analytics_v1 (max 3000, oldest rotated)
+ *   incl. commission funnel events: form_start, form_step (powers the Funnel tool)
  * Artwork viewport tracking stored in localStorage._gam_spotlight_v1
  * Exposes window.GamAnalytics for admin consumption.
  * Admin page (/admin/) is excluded automatically.
@@ -147,6 +148,45 @@
     var key = art.className + '|' + (art.offsetTop || 0);
     if (hoverTimers[key]) { clearTimeout(hoverTimers[key]); delete hoverTimers[key]; }
   }, { passive: true });
+
+  /* ── Commission inquiry funnel tracking (commissions page only) ──
+     Powers the admin Funnel tool. Decoupled from the form's own JS: we listen
+     for the first real interaction (form_start) and watch which wizard step the
+     form reveals (form_step), including the "success" step = a completed inquiry. */
+  var cif = document.getElementById('cif-form');
+  if (cif) {
+    var formStarted = false;
+    function fireFormStart() {
+      if (formStarted) return;
+      formStarted = true;
+      push({ sid: sid, type: 'form_start', page: page, ts: Date.now() });
+    }
+    cif.addEventListener('focusin', fireFormStart, { passive: true });
+    cif.addEventListener('change',  fireFormStart, { passive: true });
+    cif.addEventListener('input',   fireFormStart, { passive: true });
+
+    var stepSeen = {};
+    function recordStep(step) {
+      if (!step || stepSeen[step]) return;
+      stepSeen[step] = true;
+      push({ sid: sid, type: 'form_step', page: page, step: step, ts: Date.now() });
+    }
+    var cifSteps = cif.querySelectorAll('.cif-step[data-step]');
+    if ('MutationObserver' in window) {
+      var stepObs = new MutationObserver(function (muts) {
+        muts.forEach(function (m) {
+          var el = m.target;
+          if (el.classList && el.classList.contains('cif-step') && !el.hasAttribute('hidden')) {
+            recordStep(el.getAttribute('data-step'));
+          }
+        });
+      });
+      cifSteps.forEach(function (s) {
+        stepObs.observe(s, { attributes: true, attributeFilter: ['hidden'] });
+        if (!s.hasAttribute('hidden')) recordStep(s.getAttribute('data-step')); /* initial step */
+      });
+    }
+  }
 
   /* ── Exit event ── */
   var exitFired = false;
