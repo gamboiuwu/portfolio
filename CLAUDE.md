@@ -188,6 +188,7 @@ Password-protected (SHA-256 hash in localStorage, 5-attempt lockout). Session tr
 | Journey     | Visitor flow & drop-off map — entry/exit pages, page-to-page paths, flow explorer  |
 | Pulse       | Visitor cadence & traffic timing — weekly punchcard, busiest days, peak hours       |
 | Compass     | Traffic sources & acquisition — channel mix, top referrers, device & screen breakdown |
+| Reach       | Scroll depth & content engagement — per-page reach funnel, full-read rate, drop-off |
 
 ---
 
@@ -444,6 +445,38 @@ Answers *where* the audience comes from. Spotlight = which artwork holds attenti
 
 ---
 
+## Reach — Scroll Depth & Content Engagement (Admin → Reach tab) — NEW TOOL
+
+Answers *how far down the page people actually get*. The other analytics tools cover acquisition (Compass), timing (Pulse), flow between pages (Journey), and attention per artwork (Spotlight) — but nothing surfaced the `scroll` depth signal `analytics.js` has been recording all along. Reach turns those 25 / 50 / 75 / 100% scroll milestones into a content-reach funnel, so the artist can tell whether visitors scroll far enough to hit the project tiles, bio, and the commission CTA — or bail at the fold.
+
+**No new storage key** — derived live from `_gam_analytics_v1` `pv` and `scroll` events, the same read-only pattern as Revenue / Journey / Pulse / Compass.
+
+**How it works:**
+1. `buildReach()` groups events by `page`. Each `pv` counts a load and registers the session; each `scroll` event records the **max depth** that session reached on that page.
+2. Per page it derives: `loads`, `visitors` (unique sessions), retention counts at each milestone (`r25/r50/r75/r100`), `avgDepth`, and `completion` (full-read rate = `r100 / visitors`).
+3. Denominator for the funnel is **unique sessions per page**, so reloads don't double-count. A visitor with a pageview but no scroll event counts as reaching 0% (never scrolled past the initial view).
+
+**Admin tab sections:**
+- **Stats**: Page Loads, Avg. Scroll Depth, Full-Read Rate, Pages Tracked
+- **Overall Scroll Funnel**: canvas funnel (Landed → 25 → 50 → 75 → 100%), centred bars whose width ∝ retention %, warm amber
+- **Reach by Page**: pages ranked by full-read rate, with visitor count
+- **Per-Page Funnel**: page selector → that page's 25/50/75/100 funnel as bars
+
+**Derived schema (for export):**
+```js
+{ perPage:[{ page, loads, visitors, r25, r50, r75, r100, avgDepth, completion }], totLoads, overall:{ v, depthSum, r:{25,50,75,100} } }
+```
+
+**Technical notes:**
+- Funnel canvas uses the warm amber palette (`rgba(201,168,124,α)`, α scaled by retention) — consistent with the Pulse/Compass/Revenue charts. No blue/pink.
+- Reuses the shared `jBarList()` renderer, `analytics-stat-chip` styles, and `jPageLabel()` helper.
+- Tab renders lazily on click, same pattern as Journey/Pulse/Compass/Spotlight/Revenue.
+- Caveat: a page that fully fits the viewport without scrolling never fires a `scroll` event, so its depth reads as 0 — Reach measures *scroll* reach, not pixels visible.
+
+**API:** none new — uses `CommissionData.getAnalytics()`. Logic lives in `renderReachTab()` / `buildReach()` inside `admin/index.html`.
+
+---
+
 ## Commission System
 
 ### Pages
@@ -521,4 +554,4 @@ Stored in `_gam_prices_v1`. Three sections: `digital`, `stickers`, `animation`. 
 
 ---
 
-*Last updated: 2026-06-10*
+*Last updated: 2026-06-18*

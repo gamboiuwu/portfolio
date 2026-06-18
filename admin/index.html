@@ -838,6 +838,16 @@
 		.compass-legend-item { display: flex; align-items: center; gap: 0.55em; font-size: 0.85em; color: #b9b6b0; }
 		.compass-legend-swatch { width: 0.85em; height: 0.85em; border-radius: 2px; flex-shrink: 0; }
 		.compass-legend-val { margin-left: auto; font-family: 'Courier New', monospace; color: #c9a87c; font-size: 0.9em; }
+		/* Reach tab */
+		.reach-select {
+		  background: rgba(255,255,255,0.03);
+		  border: 1px solid rgba(201,201,201,0.18);
+		  color: #ccc; border-radius: 5px;
+		  padding: 0.5em 0.7em; font-size: 0.82em;
+		  font-family: 'Courier New', monospace; max-width: 100%; margin-bottom: 0.9em;
+		}
+		.reach-funnel-wrap { overflow-x: auto; padding-bottom: 0.25em; }
+		#reach-funnel { display: block; }
 	</style>
 </head>
 <body class="is-preload">
@@ -914,6 +924,7 @@
 				<button class="admin-tab" data-tab="journey">Journey</button>
 				<button class="admin-tab" data-tab="pulse">Pulse</button>
 				<button class="admin-tab" data-tab="compass">Compass</button>
+				<button class="admin-tab" data-tab="reach">Reach</button>
 			</div>
 
 			<!-- ============ GALLERY TAB ============ -->
@@ -1623,6 +1634,39 @@
 					<h3>Top Screen Sizes</h3>
 					<p class="hint">Most common visitor screen resolutions, helpful for deciding which breakpoints to polish first.</p>
 					<div id="compass-screens"></div>
+				</div>
+
+			</div>
+
+			<div id="tab-reach" class="tab-content">
+
+				<div class="admin-card">
+					<h3>Reach — Scroll Depth &amp; Content Engagement</h3>
+					<p class="hint">How far down each page do visitors actually get? This reads the scroll-depth signals analytics already records (25 / 50 / 75 / 100% milestones) and turns them into a content-reach funnel — so you can see whether people scroll far enough to hit the project tiles, the bio, and the commission CTA, or drop off at the fold. Derived live from analytics pageviews &amp; scroll events — no new storage key.</p>
+					<div id="reach-stats" class="analytics-stats" style="margin-bottom:1em"></div>
+					<div style="display:flex;gap:0.5em;flex-wrap:wrap">
+						<button class="button small" id="reach-refresh-btn">Refresh</button>
+						<button class="button small" id="reach-export-btn">Export JSON</button>
+					</div>
+				</div>
+
+				<div class="admin-card">
+					<h3>Overall Scroll Funnel</h3>
+					<p class="hint">Across every tracked page: of all visitors who landed, what share scrolled past each milestone. A steep drop between two stages means content below that point rarely gets seen.</p>
+					<div class="reach-funnel-wrap"><canvas id="reach-funnel" width="560" height="190"></canvas></div>
+				</div>
+
+				<div class="admin-card">
+					<h3>Reach by Page</h3>
+					<p class="hint">Each page ranked by its full-read rate — the share of visitors who scrolled all the way to the bottom (100%). Pages low on this list have content the audience rarely reaches.</p>
+					<div id="reach-pages"></div>
+				</div>
+
+				<div class="admin-card">
+					<h3>Per-Page Funnel</h3>
+					<p class="hint">Pick a page to see its individual scroll funnel — what percentage of that page's visitors reached each depth.</p>
+					<select id="reach-page-select" class="reach-select"></select>
+					<div id="reach-page-funnel"></div>
 				</div>
 
 			</div>
@@ -2626,6 +2670,9 @@ document.addEventListener('click', function(e){
   }
   if (e.target.dataset && e.target.dataset.tab === 'compass') {
     renderCompassTab();
+  }
+  if (e.target.dataset && e.target.dataset.tab === 'reach') {
+    renderReachTab();
   }
 });
 
@@ -4433,6 +4480,188 @@ document.getElementById('compass-export-btn').addEventListener('click', function
   var url  = URL.createObjectURL(blob);
   var a    = document.createElement('a');
   a.href = url; a.download = 'compass-' + Date.now() + '.json'; a.click();
+  URL.revokeObjectURL(url);
+});
+
+/* ================================================================
+   REACH TAB — scroll depth & content engagement
+   Turns the scroll-depth milestones analytics already records
+   (25/50/75/100%) into a content-reach funnel, per page and overall.
+   No new storage key — derived from _gam_analytics_v1.
+================================================================ */
+
+var REACH_STAGES = [25, 50, 75, 100];
+
+function buildReach() {
+  var events = CommissionData.getAnalytics();
+  var pages  = {};  /* page -> { loads, sids:{sid:1}, depth:{sid:maxDepth} } */
+
+  function ensure(p) {
+    if (!pages[p]) pages[p] = { loads: 0, sids: {}, depth: {} };
+    return pages[p];
+  }
+
+  events.forEach(function(e) {
+    if (e.type === 'pv') {
+      var p = ensure(e.page);
+      p.loads++;
+      p.sids[e.sid] = 1;
+    } else if (e.type === 'scroll') {
+      var q = ensure(e.page);
+      q.sids[e.sid] = 1;
+      var cur = q.depth[e.sid] || 0;
+      if (e.depth > cur) q.depth[e.sid] = e.depth;
+    }
+  });
+
+  var perPage = [];
+  var totLoads = 0;
+  var overall  = { v: 0, depthSum: 0, r: { 25: 0, 50: 0, 75: 0, 100: 0 } };
+
+  Object.keys(pages).forEach(function(p) {
+    var o    = pages[p];
+    var sids = Object.keys(o.sids);
+    var v    = sids.length;
+    var r    = { 25: 0, 50: 0, 75: 0, 100: 0 };
+    var depthSum = 0;
+
+    sids.forEach(function(sid) {
+      var d = o.depth[sid] || 0;
+      depthSum += d;
+      REACH_STAGES.forEach(function(t) { if (d >= t) r[t]++; });
+    });
+
+    perPage.push({
+      page: p, loads: o.loads, visitors: v,
+      r25: r[25], r50: r[50], r75: r[75], r100: r[100],
+      avgDepth: v ? depthSum / v : 0,
+      completion: v ? Math.round((r[100] / v) * 100) : 0
+    });
+
+    totLoads += o.loads;
+    overall.v        += v;
+    overall.depthSum += depthSum;
+    REACH_STAGES.forEach(function(t) { overall.r[t] += r[t]; });
+  });
+
+  perPage.sort(function(a, b) { return b.visitors - a.visitors; });
+  return { perPage: perPage, totLoads: totLoads, overall: overall };
+}
+
+function drawReachFunnel(overall) {
+  var canvas = document.getElementById('reach-funnel');
+  if (!canvas) return;
+  var ctx = canvas.getContext('2d');
+  var W = canvas.width, H = canvas.height;
+  ctx.clearRect(0, 0, W, H);
+
+  if (!overall.v) {
+    ctx.fillStyle = '#444';
+    ctx.font = '12px -apple-system, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('No scroll data yet. Browse the public pages to populate.', W / 2, H / 2);
+    return;
+  }
+
+  /* Stage 0 = "Landed" (100% baseline), then 25/50/75/100 retention. */
+  var stages = [{ label: 'Landed', share: 100 }];
+  REACH_STAGES.forEach(function(t) {
+    stages.push({ label: t + '%', share: Math.round((overall.r[t] / overall.v) * 100) });
+  });
+
+  var n      = stages.length;
+  var gap    = 14;
+  var barH   = (H - gap * (n - 1) - 8) / n;
+  var maxW   = W - 70;
+  var topPad = 4;
+
+  stages.forEach(function(s, i) {
+    var y  = topPad + i * (barH + gap);
+    var bw = Math.max(2, (s.share / 100) * maxW);
+    var x  = (W - bw) / 2;  /* centre the funnel */
+
+    ctx.fillStyle = 'rgba(201,168,124,' + (0.45 + 0.5 * (s.share / 100)) + ')';
+    ctx.fillRect(x, y, bw, barH);
+
+    ctx.fillStyle = '#e7e3dc';
+    ctx.font = 'bold 13px -apple-system, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(s.share + '%', W / 2, y + barH / 2);
+
+    ctx.fillStyle = '#8c887f';
+    ctx.font = '10px "Courier New", monospace';
+    ctx.textAlign = 'left';
+    ctx.fillText(s.label, 4, y + barH / 2);
+  });
+}
+
+function renderReachTab() {
+  var data = buildReach();
+  var o    = data.overall;
+
+  var avgDepth = o.v ? Math.round(o.depthSum / o.v) : 0;
+  var fullRead = o.v ? Math.round((o.r[100] / o.v) * 100) : 0;
+
+  function chip(num, label) {
+    return '<div class="analytics-stat-chip"><span class="asc-num">' + num +
+      '</span><span class="asc-label">' + label + '</span></div>';
+  }
+  document.getElementById('reach-stats').innerHTML =
+    chip(data.totLoads,        'Page Loads')      +
+    chip(avgDepth + '%',       'Avg. Scroll Depth') +
+    chip(fullRead + '%',       'Full-Read Rate')  +
+    chip(data.perPage.length,  'Pages Tracked');
+
+  /* ── Overall funnel ── */
+  drawReachFunnel(o);
+
+  /* ── Reach by page (ranked by full-read rate) ── */
+  var pageRows = data.perPage
+    .filter(function(p) { return p.visitors > 0; })
+    .map(function(p) {
+      return { label: jPageLabel(p.page), count: p.completion, visitors: p.visitors };
+    })
+    .sort(function(a, b) { return b.count - a.count; });
+  document.getElementById('reach-pages').innerHTML = jBarList(pageRows, 100, {
+    suffix: function(r) { return r.count + '% read fully · ' + r.visitors + ' visitor' + (r.visitors === 1 ? '' : 's'); }
+  });
+
+  /* ── Per-page funnel selector ── */
+  var sel  = document.getElementById('reach-page-select');
+  var prev = sel.value;
+  sel.innerHTML = data.perPage.map(function(p) {
+    return '<option value="' + escHtml(p.page) + '">' + escHtml(jPageLabel(p.page)) + ' (' + p.visitors + ')</option>';
+  }).join('');
+  if (prev && data.perPage.some(function(p) { return p.page === prev; })) sel.value = prev;
+
+  function drawPageFunnel() {
+    var pg = sel.value;
+    var pp = data.perPage.filter(function(p) { return p.page === pg; })[0];
+    var el = document.getElementById('reach-page-funnel');
+    if (!pp || !pp.visitors) { el.innerHTML = '<p style="color:#444;font-size:0.85em">No data for this page yet.</p>'; return; }
+    var rows = [
+      { label: 'Scrolled 25%+',   count: pp.r25 },
+      { label: 'Scrolled 50%+',   count: pp.r50 },
+      { label: 'Scrolled 75%+',   count: pp.r75 },
+      { label: 'Read to 100%',    count: pp.r100 }
+    ];
+    el.innerHTML = jBarList(rows, pp.visitors, {
+      suffix: function(r, share) { return share + '% of this page’s visitors'; }
+    });
+  }
+  sel.onchange = drawPageFunnel;
+  drawPageFunnel();
+}
+
+document.getElementById('reach-refresh-btn').addEventListener('click', renderReachTab);
+
+document.getElementById('reach-export-btn').addEventListener('click', function() {
+  var data = buildReach();
+  var blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  var url  = URL.createObjectURL(blob);
+  var a    = document.createElement('a');
+  a.href = url; a.download = 'reach-' + Date.now() + '.json'; a.click();
   URL.revokeObjectURL(url);
 });
 </script>
