@@ -44,6 +44,7 @@ The tracking answers the questions the portfolio owner actually cares about:
 | What do they click on? | `click` (element, text, href, x/y) | Analytics → Heatmap |
 | Where do they go on the site? | `pv` sequence per session | **Journey → Top Paths / Flow Explorer** |
 | Where do they click off / leave? | last `pv` + `exit` | **Journey → Exit Pages & Drop-off** |
+| Do visitors become commission inquiries? | `pv` + `form_focus` + `form_submit` | **Funnel → Conversion Funnel** |
 | How far do they scroll? | `scroll` (25/50/75/100%) | Analytics tab |
 | Which artworks hold attention? | `tile_hover`, spotlight viewport time | Artwork Engagement / Spotlight |
 
@@ -82,6 +83,17 @@ Inquiries, Feedback.
   - **Busiest Days** and **Peak Hours** ranked bars
   - Lets the owner time commission openings / drops for when people are actually browsing.
   - Derived live from `_gam_analytics_v1` — no extra tracking, no new storage key.
+- **Compass** — **traffic sources & acquisition**. Buckets every visit by referrer
+  into channels (direct / social / search / referral), with top referrers, device
+  mix, and common screen sizes. Tells the owner which platform actually sends traffic.
+  Derived live from `_gam_analytics_v1` (`refHost`) — no new storage key.
+- **Funnel** *(newest)* — **commission conversion funnel**. The bottom-line business
+  view: how many visitors become inquiries, and where they fall off. A fixed four-stage
+  funnel — Visited → Viewed Commissions → Engaged the Form → Submitted — with per-step
+  conversion %, drop-off counts, an automatic "biggest drop-off" insight, and a
+  conversion-by-channel breakdown. Two new lightweight events (`form_focus`,
+  `form_submit`) power the form stages; everything else is derived live from
+  `_gam_analytics_v1` plus the stored inquiry count — no new storage key.
 - **Revenue** — financial dashboard derived from the commission Queue: total earned,
   pipeline value, monthly earnings chart, revenue by type, top clients.
 - **Palette** — extract dominant colors from an uploaded artwork (k-means), save
@@ -112,4 +124,4 @@ Inquiries, Feedback.
 - `assets/js/analytics.js` owns all client-side event capture.
 - Keep the gallery light-mode and let the artwork lead; cyber accents stay subtle.
 
-*Last updated: 2026-06-09*
+*Last updated: 2026-06-19*

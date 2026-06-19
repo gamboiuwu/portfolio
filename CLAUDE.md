@@ -136,6 +136,8 @@ Each event is a flat object:
 | `scroll`     | `depth` (25 / 50 / 75 / 100)                                                           |
 | `exit`       | `ms` (milliseconds on page)                                                            |
 | `tile_hover` | `title` (h2 text of hovered `.tiles article`, up to 60 chars)                         |
+| `form_focus` | *(none extra)* — fired once per session when a field inside `#cif-form` is first focused (powers Funnel) |
+| `form_submit`| *(none extra)* — fired when the commission form `#cif-form` is submitted (powers Funnel) |
 
 - **`sid`**: session ID (per tab, stored in sessionStorage)
 - **`page`**: URL pathname, normalized (trailing slash, no index.html)
@@ -188,6 +190,7 @@ Password-protected (SHA-256 hash in localStorage, 5-attempt lockout). Session tr
 | Journey     | Visitor flow & drop-off map — entry/exit pages, page-to-page paths, flow explorer  |
 | Pulse       | Visitor cadence & traffic timing — weekly punchcard, busiest days, peak hours       |
 | Compass     | Traffic sources & acquisition — channel mix, top referrers, device & screen breakdown |
+| Funnel      | Commission conversion funnel — visited → viewed commissions → engaged form → submitted, with per-step drop-off |
 
 ---
 
@@ -444,6 +447,47 @@ Answers *where* the audience comes from. Spotlight = which artwork holds attenti
 
 ---
 
+## Funnel — Commission Conversion Funnel (Admin → Funnel tab) — NEW TOOL
+
+Answers the one question that matters commercially: **how many visitors actually become commission inquiries, and where do they fall off?** Spotlight = which artwork holds attention, Journey = where visitors go (generic flow), Pulse = when they arrive, Compass = where they come from, Revenue = money — **Funnel = conversion**: a fixed, goal-ordered sequence measuring the drop-off from a casual visit to a submitted inquiry.
+
+**Distinct from Journey:** Journey is a generic page-to-page flow/drop-off map. Funnel is a fixed four-stage *business* funnel with per-step conversion and drop-off rates toward a single goal (an inquiry) — a different analytics primitive.
+
+**No new storage key** — derived live from `_gam_analytics_v1`, the same read-only pattern as Compass/Journey/Pulse. To power the two middle/late stages, `analytics.js` now emits two new events on the commissions page:
+- **`form_focus`** — once per session, the first time a visitor focuses any field inside the commission form `#cif-form`.
+- **`form_submit`** — when `#cif-form` is submitted.
+Old events without these still work; sessions simply don't advance past the stages they never reached.
+
+**The four stages (per unique session):**
+1. **Visited Site** — any `pv`
+2. **Viewed Commissions** — a `pv` on `/commissions/`
+3. **Engaged the Form** — a `form_focus` event
+4. **Submitted Inquiry** — a `form_submit` event
+
+**How it works:**
+1. `buildFunnel()` groups all events by `sid`, flags which stages each session reached, and captures each session's entry channel (first referrer host, via `compassClassify`).
+2. Counts unique sessions per stage; computes per-step conversion (% of previous stage) and drop-off (sessions lost).
+3. Cross-references the real stored inquiry count (`CommissionData.getInquiries().length`) as a sanity check against the `form_submit` signal.
+
+**Admin tab sections:**
+- **Stats**: Total Visitors, Visit → Inquiry %, Form Completion %, Stored Inquiries
+- **Conversion Funnel**: stacked horizontal bars scaled to the widest stage, each labelled with % of visitors, % of previous stage, and sessions dropped; an **insight line** calls out the single biggest drop-off and a tailored suggestion
+- **Conversion by Entry Channel**: of sessions that viewed commissions, which acquisition channel (direct/social/search/referral) best converts to a form engagement
+
+**Derived schema (for export):**
+```js
+{ sessionCount, steps:[{key,label,count}…4], byChannel:{ch:{viewed,engaged}}, inquiries }
+```
+
+**Technical notes:**
+- Funnel bars use the warm amber/clay gradient (`rgba(176,122,74…)` → `rgba(214,190,150…)`) — no blue/pink.
+- Reuses the shared `jBarList()` renderer and `analytics-stat-chip` styles; channel attribution reuses `compassClassify()` / `compassHostOf()`.
+- Tab renders lazily on click, same pattern as Compass/Journey/Pulse/Spotlight/Revenue.
+
+**API:** none new — uses `CommissionData.getAnalytics()` + `CommissionData.getInquiries()`. Logic lives in `renderFunnelTab()` / `buildFunnel()` inside `admin/index.html`.
+
+---
+
 ## Commission System
 
 ### Pages
@@ -521,4 +565,4 @@ Stored in `_gam_prices_v1`. Three sections: `digital`, `stickers`, `animation`. 
 
 ---
 
-*Last updated: 2026-06-10*
+*Last updated: 2026-06-19*

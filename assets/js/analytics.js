@@ -119,6 +119,28 @@
     }, 250);
   }, { passive: true });
 
+  /* ── Commission form funnel signals ──
+     form_focus: fired once per session the first time a visitor focuses a field
+     inside the commission inquiry form (#cif-form). form_submit: fired when that
+     form is submitted. These two events power the admin Funnel tool (commission
+     conversion tracking). Both are lightweight and stored alongside other events. */
+  var formFocusLogged = false;
+  document.addEventListener('focusin', function (e) {
+    if (formFocusLogged) return;
+    var el = e.target;
+    if (!el || !el.closest) return;
+    if (!el.closest('#cif-form')) return;
+    var tag = (el.tagName || '').toUpperCase();
+    if (tag !== 'INPUT' && tag !== 'TEXTAREA' && tag !== 'SELECT') return;
+    formFocusLogged = true;
+    push({ sid: sid, type: 'form_focus', page: page, ts: Date.now() });
+  }, { passive: true });
+  document.addEventListener('submit', function (e) {
+    var form = e.target;
+    if (!form || form.id !== 'cif-form') return;
+    push({ sid: sid, type: 'form_submit', page: page, ts: Date.now() });
+  }, true);
+
   /* ── Artwork tile hover (fires after 1 s sustained hover) ── */
   var hoverTimers = {};
   function findTileArticle(el) {
