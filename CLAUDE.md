@@ -188,6 +188,7 @@ Password-protected (SHA-256 hash in localStorage, 5-attempt lockout). Session tr
 | Journey     | Visitor flow & drop-off map — entry/exit pages, page-to-page paths, flow explorer  |
 | Pulse       | Visitor cadence & traffic timing — weekly punchcard, busiest days, peak hours       |
 | Compass     | Traffic sources & acquisition — channel mix, top referrers, device & screen breakdown |
+| Funnel      | Commission conversion funnel — visitors → commissions page → form engagement → submitted inquiry |
 
 ---
 
@@ -444,6 +445,44 @@ Answers *where* the audience comes from. Spotlight = which artwork holds attenti
 
 ---
 
+## Funnel — Commission Conversion (Admin → Funnel tab) — NEW TOOL
+
+The bottom-line **business** view. Spotlight = which artwork holds attention, Journey = where visitors go, Pulse = when they arrive, Compass = where they come from, Revenue = money already earned — **Funnel = conversion**: what fraction of visitors actually turn into a commission inquiry, and exactly where the rest fall out.
+
+**It is the only tool that joins two data streams** — visitor analytics (`_gam_analytics_v1`) *and* the real saved inquiries (`_gam_inquiries_v1`). Every other analytics tool reads a single stream. **No new storage key** — derived live, the same read-only pattern as Revenue/Journey/Pulse/Compass.
+
+**Funnel stages (each a subset of the one above, in unique sessions):**
+1. **Visitors** — unique sessions (`sid`) with any `pv`
+2. **Reached Commissions** — sessions with a `pv` whose `page` matches `/^\/commissions(\/|$)/`
+3. **Engaged Form** — sessions with a `click` on the commissions page whose `el` matches `/(^|\.)cif-|^input|^textarea|^select/` (the inquiry form is the only place `cif-` controls / form fields appear — a clean intent signal)
+4. **Submitted Inquiry** — count of records in `_gam_inquiries_v1` within the range (filtered by `submittedAt`, falling back to `id` timestamp)
+
+Stage 4 is counted **independently of sessions** (inquiries don't store `sid`), so it can exceed stage 3 if analytics were cleared — the UI notes this and the drop connector shows an "↑ more than prior stage" line rather than a negative drop.
+
+**How it works:**
+1. `buildFunnel(rangeDays)` filters events to the chosen window (`7` / `30` / `90` days, or `0` = all time), groups by `sid`, and flags each session `reached` / `engaged`.
+2. Counts unique sessions per stage; counts in-range inquiries for the final stage.
+3. `renderFunnelTab()` draws stat chips, descending funnel bars (amber gradient, width = % of visitors), and a rust "drop connector" between each stage showing sessions lost, % drop, and % continuing.
+
+**Admin tab sections:**
+- **Stats**: Visitors, Reached Commissions, Conversion Rate (`submitted ÷ visitors`), Inquiries
+- **Conversion Funnel**: four descending bars with per-step drop-off lines; identifies the biggest leak
+- **Range selector**: 7 / 30 / 90 days / all time
+- **Export JSON** of the derived funnel
+
+**Derived schema (for export):**
+```js
+{ visitors, reached, engaged, submitted, rangeDays }
+```
+
+**Technical notes:**
+- Bars/stats reuse the warm amber palette (`#8c887f → #c9a87c`) and shared `analytics-stat-chip` styles. Drop lines use a muted clay (`#a87a5a`) — no blue/pink/bright red.
+- Tab renders lazily on click and re-renders on range change, same pattern as the other analytics tabs.
+
+**API:** none new — uses `CommissionData.getAnalytics()` + `CommissionData.getInquiries()`. Logic lives in `renderFunnelTab()` / `buildFunnel()` inside `admin/index.html`.
+
+---
+
 ## Commission System
 
 ### Pages
@@ -521,4 +560,4 @@ Stored in `_gam_prices_v1`. Three sections: `digital`, `stickers`, `animation`. 
 
 ---
 
-*Last updated: 2026-06-10*
+*Last updated: 2026-06-22*

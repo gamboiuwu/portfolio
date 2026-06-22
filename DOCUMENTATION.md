@@ -46,6 +46,7 @@ The tracking answers the questions the portfolio owner actually cares about:
 | Where do they click off / leave? | last `pv` + `exit` | **Journey → Exit Pages & Drop-off** |
 | How far do they scroll? | `scroll` (25/50/75/100%) | Analytics tab |
 | Which artworks hold attention? | `tile_hover`, spotlight viewport time | Artwork Engagement / Spotlight |
+| What share of visitors become inquiries? | `pv` + form `click` + saved inquiries | **Funnel → Conversion Funnel** |
 
 See `CLAUDE.md` → Analytics System for the exact event field schema.
 
@@ -82,6 +83,17 @@ Inquiries, Feedback.
   - **Busiest Days** and **Peak Hours** ranked bars
   - Lets the owner time commission openings / drops for when people are actually browsing.
   - Derived live from `_gam_analytics_v1` — no extra tracking, no new storage key.
+- **Compass** — **traffic sources & acquisition**. Buckets every visit by its
+  referrer into channels (direct / social / search / referral), with a channel-mix
+  donut, top referring hosts, device mix, and top screen sizes. Tells the owner
+  which platform actually sends traffic. Derived live from `_gam_analytics_v1`.
+- **Funnel** *(newest)* — **commission conversion funnel**. The only tool that joins
+  two data streams — visitor analytics (`pv` + form clicks) *and* the real saved
+  inquiries — to answer the bottom-line question: what share of visitors become a
+  commission inquiry, and where do the rest drop off? Four stages (Visitors →
+  Reached Commissions → Engaged Form → Submitted Inquiry) with per-step drop-off,
+  a conversion-rate stat, and a 7/30/90-day/all-time range. Derived live — no new
+  storage key.
 - **Revenue** — financial dashboard derived from the commission Queue: total earned,
   pipeline value, monthly earnings chart, revenue by type, top clients.
 - **Palette** — extract dominant colors from an uploaded artwork (k-means), save
@@ -112,4 +124,4 @@ Inquiries, Feedback.
 - `assets/js/analytics.js` owns all client-side event capture.
 - Keep the gallery light-mode and let the artwork lead; cyber accents stay subtle.
 
-*Last updated: 2026-06-09*
+*Last updated: 2026-06-22*

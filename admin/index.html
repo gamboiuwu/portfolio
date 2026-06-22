@@ -838,6 +838,19 @@
 		.compass-legend-item { display: flex; align-items: center; gap: 0.55em; font-size: 0.85em; color: #b9b6b0; }
 		.compass-legend-swatch { width: 0.85em; height: 0.85em; border-radius: 2px; flex-shrink: 0; }
 		.compass-legend-val { margin-left: auto; font-family: 'Courier New', monospace; color: #c9a87c; font-size: 0.9em; }
+		/* Funnel tab */
+		.funnel-board { display: flex; flex-direction: column; gap: 0; }
+		.funnel-stage { padding: 0.15em 0; }
+		.funnel-stage-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 0.4em; gap: 1em; }
+		.funnel-stage-name { font-size: 0.82em; color: #ccc; }
+		.funnel-stage-name .fn-idx { font-family: 'Courier New', monospace; color: #8c887f; margin-right: 0.55em; font-size: 0.85em; }
+		.funnel-stage-val { font-family: 'Courier New', monospace; font-size: 0.85em; color: #c9a87c; white-space: nowrap; }
+		.funnel-bar-wrap { height: 28px; background: rgba(255,255,255,0.05); border-radius: 4px; overflow: hidden; }
+		.funnel-bar { height: 100%; background: linear-gradient(to right, #8c887f, #c9a87c); border-radius: 4px; transition: width 0.5s ease; min-width: 3px; display: flex; align-items: center; }
+		.funnel-bar-pct { font-size: 0.62em; color: #211d18; font-weight: 700; padding-left: 0.7em; white-space: nowrap; font-family: 'Courier New', monospace; }
+		.funnel-drop { display: flex; align-items: center; gap: 0.45em; padding: 0.3em 0 0.3em 0.3em; font-size: 0.68em; font-family: 'Courier New', monospace; color: #a87a5a; }
+		.funnel-drop-arrow { color: #555; }
+		.funnel-range { background: rgba(255,255,255,0.03); border: 1px solid rgba(201,201,201,0.15); color: #ccc; padding: 0.4em 0.7em; border-radius: 5px; font-size: 0.85em; }
 	</style>
 </head>
 <body class="is-preload">
@@ -914,6 +927,7 @@
 				<button class="admin-tab" data-tab="journey">Journey</button>
 				<button class="admin-tab" data-tab="pulse">Pulse</button>
 				<button class="admin-tab" data-tab="compass">Compass</button>
+				<button class="admin-tab" data-tab="funnel">Funnel</button>
 			</div>
 
 			<!-- ============ GALLERY TAB ============ -->
@@ -1623,6 +1637,45 @@
 					<h3>Top Screen Sizes</h3>
 					<p class="hint">Most common visitor screen resolutions, helpful for deciding which breakpoints to polish first.</p>
 					<div id="compass-screens"></div>
+				</div>
+
+			</div>
+
+			<div id="tab-funnel" class="tab-content">
+
+				<div class="admin-card">
+					<h3>Funnel — Commission Conversion</h3>
+					<p class="hint">The bottom-line business question: of everyone who lands on the site, how many actually become a commission inquiry — and where do they fall out along the way? This joins two data streams no other tool combines — visitor analytics (<code>pv</code> + form clicks) and your real saved inquiries — into one conversion funnel. Use it to spot the biggest leak: are people not finding the commissions page, not engaging the form, or abandoning the form before submitting? Derived live — no new storage key.</p>
+					<div id="funnel-stats" class="analytics-stats" style="margin-bottom:1em"></div>
+					<div style="display:flex;gap:0.5em;flex-wrap:wrap;align-items:center">
+						<label style="font-size:0.8em;color:#8c887f">Range
+							<select id="funnel-range" class="funnel-range">
+								<option value="7">Last 7 days</option>
+								<option value="30" selected>Last 30 days</option>
+								<option value="90">Last 90 days</option>
+								<option value="0">All time</option>
+							</select>
+						</label>
+						<button class="button small" id="funnel-refresh-btn">Refresh</button>
+						<button class="button small" id="funnel-export-btn">Export JSON</button>
+					</div>
+				</div>
+
+				<div class="admin-card">
+					<h3>Conversion Funnel</h3>
+					<p class="hint">Each stage is a subset of the one above it, measured in unique sessions, ending in real submitted inquiries. Percentages on the bars are share of all visitors; the rust lines between stages show how many were lost at each step.</p>
+					<div id="funnel-board"></div>
+				</div>
+
+				<div class="admin-card">
+					<h3>How it's measured</h3>
+					<p class="hint" style="margin:0">
+						<strong>Visitors</strong> — unique sessions with any pageview.
+						<strong>Reached Commissions</strong> — sessions that opened <code>/commissions/</code>.
+						<strong>Engaged Form</strong> — sessions that clicked inside the inquiry form (any <code>cif-</code> control).
+						<strong>Submitted Inquiry</strong> — actual records saved by the form (<code>_gam_inquiries_v1</code>) in range.
+						Submissions are counted independently of sessions, so if analytics were cleared this stage can read higher than the one above it.
+					</p>
 				</div>
 
 			</div>
@@ -2626,6 +2679,9 @@ document.addEventListener('click', function(e){
   }
   if (e.target.dataset && e.target.dataset.tab === 'compass') {
     renderCompassTab();
+  }
+  if (e.target.dataset && e.target.dataset.tab === 'funnel') {
+    renderFunnelTab();
   }
 });
 
@@ -4433,6 +4489,153 @@ document.getElementById('compass-export-btn').addEventListener('click', function
   var url  = URL.createObjectURL(blob);
   var a    = document.createElement('a');
   a.href = url; a.download = 'compass-' + Date.now() + '.json'; a.click();
+  URL.revokeObjectURL(url);
+});
+
+/* ================================================================
+   FUNNEL TAB — Commission Conversion
+   Joins visitor analytics (_gam_analytics_v1) with real saved
+   inquiries (_gam_inquiries_v1) into one conversion funnel.
+   Derived live — no new storage key.
+================================================================ */
+
+/* A page counts as the commissions page (covers /commissions/ and any sub-path) */
+function funnelIsCommPage(page) {
+  return /^\/commissions(\/|$)/.test(page || '');
+}
+
+/* A click is "form engagement" if it lands on any cif- prefixed form control,
+   or a bare form field tag. The inquiry form is the only place these appear on
+   the commissions page, so this is a clean, form-specific intent signal. */
+function funnelIsFormClick(el) {
+  return /(^|\.)cif-|^input|^textarea|^select/.test(el || '');
+}
+
+function buildFunnel(rangeDays) {
+  var events    = CommissionData.getAnalytics();
+  var inquiries = CommissionData.getInquiries();
+  var cutoff    = rangeDays ? (Date.now() - rangeDays * 86400000) : 0;
+
+  var sessions = {}; /* sid -> { pv, reached, engaged } */
+  events.forEach(function(e) {
+    if (!e || !e.sid) return;
+    if (cutoff && e.ts < cutoff) return;
+    var s = sessions[e.sid] || (sessions[e.sid] = { pv: false, reached: false, engaged: false });
+    if (e.type === 'pv') {
+      s.pv = true;
+      if (funnelIsCommPage(e.page)) s.reached = true;
+    } else if (e.type === 'click' && funnelIsCommPage(e.page) && funnelIsFormClick(e.el)) {
+      s.reached = true;       /* a form click implies they were on the commissions page */
+      s.engaged = true;
+    }
+  });
+
+  var visitors = 0, reached = 0, engaged = 0;
+  Object.keys(sessions).forEach(function(k) {
+    var s = sessions[k];
+    if (!s.pv) return;
+    visitors++;
+    if (s.reached) reached++;
+    if (s.engaged) engaged++;
+  });
+
+  var submitted = inquiries.filter(function(i) {
+    if (!cutoff) return true;
+    var t = i.submittedAt ? Date.parse(i.submittedAt) : (i.id || 0);
+    return t >= cutoff;
+  }).length;
+
+  return { visitors: visitors, reached: reached, engaged: engaged, submitted: submitted, rangeDays: rangeDays };
+}
+
+function renderFunnelTab() {
+  var sel  = document.getElementById('funnel-range');
+  var days = sel ? parseInt(sel.value, 10) : 30;
+  var f    = buildFunnel(days);
+
+  var stages = [
+    { key: 'visitors',  name: 'Visitors',             count: f.visitors  },
+    { key: 'reached',   name: 'Reached Commissions',  count: f.reached   },
+    { key: 'engaged',   name: 'Engaged Form',         count: f.engaged   },
+    { key: 'submitted', name: 'Submitted Inquiry',    count: f.submitted }
+  ];
+
+  var base = f.visitors || 0;
+  var convPct = base ? Math.round((f.submitted / base) * 1000) / 10 : 0;
+
+  /* Biggest drop-off between consecutive stages (absolute sessions lost) */
+  var biggestLeak = '—', maxLost = -1;
+  for (var i = 1; i < stages.length; i++) {
+    var lost = stages[i - 1].count - stages[i].count;
+    if (lost > maxLost) {
+      maxLost = lost;
+      biggestLeak = stages[i - 1].name + ' → ' + stages[i].name;
+    }
+  }
+  if (maxLost <= 0) biggestLeak = '—';
+
+  function chip(num, label) {
+    return '<div class="analytics-stat-chip"><span class="asc-num">' + num +
+      '</span><span class="asc-label">' + label + '</span></div>';
+  }
+  document.getElementById('funnel-stats').innerHTML =
+    chip(f.visitors,        'Visitors') +
+    chip(f.reached,         'Reached Commissions') +
+    chip(convPct + '%',     'Conversion Rate') +
+    chip(f.submitted,       'Inquiries');
+
+  /* ── Funnel bars ── */
+  var html = '<div class="funnel-board">';
+  stages.forEach(function(st, idx) {
+    var widthPct = base ? Math.max(2, Math.min(100, Math.round((st.count / base) * 100))) : 0;
+    var sharePct = base ? Math.round((st.count / base) * 100) : 0;
+    var idxStr   = ('0' + (idx + 1)).slice(-2);
+
+    html += '<div class="funnel-stage">' +
+      '<div class="funnel-stage-head">' +
+        '<span class="funnel-stage-name"><span class="fn-idx">' + idxStr + ' //</span>' + st.name + '</span>' +
+        '<span class="funnel-stage-val">' + st.count + ' · ' + sharePct + '% of visitors</span>' +
+      '</div>' +
+      '<div class="funnel-bar-wrap"><div class="funnel-bar" style="width:' + widthPct + '%">' +
+        '<span class="funnel-bar-pct">' + sharePct + '%</span>' +
+      '</div></div>' +
+    '</div>';
+
+    /* Drop connector to the next stage */
+    if (idx < stages.length - 1) {
+      var next = stages[idx + 1];
+      var lost = st.count - next.count;
+      var stepConv = st.count ? Math.round((next.count / st.count) * 100) : 0;
+      var line;
+      if (lost > 0) {
+        line = '▼ ' + lost + ' lost (' + (100 - stepConv) + '% drop) — ' + stepConv + '% continue';
+      } else if (lost === 0) {
+        line = '→ no drop — 100% continue';
+      } else {
+        line = '↑ ' + Math.abs(lost) + ' more than prior stage (see note below)';
+      }
+      html += '<div class="funnel-drop"><span class="funnel-drop-arrow">│</span>' + line + '</div>';
+    }
+  });
+  html += '</div>';
+
+  if (!base) {
+    html = '<p class="rev-empty-note">No visitor sessions in this range yet. Browse the public pages (and submit a test inquiry) to populate the funnel.</p>';
+  }
+  document.getElementById('funnel-board').innerHTML = html;
+}
+
+document.getElementById('funnel-refresh-btn').addEventListener('click', renderFunnelTab);
+document.getElementById('funnel-range').addEventListener('change', renderFunnelTab);
+
+document.getElementById('funnel-export-btn').addEventListener('click', function() {
+  var sel  = document.getElementById('funnel-range');
+  var days = sel ? parseInt(sel.value, 10) : 30;
+  var f    = buildFunnel(days);
+  var blob = new Blob([JSON.stringify(f, null, 2)], { type: 'application/json' });
+  var url  = URL.createObjectURL(blob);
+  var a    = document.createElement('a');
+  a.href = url; a.download = 'funnel-' + Date.now() + '.json'; a.click();
   URL.revokeObjectURL(url);
 });
 </script>
