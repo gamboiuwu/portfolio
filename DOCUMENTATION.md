@@ -46,6 +46,7 @@ The tracking answers the questions the portfolio owner actually cares about:
 | Where do they click off / leave? | last `pv` + `exit` | **Journey → Exit Pages & Drop-off** |
 | How far do they scroll? | `scroll` (25/50/75/100%) | Analytics tab |
 | Which artworks hold attention? | `tile_hover`, spotlight viewport time | Artwork Engagement / Spotlight |
+| Do visitors actually convert into inquiries? | `pv` + `form_start` + `convert` | **Funnel → Conversion Funnel** |
 
 See `CLAUDE.md` → Analytics System for the exact event field schema.
 
@@ -88,6 +89,20 @@ Inquiries, Feedback.
   named palettes, apply as accent.
 - **Queue** — internal Kanban work-order tracker for active commissions
   (Queue → Sketch → … → Delivered), distinct from the public Inquiries form.
+- **Compass** — traffic sources & acquisition: channel mix (direct/social/search/
+  referral), top referrers, device & screen breakdown. Answers *where* visitors
+  come from.
+- **Funnel** *(newest)* — **commission conversion funnel**. The site's whole job is
+  turning visitors into inquiries; this places every session at the furthest stage
+  it reached and shows where people fall out:
+  - Stages: **Landed → Reached Commissions → Engaged → Started Form → Submitted**
+  - Stats: sessions, reached-commissions %, started-form %, overall conversion %
+  - A canvas funnel chart (narrowing amber bars) + step-to-step conversion list
+  - **Biggest Drop-off** — the consecutive stage gap losing the most visitors
+  - **Conversions by Type** — what submitted inquiries actually ask for
+  - Started/Submitted come from `form_start` (first form interaction) and `convert`
+    (submit) events the commissions form logs via `GamAnalytics.track()`. Everything
+    else is derived live from `_gam_analytics_v1` — no new storage key.
 
 > When adding a new behind-the-scenes tool, **first verify it doesn't already exist**
 > in this list and in `CLAUDE.md`, then document it in both files.
@@ -112,4 +127,4 @@ Inquiries, Feedback.
 - `assets/js/analytics.js` owns all client-side event capture.
 - Keep the gallery light-mode and let the artwork lead; cyber accents stay subtle.
 
-*Last updated: 2026-06-09*
+*Last updated: 2026-06-23*

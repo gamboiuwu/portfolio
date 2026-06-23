@@ -1820,11 +1820,23 @@
     return ok;
   }
 
+  // Funnel: fire a one-time `form_start` the moment a visitor actually engages
+  // the inquiry form (first field focus or first Next), so the admin Funnel tab
+  // can measure form-start → submit conversion per session.
+  var funnelStarted = false;
+  function markFormStart() {
+    if (funnelStarted) return;
+    funnelStarted = true;
+    try { window.GamAnalytics && window.GamAnalytics.track('form_start'); } catch (err) {}
+  }
+  form.addEventListener('focusin', markFormStart);
+
   // Next buttons
   form.addEventListener('click', function (e) {
     var t = e.target;
 
     if (t.classList.contains('cif-btn-next')) {
+      markFormStart();
       var toValidate = (t.dataset.validate || '').split(',').filter(Boolean);
       if (validate(toValidate)) showStep(current + 1);
       return;
@@ -1878,6 +1890,10 @@
     };
 
     try { CommissionData.saveInquiry(inquiry); } catch (err) { /* silent — notifications still fire */ }
+
+    // Funnel: session-linked conversion event (the goal of the whole site).
+    // `ctype` lets the Funnel tab break conversions down by commission type.
+    try { window.GamAnalytics && window.GamAnalytics.track('convert', { ctype: inquiry.commissionType || '' }); } catch (err) {}
 
     // ── Notifications (fire-and-forget, never block the UI) ──────────
     var addonsStr  = inquiry.addons.length ? inquiry.addons.join(', ') : 'none';

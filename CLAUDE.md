@@ -136,6 +136,10 @@ Each event is a flat object:
 | `scroll`     | `depth` (25 / 50 / 75 / 100)                                                           |
 | `exit`       | `ms` (milliseconds on page)                                                            |
 | `tile_hover` | `title` (h2 text of hovered `.tiles article`, up to 60 chars)                         |
+| `form_start` | *(none)* — fired once when a visitor first engages the commission inquiry form (field focus or first Next); page is `/commissions/` |
+| `convert`    | `ctype` (commission type requested) — fired when the inquiry form is submitted; page is `/commissions/` |
+
+`form_start` and `convert` are emitted by the commissions page via `window.GamAnalytics.track(type, extra)`, which carries the current `sid`/`page`/`ts` so the events join the same session stream. They power the **Funnel** tab's conversion stages.
 
 - **`sid`**: session ID (per tab, stored in sessionStorage)
 - **`page`**: URL pathname, normalized (trailing slash, no index.html)
@@ -143,7 +147,7 @@ Each event is a flat object:
 - **`xp` / `yp`**: click position as 0–1 fraction of viewport width/height
 - Max 3000 events; oldest are rotated out automatically
 - Admin page is **excluded** from tracking
-- `window.GamAnalytics` is the public API (`.get()`, `.clear()`, `.getSpotlight()`, `.clearSpotlight()`)
+- `window.GamAnalytics` is the public API (`.get()`, `.clear()`, `.getSpotlight()`, `.clearSpotlight()`, `.track(type, extra)`)
 
 ### Heatmap Visualizer (Admin → Analytics tab)
 Canvas-based click density map. Select a page from the dropdown, see click positions as color-coded dots (blue=low density → red=high). Uses proximity bucketing (32×32 grid cells) to aggregate nearby clicks.
@@ -188,6 +192,7 @@ Password-protected (SHA-256 hash in localStorage, 5-attempt lockout). Session tr
 | Journey     | Visitor flow & drop-off map — entry/exit pages, page-to-page paths, flow explorer  |
 | Pulse       | Visitor cadence & traffic timing — weekly punchcard, busiest days, peak hours       |
 | Compass     | Traffic sources & acquisition — channel mix, top referrers, device & screen breakdown |
+| Funnel      | Commission conversion funnel — landed → reached → engaged → started form → submitted, with drop-off |
 
 ---
 
@@ -444,6 +449,45 @@ Answers *where* the audience comes from. Spotlight = which artwork holds attenti
 
 ---
 
+## Funnel — Commission Conversion Funnel (Admin → Funnel tab) — NEW TOOL
+
+The portfolio's single business goal is converting visitors into commission inquiries. Spotlight = attention, Journey = flow, Pulse = timing, Compass = acquisition, Revenue = money — **Funnel = conversion**: of everyone who lands, how many reach the commissions page, engage, start the form, and actually submit. It surfaces the *biggest leak* in that path so the owner knows exactly what to fix.
+
+**Mostly derived live from `_gam_analytics_v1` — no new storage key.** Two of the five stages need an explicit signal, so `analytics.js` exposes a new `GamAnalytics.track(type, extra)` method, and the commissions form logs:
+- **`form_start`** — fired once when a visitor first engages the inquiry form (field focus or first *Next*).
+- **`convert`** — fired on submit, with `ctype` (the commission type requested).
+
+Both carry the session's `sid`/`page`/`ts`, so they live in the same event stream as `pv`/`click`/`scroll`. Old data without them simply shows zero for those stages — nothing breaks.
+
+**How it works:**
+1. `buildFunnel()` groups events by `sid` and, per session, computes the **furthest stage reached** (monotonic — a later stage implies all earlier ones):
+   1. **Landed** — any pageview
+   2. **Reached Commissions** — a `pv` on `/commissions/`
+   3. **Engaged** — on `/commissions/`, a `click` *or* `scroll` ≥ 50%
+   4. **Started Form** — a `form_start` event
+   5. **Submitted** — a `convert` event
+2. `counts[i]` = sessions that reached *at least* stage i+1, giving a strictly non-increasing funnel.
+
+**Admin tab sections:**
+- **Stats**: Sessions, Reached Commissions %, Started Form %, Overall Conversion % (submitted ÷ landed)
+- **Conversion Funnel**: canvas chart of narrowing centred amber bars (one per stage, width = share of sessions), plus a step list showing step-to-step conversion (`% of prev`; <50% steps flagged)
+- **Biggest Drop-off**: consecutive-stage gaps ranked by sessions lost — fix the top one first
+- **Conversions by Type**: `convert` events grouped by `ctype`
+
+**Derived schema (for export):**
+```js
+{ sessions, stages:[{stage,count},…5], types:{ctype:count} }
+```
+
+**Technical notes:**
+- Funnel bars use the warm amber/sand palette deepening down the funnel (`rgba(214,190,150…)` → `rgba(150,108,62…)`) — no blue/pink.
+- Reuses the shared `jBarList()` renderer and `analytics-stat-chip` styles; canvas drawn with the 2D API like the other charts.
+- Tab renders lazily on click, same pattern as Compass/Journey/Pulse/Spotlight/Revenue.
+
+**API:** `GamAnalytics.track(type, extra)` (new, in `analytics.js`). Tab logic lives in `renderFunnelTab()` / `buildFunnel()` / `drawFunnelChart()` inside `admin/index.html`.
+
+---
+
 ## Commission System
 
 ### Pages
@@ -521,4 +565,4 @@ Stored in `_gam_prices_v1`. Three sections: `digital`, `stickers`, `animation`. 
 
 ---
 
-*Last updated: 2026-06-10*
+*Last updated: 2026-06-23*

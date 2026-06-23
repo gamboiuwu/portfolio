@@ -286,7 +286,18 @@
     clear:        function () { localStorage.removeItem(KEY); },
     getKey:       function () { return KEY; },
     getSpotlight: loadSpotlight,
-    clearSpotlight: function () { localStorage.removeItem(SP_KEY); }
+    clearSpotlight: function () { localStorage.removeItem(SP_KEY); },
+    /* Log a custom session-linked event (used by the commission funnel:
+       `form_start` when a visitor begins the inquiry form, `convert` on submit).
+       Always carries the current sid/page so it slots into the same session stream. */
+    track: function (type, extra) {
+      if (!type) return;
+      var evt = { sid: sid, type: String(type), page: page, ts: Date.now() };
+      if (extra && typeof extra === 'object') {
+        Object.keys(extra).forEach(function (k) { evt[k] = extra[k]; });
+      }
+      push(evt);
+    }
   };
 
 }());
