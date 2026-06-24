@@ -838,6 +838,19 @@
 		.compass-legend-item { display: flex; align-items: center; gap: 0.55em; font-size: 0.85em; color: #b9b6b0; }
 		.compass-legend-swatch { width: 0.85em; height: 0.85em; border-radius: 2px; flex-shrink: 0; }
 		.compass-legend-val { margin-left: auto; font-family: 'Courier New', monospace; color: #c9a87c; font-size: 0.9em; }
+
+		/* Depth tab — scroll read-through funnel */
+		.depth-page { padding: 0.7em 0; border-bottom: 1px solid rgba(255,255,255,0.06); }
+		.depth-page:last-child { border-bottom: none; }
+		.depth-page-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 0.5em; gap: 1em; }
+		.depth-page-name { font-family: 'Courier New', monospace; font-size: 0.9em; color: #e7e4de; word-break: break-all; }
+		.depth-page-views { font-size: 0.78em; color: #8c887f; white-space: nowrap; }
+		.depth-tiers { display: flex; flex-direction: column; gap: 0.3em; }
+		.depth-tier { display: flex; align-items: center; gap: 0.6em; }
+		.depth-tier-label { width: 2.8em; font-family: 'Courier New', monospace; font-size: 0.78em; color: #8c887f; text-align: right; flex-shrink: 0; }
+		.depth-tier-bar-wrap { flex: 1; height: 0.85em; background: rgba(255,255,255,0.05); border-radius: 3px; overflow: hidden; }
+		.depth-tier-bar { height: 100%; border-radius: 3px; transition: width 0.4s ease; }
+		.depth-tier-val { width: 3.2em; font-family: 'Courier New', monospace; font-size: 0.78em; color: #c9a87c; flex-shrink: 0; }
 	</style>
 </head>
 <body class="is-preload">
@@ -914,6 +927,7 @@
 				<button class="admin-tab" data-tab="journey">Journey</button>
 				<button class="admin-tab" data-tab="pulse">Pulse</button>
 				<button class="admin-tab" data-tab="compass">Compass</button>
+				<button class="admin-tab" data-tab="depth">Depth</button>
 			</div>
 
 			<!-- ============ GALLERY TAB ============ -->
@@ -1626,6 +1640,38 @@
 				</div>
 
 			</div>
+
+				<div id="tab-depth" class="tab-content">
+
+					<div class="admin-card">
+						<h3>Depth — Scroll Reach &amp; Read-Through</h3>
+						<p class="hint">How far down each page do visitors actually scroll before they leave? Compass tells you where traffic comes from and Journey where it goes between pages — Depth shows the <em>vertical</em> story: which pages get read to the bottom and which lose people above the fold. Derived live from the scroll-depth events analytics already records — no new storage key. Note: a session that never scrolls (short page or instant bounce) counts as 0% reach, so treat reach as relative engagement, not a literal pixel measure.</p>
+						<div id="depth-stats" class="analytics-stats" style="margin-bottom:1em"></div>
+						<div style="display:flex;gap:0.5em;flex-wrap:wrap">
+							<button class="button small" id="depth-refresh-btn">Refresh</button>
+							<button class="button small" id="depth-export-btn">Export JSON</button>
+						</div>
+					</div>
+
+					<div class="admin-card">
+						<h3>Read-Through Funnel by Page</h3>
+						<p class="hint">For each page, the share of visitors who reached 25% / 50% / 75% / 100% of the page. A healthy funnel narrows gently; a sharp drop between two tiers marks where attention falls off.</p>
+						<div id="depth-funnels"></div>
+					</div>
+
+					<div class="admin-card">
+						<h3>Where Readers Drop Off</h3>
+						<p class="hint">Pages ranked by the share of visitors who left before reaching the halfway point — your weakest above-the-fold hooks. High numbers here are candidates for a stronger opening or shorter layout.</p>
+						<div id="depth-dropoff"></div>
+					</div>
+
+					<div class="admin-card">
+						<h3>Average Scroll Depth by Page</h3>
+						<p class="hint">Mean furthest-point reached per visit, page by page. The deepest pages are the ones holding attention all the way through.</p>
+						<div id="depth-avg"></div>
+					</div>
+
+				</div>
 
 		</div><!-- /#admin-dash -->
 		<input type="file" id="img-file-input" accept="image/*" style="display:none" />
@@ -2626,6 +2672,9 @@ document.addEventListener('click', function(e){
   }
   if (e.target.dataset && e.target.dataset.tab === 'compass') {
     renderCompassTab();
+  }
+  if (e.target.dataset && e.target.dataset.tab === 'depth') {
+    renderDepthTab();
   }
 });
 
@@ -4433,6 +4482,154 @@ document.getElementById('compass-export-btn').addEventListener('click', function
   var url  = URL.createObjectURL(blob);
   var a    = document.createElement('a');
   a.href = url; a.download = 'compass-' + Date.now() + '.json'; a.click();
+  URL.revokeObjectURL(url);
+});
+
+/* ================================================================
+   DEPTH TAB — Scroll Reach & Read-Through
+   Turns the scroll-depth events analytics already records into a
+   per-page read-through funnel. No new storage key — derived live
+   from CommissionData.getAnalytics(), same pattern as Compass/Journey.
+================================================================ */
+
+var DEPTH_TIERS = [25, 50, 75, 100];
+
+function buildDepth() {
+  var events = CommissionData.getAnalytics();
+
+  /* page -> { sid: true } of sessions that loaded the page */
+  var pvSessions = {};
+  /* page -> { sid: furthest depth reached } */
+  var maxDepth = {};
+
+  events.forEach(function(e) {
+    if (!e.sid || !e.page) return;
+    var pg = e.page;
+    if (e.type === 'pv') {
+      (pvSessions[pg] = pvSessions[pg] || {})[e.sid] = true;
+    } else if (e.type === 'scroll' && typeof e.depth === 'number') {
+      var m = (maxDepth[pg] = maxDepth[pg] || {});
+      if (!m[e.sid] || e.depth > m[e.sid]) m[e.sid] = e.depth;
+    }
+  });
+
+  var pages = [];
+  Object.keys(pvSessions).forEach(function(pg) {
+    var sids  = Object.keys(pvSessions[pg]);
+    var views = sids.length;
+    if (!views) return;
+    var md = maxDepth[pg] || {};
+    var reach = { 25: 0, 50: 0, 75: 0, 100: 0 };
+    var depthSum = 0;
+    sids.forEach(function(sid) {
+      var d = md[sid] || 0;
+      depthSum += d;
+      DEPTH_TIERS.forEach(function(t) { if (d >= t) reach[t]++; });
+    });
+    pages.push({
+      page:        pg,
+      views:       views,
+      reach:       reach,
+      avgDepth:    Math.round(depthSum / views),
+      fullRead:    Math.round((reach[100] / views) * 100),
+      bailedEarly: Math.round(((views - reach[50]) / views) * 100)
+    });
+  });
+  pages.sort(function(a, b) { return b.views - a.views; });
+
+  var totalViews = 0, weightedDepth = 0, fullReaders = 0;
+  pages.forEach(function(p) {
+    totalViews    += p.views;
+    weightedDepth += p.avgDepth * p.views;
+    fullReaders   += p.reach[100];
+  });
+
+  return {
+    pages:          pages,
+    totalViews:     totalViews,
+    avgReadThrough: totalViews ? Math.round(weightedDepth / totalViews) : 0,
+    fullReadRate:   totalViews ? Math.round((fullReaders / totalViews) * 100) : 0
+  };
+}
+
+/* Warmer/darker amber the deeper the tier — gives the funnel a sense of descent. */
+var DEPTH_TIER_COLOR = {
+  25:  'rgba(214,190,150,0.92)',
+  50:  'rgba(201,168,124,0.92)',
+  75:  'rgba(176,122,74,0.92)',
+  100: 'rgba(150,104,62,0.94)'
+};
+
+function renderDepthTab() {
+  var d = buildDepth();
+
+  /* deepest page (by avg depth, min 1 view) */
+  var deepest = '—', deepestMax = -1;
+  d.pages.forEach(function(p) {
+    if (p.avgDepth > deepestMax) { deepestMax = p.avgDepth; deepest = jPageLabel(p.page); }
+  });
+  if (deepestMax < 0) deepest = '—';
+
+  function chip(num, label) {
+    return '<div class="analytics-stat-chip"><span class="asc-num">' + num +
+      '</span><span class="asc-label">' + label + '</span></div>';
+  }
+  document.getElementById('depth-stats').innerHTML =
+    chip(d.pages.length,          'Pages Tracked') +
+    chip(d.avgReadThrough + '%',  'Avg Read-Through') +
+    chip(d.fullReadRate + '%',    'Full-Read Rate') +
+    chip(deepest,                 'Deepest Page');
+
+  /* ── Per-page read-through funnels (top 12 by views) ── */
+  var funnelEl = document.getElementById('depth-funnels');
+  if (!d.pages.length) {
+    funnelEl.innerHTML = '<p style="color:#444;font-size:0.85em;padding:0.5em 0">No scroll data yet. Browse the public pages and scroll — depth events populate automatically.</p>';
+  } else {
+    funnelEl.innerHTML = d.pages.slice(0, 12).map(function(p) {
+      var tiers = DEPTH_TIERS.map(function(t) {
+        var pct = Math.round((p.reach[t] / p.views) * 100);
+        return '<div class="depth-tier">' +
+          '<span class="depth-tier-label">' + t + '%</span>' +
+          '<div class="depth-tier-bar-wrap"><div class="depth-tier-bar" style="width:' + pct +
+            '%;background:' + DEPTH_TIER_COLOR[t] + '"></div></div>' +
+          '<span class="depth-tier-val">' + pct + '%</span>' +
+        '</div>';
+      }).join('');
+      return '<div class="depth-page">' +
+        '<div class="depth-page-head">' +
+          '<span class="depth-page-name">' + escHtml(jPageLabel(p.page)) + '</span>' +
+          '<span class="depth-page-views">' + p.views + ' views · avg ' + p.avgDepth + '%</span>' +
+        '</div>' +
+        '<div class="depth-tiers">' + tiers + '</div>' +
+      '</div>';
+    }).join('');
+  }
+
+  /* ── Where readers drop off (ranked by % who never reach 50%) ── */
+  var dropRows = d.pages.map(function(p) {
+    return { label: jPageLabel(p.page), count: p.bailedEarly };
+  }).sort(function(a, b) { return b.count - a.count; }).slice(0, 12);
+  document.getElementById('depth-dropoff').innerHTML = jBarList(dropRows, 100, {
+    suffix: function(r) { return r.count + '% leave before 50%'; }
+  });
+
+  /* ── Average scroll depth per page ── */
+  var avgRows = d.pages.map(function(p) {
+    return { label: jPageLabel(p.page), count: p.avgDepth };
+  }).sort(function(a, b) { return b.count - a.count; }).slice(0, 12);
+  document.getElementById('depth-avg').innerHTML = jBarList(avgRows, 100, {
+    suffix: function(r) { return r.count + '% avg depth'; }
+  });
+}
+
+document.getElementById('depth-refresh-btn').addEventListener('click', renderDepthTab);
+
+document.getElementById('depth-export-btn').addEventListener('click', function() {
+  var d = buildDepth();
+  var blob = new Blob([JSON.stringify(d, null, 2)], { type: 'application/json' });
+  var url  = URL.createObjectURL(blob);
+  var a    = document.createElement('a');
+  a.href = url; a.download = 'depth-' + Date.now() + '.json'; a.click();
   URL.revokeObjectURL(url);
 });
 </script>
