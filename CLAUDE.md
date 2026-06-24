@@ -188,6 +188,7 @@ Password-protected (SHA-256 hash in localStorage, 5-attempt lockout). Session tr
 | Journey     | Visitor flow & drop-off map — entry/exit pages, page-to-page paths, flow explorer  |
 | Pulse       | Visitor cadence & traffic timing — weekly punchcard, busiest days, peak hours       |
 | Compass     | Traffic sources & acquisition — channel mix, top referrers, device & screen breakdown |
+| Depth       | Scroll reach & read-through — per-page scroll funnel, drop-off points, avg depth     |
 
 ---
 
@@ -444,6 +445,37 @@ Answers *where* the audience comes from. Spotlight = which artwork holds attenti
 
 ---
 
+## Depth — Scroll Reach & Read-Through (Admin → Depth tab) — NEW TOOL
+
+Answers the *vertical* engagement question: how far down each page do visitors actually scroll before they leave? The analytics family now reads: Compass = where traffic comes from, Journey = where it goes between pages, Pulse = when it shows up, Spotlight = which artwork holds attention, Revenue = money — **Depth = read-through**: which pages get read to the bottom and which lose people above the fold.
+
+**No new storage key** — derived live from `_gam_analytics_v1` `scroll` events, which `analytics.js` already records at the 25 / 50 / 75 / 100 thresholds. Until now those events were only surfaced as a single max-depth value in the Analytics session list; Depth aggregates them into a real read-through funnel.
+
+**How it works:**
+1. `buildDepth()` walks all events. For each page it collects the set of sessions that loaded it (`pv` events) and the furthest scroll depth each session reached (`scroll` events, max per `sid`).
+2. A session with a `pv` but no `scroll` event counts as **0% reach** (short page that fits the viewport, or an instant bounce) — so reach is a *relative* engagement signal, not a literal pixel measure. This caveat is shown in the tab hint.
+3. Per page it derives: `views` (distinct sessions), `reach` at each tier (25/50/75/100), `avgDepth` (mean furthest point), `fullRead` (% reaching 100), `bailedEarly` (% never reaching 50).
+
+**Admin tab sections:**
+- **Stats**: Pages Tracked, Avg Read-Through %, Full-Read Rate %, Deepest Page
+- **Read-Through Funnel by Page**: per-page 4-tier funnel (25→100), each tier a horizontal bar with reach %. Deeper tiers use progressively darker amber to read as a descent.
+- **Where Readers Drop Off**: pages ranked by % of visitors who leave before the halfway point (weakest above-the-fold hooks)
+- **Average Scroll Depth by Page**: pages ranked by mean furthest-point reached
+
+**Derived schema (for export):**
+```js
+{ pages:[{ page, views, reach:{25,50,75,100}, avgDepth, fullRead, bailedEarly }], totalViews, avgReadThrough, fullReadRate }
+```
+
+**Technical notes:**
+- Funnel bars use the warm amber/clay palette (`rgba(214,190,150…)` → `rgba(150,104,62…)`, lightest→deepest tier) — no blue/pink.
+- Reuses the shared `jBarList()` renderer and `analytics-stat-chip` styles; funnel rows use new `.depth-*` classes.
+- Tab renders lazily on click, same pattern as Compass/Journey/Pulse/Spotlight/Revenue.
+
+**API:** none new — uses `CommissionData.getAnalytics()`. Logic lives in `renderDepthTab()` / `buildDepth()` inside `admin/index.html`.
+
+---
+
 ## Commission System
 
 ### Pages
@@ -521,4 +553,4 @@ Stored in `_gam_prices_v1`. Three sections: `digital`, `stickers`, `animation`. 
 
 ---
 
-*Last updated: 2026-06-10*
+*Last updated: 2026-06-24*
