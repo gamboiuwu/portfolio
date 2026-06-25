@@ -928,6 +928,7 @@
 				<button class="admin-tab" data-tab="pulse">Pulse</button>
 				<button class="admin-tab" data-tab="compass">Compass</button>
 				<button class="admin-tab" data-tab="depth">Depth</button>
+				<button class="admin-tab" data-tab="orbit">Orbit</button>
 			</div>
 
 			<!-- ============ GALLERY TAB ============ -->
@@ -1669,6 +1670,53 @@
 						<h3>Average Scroll Depth by Page</h3>
 						<p class="hint">Mean furthest-point reached per visit, page by page. The deepest pages are the ones holding attention all the way through.</p>
 						<div id="depth-avg"></div>
+					</div>
+
+				</div>
+
+				<div id="tab-orbit" class="tab-content">
+
+					<div class="admin-card">
+						<h3>Orbit — Visitor Loyalty &amp; Return Cadence</h3>
+						<p class="hint">Every other analytics tool measures a single visit; Orbit is the only one that follows people <em>across</em> visits. It answers "how often does someone come back?" — new vs. returning, how many times each visitor has been here, and how many days pass between returns. Built on a persistent visitor ID (stored in the browser, separate from the per-tab session). Note: identity is per-browser — a visitor on a new device or after clearing storage reads as new, so treat returning counts as a confident floor, not an exact headcount.</p>
+						<div id="orbit-stats" class="analytics-stats" style="margin-bottom:1em"></div>
+						<div style="display:flex;gap:0.5em;flex-wrap:wrap">
+							<button class="button small" id="orbit-refresh-btn">Refresh</button>
+							<button class="button small" id="orbit-export-btn">Export JSON</button>
+						</div>
+					</div>
+
+					<div class="admin-card">
+						<h3>New vs. Returning</h3>
+						<p class="hint">Every visit split into first-time vs. return visits. A healthy portfolio that people bookmark and revisit grows the returning slice over time; a heavy first-time slice means lots of fresh discovery but little stickiness.</p>
+						<div class="compass-donut-row">
+							<canvas id="orbit-donut" width="180" height="180"></canvas>
+							<div id="orbit-legend" class="compass-legend"></div>
+						</div>
+					</div>
+
+					<div class="admin-card">
+						<h3>Visit Frequency</h3>
+						<p class="hint">How many lifetime visits each unique visitor has made. A long tail of 3+ visitors is your loyal core — the people most likely to commission or share your work.</p>
+						<div id="orbit-frequency"></div>
+					</div>
+
+					<div class="admin-card">
+						<h3>Return Cadence</h3>
+						<p class="hint">For every return visit, how many days passed since that visitor's previous visit. Tells you the natural rhythm of your audience — same-day re-checks vs. weekly drop-ins — so you can time posts and commission openings to when people already tend to come back.</p>
+						<div id="orbit-cadence"></div>
+					</div>
+
+					<div class="admin-card">
+						<h3>Recency</h3>
+						<p class="hint">When each visitor was last seen, relative to the most recent activity on record. "Dormant" visitors (30+ days) were once engaged and may be worth a re-activation post.</p>
+						<div id="orbit-recency"></div>
+					</div>
+
+					<div class="admin-card">
+						<h3>Most Loyal Visitors</h3>
+						<p class="hint">Anonymous visitor IDs ranked by lifetime visit count. No personal data — just a stable per-browser key — so you can see how deep your repeat audience runs.</p>
+						<div id="orbit-leaders"></div>
 					</div>
 
 				</div>
@@ -2675,6 +2723,9 @@ document.addEventListener('click', function(e){
   }
   if (e.target.dataset && e.target.dataset.tab === 'depth') {
     renderDepthTab();
+  }
+  if (e.target.dataset && e.target.dataset.tab === 'orbit') {
+    renderOrbitTab();
   }
 });
 
@@ -4630,6 +4681,270 @@ document.getElementById('depth-export-btn').addEventListener('click', function()
   var url  = URL.createObjectURL(blob);
   var a    = document.createElement('a');
   a.href = url; a.download = 'depth-' + Date.now() + '.json'; a.click();
+  URL.revokeObjectURL(url);
+});
+
+/* ================================================================
+   ORBIT TAB — Visitor Loyalty & Return Cadence
+   The only analytics tool that follows visitors ACROSS sessions.
+   Built on the persistent `vid` (+ vnum/vnew/vgap) that analytics.js
+   now stamps on every pageview. No new admin storage key — derived
+   live from CommissionData.getAnalytics(), same pattern as the rest.
+================================================================ */
+
+var ORBIT_DAY_MS = 86400000;
+
+function buildOrbit() {
+  var events = CommissionData.getAnalytics();
+
+  var now = 0;
+  events.forEach(function(e){ if (e.ts && e.ts > now) now = e.ts; });
+
+  /* One record per distinct visit (vid + sid); plus per-visitor rollups. */
+  var visits   = {};   /* "vid|sid" -> { vid, vnum, gap, ts } */
+  var visitors = {};   /* vid -> { lifetime, firstTs, lastTs } */
+
+  events.forEach(function(e) {
+    if (e.type !== 'pv' || !e.vid) return;   /* legacy events without vid are skipped */
+    var vk  = e.vid + '|' + (e.sid || 'x');
+    var vis = visits[vk];
+    if (!vis) {
+      visits[vk] = { vid: e.vid, vnum: (typeof e.vnum === 'number' ? e.vnum : 0),
+                     gap: (typeof e.vgap === 'number' ? e.vgap : -1), ts: e.ts };
+    } else {
+      if (e.ts < vis.ts) vis.ts = e.ts;
+      if (typeof e.vnum === 'number' && e.vnum > vis.vnum) vis.vnum = e.vnum;
+    }
+    var vr = visitors[e.vid] || (visitors[e.vid] = { lifetime: 0, firstTs: e.ts, lastTs: e.ts });
+    if (typeof e.vnum === 'number' && e.vnum > vr.lifetime) vr.lifetime = e.vnum;
+    if (e.ts < vr.firstTs) vr.firstTs = e.ts;
+    if (e.ts > vr.lastTs)  vr.lastTs  = e.ts;
+  });
+
+  var visitArr = Object.keys(visits).map(function(k){ return visits[k]; });
+  var vidArr   = Object.keys(visitors);
+
+  /* Lifetime floor = distinct visits actually seen in the retained buffer. */
+  var bufferVisits = {};
+  visitArr.forEach(function(v){ bufferVisits[v.vid] = (bufferVisits[v.vid] || 0) + 1; });
+  vidArr.forEach(function(id){
+    if (visitors[id].lifetime < bufferVisits[id]) visitors[id].lifetime = bufferVisits[id];
+    if (visitors[id].lifetime < 1) visitors[id].lifetime = 1;
+  });
+
+  /* New vs returning visits */
+  var newVisits = 0, returningVisits = 0;
+  visitArr.forEach(function(v){ if (v.vnum <= 1) newVisits++; else returningVisits++; });
+
+  /* Frequency: visitors bucketed by lifetime visit count */
+  var freq = { '1': 0, '2': 0, '3': 0, '4': 0, '5+': 0 };
+  var lifetimeSum = 0;
+  vidArr.forEach(function(id){
+    var n = visitors[id].lifetime || 1;
+    lifetimeSum += n;
+    if (n >= 5) freq['5+']++; else freq[String(n)]++;
+  });
+
+  /* Cadence: per return visit, days since that visitor's previous visit */
+  var cad = { 'same': 0, '1d': 0, '2-7d': 0, '8-30d': 0, '30d+': 0 };
+  var gapSum = 0, gapN = 0;
+  visitArr.forEach(function(v){
+    if (v.gap < 0) return;          /* −1 = first-ever visit, no prior gap */
+    gapSum += v.gap; gapN++;
+    if      (v.gap === 0) cad['same']++;
+    else if (v.gap === 1) cad['1d']++;
+    else if (v.gap <= 7)  cad['2-7d']++;
+    else if (v.gap <= 30) cad['8-30d']++;
+    else                  cad['30d+']++;
+  });
+
+  /* Recency: days since each visitor was last seen, relative to latest activity */
+  var rec = { 'today': 0, '7d': 0, '30d': 0, 'dormant': 0 };
+  vidArr.forEach(function(id){
+    var days = Math.floor((now - visitors[id].lastTs) / ORBIT_DAY_MS);
+    if      (days <= 0) rec['today']++;
+    else if (days <= 7) rec['7d']++;
+    else if (days <= 30) rec['30d']++;
+    else                 rec['dormant']++;
+  });
+
+  /* Loyalty leaderboard */
+  var leaders = vidArr.map(function(id){
+    return { vid: id, lifetime: visitors[id].lifetime || 1,
+             lastTs: visitors[id].lastTs, firstTs: visitors[id].firstTs };
+  }).sort(function(a, b){ return b.lifetime - a.lifetime || b.lastTs - a.lastTs; });
+
+  var totalVisitors      = vidArr.length;
+  var returningVisitors  = vidArr.filter(function(id){ return visitors[id].lifetime >= 2; }).length;
+
+  return {
+    totalVisitors:     totalVisitors,
+    totalVisits:       visitArr.length,
+    newVisits:         newVisits,
+    returningVisits:   returningVisits,
+    returningVisitors: returningVisitors,
+    avgVisits:         totalVisitors ? (lifetimeSum / totalVisitors) : 0,
+    avgGap:            gapN ? (gapSum / gapN) : -1,
+    freq:              freq,
+    cadence:           cad,
+    recency:           rec,
+    leaders:           leaders,
+    now:               now
+  };
+}
+
+/* Warm amber/sand pair — consistent with Compass donut palette. */
+var ORBIT_COLORS = { returning: 'rgba(176,122,74,0.92)', 'new': 'rgba(214,190,150,0.92)' };
+
+function drawOrbitDonut(o) {
+  var canvas = document.getElementById('orbit-donut');
+  if (!canvas) return;
+  var ctx = canvas.getContext('2d');
+  var W = canvas.width, H = canvas.height;
+  ctx.clearRect(0, 0, W, H);
+  var cx = W / 2, cy = H / 2, rOut = 78, rIn = 46;
+
+  var tot = o.newVisits + o.returningVisits;
+  if (!tot) {
+    ctx.fillStyle = '#444';
+    ctx.font = '12px -apple-system, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('No visits yet.', cx, cy);
+    return;
+  }
+
+  var slices = [
+    { v: o.returningVisits, c: ORBIT_COLORS.returning },
+    { v: o.newVisits,       c: ORBIT_COLORS['new'] }
+  ];
+  var start = -Math.PI / 2;
+  slices.forEach(function(s) {
+    if (!s.v) return;
+    var ang = (s.v / tot) * Math.PI * 2;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.arc(cx, cy, rOut, start, start + ang);
+    ctx.closePath();
+    ctx.fillStyle = s.c;
+    ctx.fill();
+    start += ang;
+  });
+
+  ctx.globalCompositeOperation = 'destination-out';
+  ctx.beginPath();
+  ctx.arc(cx, cy, rIn, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.globalCompositeOperation = 'source-over';
+
+  var retPct = Math.round((o.returningVisits / tot) * 100);
+  ctx.fillStyle = '#c9a87c';
+  ctx.font = 'bold 22px -apple-system, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(retPct + '%', cx, cy - 6);
+  ctx.fillStyle = '#8c887f';
+  ctx.font = '10px "Courier New", monospace';
+  ctx.fillText('RETURNING', cx, cy + 12);
+}
+
+function orbitVisitorLabel(vid) {
+  var tail = (vid || '').replace(/^v/, '').slice(-5);
+  return 'visitor ··' + (tail || '?????');
+}
+
+function orbitAgoLabel(ts, now) {
+  if (!ts) return '—';
+  var days = Math.floor((now - ts) / ORBIT_DAY_MS);
+  if (days <= 0) return 'today';
+  if (days === 1) return 'yesterday';
+  if (days < 30) return days + 'd ago';
+  if (days < 365) return Math.round(days / 30) + 'mo ago';
+  return Math.round(days / 365) + 'y ago';
+}
+
+function renderOrbitTab() {
+  var o = buildOrbit();
+
+  var retVisitorPct = o.totalVisitors ? Math.round((o.returningVisitors / o.totalVisitors) * 100) : 0;
+
+  function chip(num, label) {
+    return '<div class="analytics-stat-chip"><span class="asc-num">' + num +
+      '</span><span class="asc-label">' + label + '</span></div>';
+  }
+  document.getElementById('orbit-stats').innerHTML =
+    chip(o.totalVisitors,                                  'Unique Visitors') +
+    chip(retVisitorPct + '%',                              'Returning Share') +
+    chip(o.avgVisits ? o.avgVisits.toFixed(1) : '0',       'Avg Visits / Visitor') +
+    chip(o.avgGap >= 0 ? o.avgGap.toFixed(1) + 'd' : '—',  'Avg Days Between');
+
+  /* ── New vs returning donut + legend ── */
+  drawOrbitDonut(o);
+  var totVisits = o.newVisits + o.returningVisits;
+  var legend = [
+    { key: 'returning', label: 'Returning', v: o.returningVisits },
+    { key: 'new',       label: 'First-time', v: o.newVisits }
+  ];
+  document.getElementById('orbit-legend').innerHTML = legend.map(function(l) {
+    var share = totVisits ? Math.round((l.v / totVisits) * 100) : 0;
+    return '<div class="compass-legend-item">' +
+      '<span class="compass-legend-swatch" style="background:' + ORBIT_COLORS[l.key] + '"></span>' +
+      '<span>' + l.label + '</span>' +
+      '<span class="compass-legend-val">' + l.v + ' · ' + share + '%</span>' +
+    '</div>';
+  }).join('');
+
+  /* ── Visit frequency (visitors per lifetime-visit bucket) ── */
+  var freqOrder = ['1', '2', '3', '4', '5+'];
+  var freqLabels = { '1': '1 visit', '2': '2 visits', '3': '3 visits', '4': '4 visits', '5+': '5+ visits' };
+  var freqRows = freqOrder.map(function(k){
+    return { label: freqLabels[k], count: o.freq[k] };
+  }).filter(function(r){ return r.count > 0; });
+  document.getElementById('orbit-frequency').innerHTML = jBarList(freqRows, o.totalVisitors, {
+    suffix: function(r, share){ return share + '% of visitors'; }
+  });
+
+  /* ── Return cadence (days between consecutive visits) ── */
+  var cadOrder = ['same', '1d', '2-7d', '8-30d', '30d+'];
+  var cadLabels = { 'same': 'Same day', '1d': 'Next day', '2-7d': 'Within a week',
+                    '8-30d': 'Within a month', '30d+': 'Over a month' };
+  var cadTotal = cadOrder.reduce(function(s, k){ return s + o.cadence[k]; }, 0);
+  var cadRows = cadOrder.map(function(k){
+    return { label: cadLabels[k], count: o.cadence[k] };
+  }).filter(function(r){ return r.count > 0; });
+  document.getElementById('orbit-cadence').innerHTML = jBarList(cadRows, cadTotal, {
+    suffix: function(r, share){ return share + '% of returns'; }
+  });
+
+  /* ── Recency ── */
+  var recOrder = ['today', '7d', '30d', 'dormant'];
+  var recLabels = { 'today': 'Active today', '7d': 'Within 7 days',
+                    '30d': 'Within 30 days', 'dormant': 'Dormant (30d+)' };
+  var recRows = recOrder.map(function(k){
+    return { label: recLabels[k], count: o.recency[k] };
+  }).filter(function(r){ return r.count > 0; });
+  document.getElementById('orbit-recency').innerHTML = jBarList(recRows, o.totalVisitors, {
+    suffix: function(r, share){ return share + '% of visitors'; }
+  });
+
+  /* ── Loyalty leaderboard (top 15 by lifetime visits) ── */
+  var leadRows = o.leaders.slice(0, 15).map(function(l){
+    return { label: orbitVisitorLabel(l.vid), count: l.lifetime, lastTs: l.lastTs };
+  });
+  document.getElementById('orbit-leaders').innerHTML = jBarList(leadRows, 0, {
+    suffix: function(r){
+      return (r.count === 1 ? '1 visit' : r.count + ' visits') + ' · last ' + orbitAgoLabel(r.lastTs, o.now);
+    }
+  });
+}
+
+document.getElementById('orbit-refresh-btn').addEventListener('click', renderOrbitTab);
+
+document.getElementById('orbit-export-btn').addEventListener('click', function() {
+  var o = buildOrbit();
+  var blob = new Blob([JSON.stringify(o, null, 2)], { type: 'application/json' });
+  var url  = URL.createObjectURL(blob);
+  var a    = document.createElement('a');
+  a.href = url; a.download = 'orbit-' + Date.now() + '.json'; a.click();
   URL.revokeObjectURL(url);
 });
 </script>

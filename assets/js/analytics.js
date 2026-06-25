@@ -38,11 +38,40 @@
   }
 
   /* ── Session ID (per browser tab) ── */
-  var sid = sessionStorage.getItem('_gam_sid');
+  var sid        = sessionStorage.getItem('_gam_sid');
+  var newSession = !sid;            /* true the first pageview of a fresh tab session */
   if (!sid) {
     sid = 's' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
     sessionStorage.setItem('_gam_sid', sid);
   }
+
+  /* ── Persistent visitor identity (survives across sessions; powers the Orbit
+        loyalty / return-cadence tool). Stored in localStorage so it persists
+        between visits, unlike the per-tab `sid`. ── */
+  var VID_KEY   = '_gam_vid';
+  var VISIT_KEY = '_gam_visit_v1';
+  var vid = localStorage.getItem(VID_KEY);
+  if (!vid) {
+    vid = 'v' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+    try { localStorage.setItem(VID_KEY, vid); } catch (e) {}
+  }
+  /* Visit ledger: { first: ts, last: ts, count: n } — count is lifetime visits */
+  var visitLedger;
+  try { visitLedger = JSON.parse(localStorage.getItem(VISIT_KEY) || 'null'); } catch (e) { visitLedger = null; }
+  if (!visitLedger || typeof visitLedger.count !== 'number') {
+    visitLedger = { first: 0, last: 0, count: 0 };
+  }
+  /* Days since the previous visit, computed before we overwrite `last` (−1 = first ever) */
+  var vgap = visitLedger.last ? Math.floor((Date.now() - visitLedger.last) / 86400000) : -1;
+  /* A fresh tab session counts as a new visit; bump the lifetime ledger once */
+  if (newSession) {
+    visitLedger.count += 1;
+    if (!visitLedger.first) visitLedger.first = Date.now();
+    visitLedger.last = Date.now();
+    try { localStorage.setItem(VISIT_KEY, JSON.stringify(visitLedger)); } catch (e) {}
+  }
+  var vnum = visitLedger.count || 1;   /* lifetime visit number for this session */
+  var vnew = vnum <= 1;                 /* first-ever visit for this browser */
 
   /* ── Normalise page path ── */
   var page = location.pathname
@@ -67,7 +96,8 @@
   var sh  = window.screen ? window.screen.height : 0;
 
   /* ── Pageview ── */
-  push({ sid: sid, type: 'pv', page: page, ref: ref, refHost: refHost, dev: dev, sw: sw, sh: sh, ts: pageStart });
+  push({ sid: sid, type: 'pv', page: page, ref: ref, refHost: refHost, dev: dev, sw: sw, sh: sh,
+         vid: vid, vnum: vnum, vnew: vnew, vgap: vgap, ts: pageStart });
 
   /* ── Click tracking ── */
   document.addEventListener('click', function (e) {
@@ -286,7 +316,9 @@
     clear:        function () { localStorage.removeItem(KEY); },
     getKey:       function () { return KEY; },
     getSpotlight: loadSpotlight,
-    clearSpotlight: function () { localStorage.removeItem(SP_KEY); }
+    clearSpotlight: function () { localStorage.removeItem(SP_KEY); },
+    getVid:   function () { return vid; },
+    getVisit: function () { return visitLedger; }
   };
 
 }());

@@ -131,13 +131,14 @@ Each event is a flat object:
 
 | Type         | Extra Fields                                                                          |
 |--------------|---------------------------------------------------------------------------------------|
-| `pv`         | `ref` (referrer path or "direct"), `refHost` (full referrer hostname, www-stripped, or "direct"), `dev` (mobile/tablet/desktop), `sw`/`sh` (screen size) |
+| `pv`         | `ref` (referrer path or "direct"), `refHost` (full referrer hostname, www-stripped, or "direct"), `dev` (mobile/tablet/desktop), `sw`/`sh` (screen size), `vid` (persistent visitor id), `vnum` (lifetime visit number), `vnew` (bool, first-ever visit), `vgap` (days since previous visit, −1 if first) |
 | `click`      | `el` (tag.class), `text`, `href`, `xp`, `yp`                                          |
 | `scroll`     | `depth` (25 / 50 / 75 / 100)                                                           |
 | `exit`       | `ms` (milliseconds on page)                                                            |
 | `tile_hover` | `title` (h2 text of hovered `.tiles article`, up to 60 chars)                         |
 
 - **`sid`**: session ID (per tab, stored in sessionStorage)
+- **`vid`**: persistent visitor ID (stored in `localStorage._gam_vid`; survives across sessions — powers the Orbit loyalty tool). A lightweight visit ledger lives in `localStorage._gam_visit_v1` (`{ first, last, count }`); a fresh tab session increments the lifetime `count`.
 - **`page`**: URL pathname, normalized (trailing slash, no index.html)
 - **`ts`**: Unix timestamp (ms)
 - **`xp` / `yp`**: click position as 0–1 fraction of viewport width/height
@@ -189,6 +190,7 @@ Password-protected (SHA-256 hash in localStorage, 5-attempt lockout). Session tr
 | Pulse       | Visitor cadence & traffic timing — weekly punchcard, busiest days, peak hours       |
 | Compass     | Traffic sources & acquisition — channel mix, top referrers, device & screen breakdown |
 | Depth       | Scroll reach & read-through — per-page scroll funnel, drop-off points, avg depth     |
+| Orbit       | Visitor loyalty & return cadence — new vs returning, visit frequency, days between visits, recency, loyal-visitor leaderboard |
 
 ---
 
@@ -476,6 +478,48 @@ Answers the *vertical* engagement question: how far down each page do visitors a
 
 ---
 
+## Orbit — Visitor Loyalty & Return Cadence (Admin → Orbit tab) — NEW TOOL
+
+The first analytics tool that follows visitors **across** sessions instead of within a single visit. Every other tool keys on `sid` (a per-tab session); Orbit keys on a **persistent visitor ID** so it can answer the one question the rest can't: *how often does the same person come back?* This is the direct read on audience stickiness — the visitors most likely to commission, share, or follow.
+
+**How the persistent identity works (analytics.js):**
+- On first ever load, a random `vid` is written to `localStorage._gam_vid` and reused on every future visit (separate from the per-tab `sid`).
+- A visit ledger `localStorage._gam_visit_v1` (`{ first, last, count }`) tracks lifetime visits. A **fresh tab session** (no `sid` in sessionStorage) counts as a new visit and increments `count`.
+- Each `pv` event now carries `vid`, `vnum` (lifetime visit number), `vnew` (bool, first-ever visit), and `vgap` (days since the previous visit, −1 on the first). Legacy pageviews without these fields are simply skipped by Orbit — nothing breaks.
+
+**No new admin storage key** — the Orbit tab derives everything live from `_gam_analytics_v1`, same read-only pattern as Compass/Journey/Pulse/Depth. The only persistence added is the visitor-side `_gam_vid` / `_gam_visit_v1` written by analytics.js.
+
+**How it works:**
+1. `buildOrbit()` groups every `pv` event by visit (`vid|sid`) and by visitor (`vid`).
+2. Per visit it reads `vnum` (new if ≤1, returning if ≥2) and `vgap` (return interval).
+3. Per visitor it derives lifetime visit count (max `vnum`, floored by distinct visits seen in the retained buffer), first/last-seen timestamps.
+4. Aggregates into new-vs-returning, frequency, cadence, recency, and a loyalty leaderboard.
+
+**Admin tab sections:**
+- **Stats**: Unique Visitors, Returning Share %, Avg Visits / Visitor, Avg Days Between visits
+- **New vs. Returning**: canvas donut (centre shows returning %) + legend, splitting visits into first-time vs. return
+- **Visit Frequency**: visitors bucketed by lifetime visit count (1 / 2 / 3 / 4 / 5+)
+- **Return Cadence**: return visits bucketed by gap since prior visit (same day / next day / within a week / within a month / over a month)
+- **Recency**: visitors bucketed by days since last seen (today / 7d / 30d / dormant)
+- **Most Loyal Visitors**: anonymous `visitor ··xxxxx` IDs ranked by lifetime visits, with last-seen
+
+**Caveat (shown in the tab hint):** identity is per-browser — a new device or cleared storage reads as a new visitor — so returning counts are a confident floor, not an exact headcount.
+
+**Derived schema (for export):**
+```js
+{ totalVisitors, totalVisits, newVisits, returningVisits, returningVisitors,
+  avgVisits, avgGap, freq:{…}, cadence:{…}, recency:{…}, leaders:[…], now }
+```
+
+**Technical notes:**
+- Donut + legend reuse the warm amber/sand palette (`rgba(176,122,74…)` returning, `rgba(214,190,150…)` first-time) and the shared `compass-donut-row` / `compass-legend` styles — no blue/pink.
+- Reuses the shared `jBarList()` renderer and `analytics-stat-chip` styles.
+- Tab renders lazily on click, same pattern as Depth/Compass/Journey/Pulse/Spotlight/Revenue.
+
+**API:** `GamAnalytics.getVid()` / `GamAnalytics.getVisit()` (visitor-side, in analytics.js). Admin logic lives in `renderOrbitTab()` / `buildOrbit()` inside `admin/index.html`.
+
+---
+
 ## Commission System
 
 ### Pages
@@ -553,4 +597,4 @@ Stored in `_gam_prices_v1`. Three sections: `digital`, `stickers`, `animation`. 
 
 ---
 
-*Last updated: 2026-06-24*
+*Last updated: 2026-06-25*
