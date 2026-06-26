@@ -79,6 +79,7 @@ Single IIFE that exposes `window.CommissionData`. All persistent data is stored 
 | `_gam_palettes_v1`     | Array   | Saved color palettes (from Palette Extractor)   |
 | `_gam_queue_v1`        | Array   | Commission work-order queue (internal tracker)  |
 | `_gam_spotlight_v1`    | Array   | Artwork viewport-time events (Spotlight tracker)|
+| `_gam_visitor_v1`      | Object  | Persistent visitor identity (`vid`, `first`, `count`, `last`) — powers the Orbit retention tool |
 
 ### Public API
 ```js
@@ -131,7 +132,7 @@ Each event is a flat object:
 
 | Type         | Extra Fields                                                                          |
 |--------------|---------------------------------------------------------------------------------------|
-| `pv`         | `ref` (referrer path or "direct"), `refHost` (full referrer hostname, www-stripped, or "direct"), `dev` (mobile/tablet/desktop), `sw`/`sh` (screen size) |
+| `pv`         | `ref` (referrer path or "direct"), `refHost` (full referrer hostname, www-stripped, or "direct"), `dev` (mobile/tablet/desktop), `sw`/`sh` (screen size), `vid` (persistent visitor id), `vnum` (visit number, 1 = first ever), `vfirst` (first-seen ts) |
 | `click`      | `el` (tag.class), `text`, `href`, `xp`, `yp`                                          |
 | `scroll`     | `depth` (25 / 50 / 75 / 100)                                                           |
 | `exit`       | `ms` (milliseconds on page)                                                            |
@@ -189,6 +190,7 @@ Password-protected (SHA-256 hash in localStorage, 5-attempt lockout). Session tr
 | Pulse       | Visitor cadence & traffic timing — weekly punchcard, busiest days, peak hours       |
 | Compass     | Traffic sources & acquisition — channel mix, top referrers, device & screen breakdown |
 | Depth       | Scroll reach & read-through — per-page scroll funnel, drop-off points, avg depth     |
+| Orbit       | Returning visitors & loyalty — new vs returning, visit frequency, recency, loyalty leaderboard |
 
 ---
 
@@ -476,6 +478,44 @@ Answers the *vertical* engagement question: how far down each page do visitors a
 
 ---
 
+## Orbit — Returning Visitors & Loyalty (Admin → Orbit tab) — NEW TOOL
+
+Answers the *retention* question the rest of the analytics family structurally cannot: **is the audience coming back?** Compass = where traffic comes from, Journey = where it goes, Pulse = when it shows up, Spotlight = which artwork holds attention, Depth = read-through, Revenue = money — **Orbit = loyalty**: new vs. returning visitors, how often they return, and how recently.
+
+**Why it needed a new storage key:** every other tool keys off `sid` (a per-tab session id in `sessionStorage`), so a visitor returning a week later looks brand-new. Orbit introduces a **persistent visitor id** (`vid`) stored in `localStorage._gam_visitor_v1`, the first and only new storage key in the analytics family. `analytics.js` now stamps every `pv` event with `vid`, `vnum` (the visit number — incremented once per new tab-session), and `vfirst` (first-ever-seen timestamp). Legacy pageviews without a `vid` are folded in as synthetic single-visit visitors keyed by their `sid`, so nothing breaks.
+
+**Persistent visitor object (`_gam_visitor_v1`):**
+```js
+{ vid: "v…", first: <ms>, count: <visits>, last: <ms> }
+```
+- `count` increments once per new session (guarded by a `sessionStorage._gam_visit_counted` flag), matching how a "visit" is counted elsewhere.
+
+**How it works:**
+1. `buildOrbit()` walks all `pv` events and groups them by `vid` (falling back to `legacy:<sid>` when absent).
+2. Per visitor it derives `visits` (max of recorded visit number and distinct sessions seen, min 1), `ageDays` (days since first seen), and `sinceDays` (days since last seen).
+3. Aggregates into new-vs-returning counts, a visit-frequency distribution, a recency distribution, and a loyalty leaderboard.
+
+**Admin tab sections:**
+- **Stats**: Unique Visitors, Returning, Return Rate %, Avg Visits / Visitor
+- **New vs. Returning**: canvas donut + legend; centre shows the return-rate %
+- **Visit Frequency**: ranked buckets (1 / 2 / 3–5 / 6–10 / 11+ visits)
+- **Recency — Last Seen**: ranked buckets (today / this week / 8–30 days / 30+ days)
+- **Most Loyal Visitors**: top returning visitors by visit count, with how long they've followed and when they last dropped in
+
+**Derived schema (for export):**
+```js
+{ list:[{vid, visits, ageDays, sinceDays, legacy, …}], unique, returning, newCount, totalVisits, returnRate, avgVisits, frequency:[…], recency:[…] }
+```
+
+**Technical notes:**
+- Donut + swatches use the warm amber/sand palette (`rgba(176,122,74…)` returning, `rgba(214,190,150…)` new) — no blue/pink.
+- Reuses the shared `jBarList()` renderer, `analytics-stat-chip`, and `.compass-legend` styles; only a small `.orbit-donut-row` wrapper is new.
+- Tab renders lazily on click, same pattern as Depth/Compass/Journey/Pulse/Spotlight/Revenue.
+
+**API:** none new on `CommissionData` — uses `CommissionData.getAnalytics()`. Visitor id is written by `analytics.js`; logic lives in `renderOrbitTab()` / `buildOrbit()` inside `admin/index.html`.
+
+---
+
 ## Commission System
 
 ### Pages
@@ -553,4 +593,4 @@ Stored in `_gam_prices_v1`. Three sections: `digital`, `stickers`, `animation`. 
 
 ---
 
-*Last updated: 2026-06-24*
+*Last updated: 2026-06-26*

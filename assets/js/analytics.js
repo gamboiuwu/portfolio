@@ -44,6 +44,27 @@
     sessionStorage.setItem('_gam_sid', sid);
   }
 
+  /* ── Persistent visitor identity (cross-session, powers the Orbit retention tool) ──
+     sid is per-tab; vid persists in localStorage so we can tell a first-time
+     visitor from someone coming back. `count` is the visit number (one per new
+     session), `first` the first-ever-seen timestamp. */
+  var VID_KEY = '_gam_visitor_v1';
+  var visitor;
+  try { visitor = JSON.parse(localStorage.getItem(VID_KEY) || 'null'); } catch (e) { visitor = null; }
+  if (!visitor || !visitor.vid) {
+    visitor = { vid: 'v' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), first: Date.now(), count: 0, last: Date.now() };
+  }
+  /* Count one visit per new tab-session (mirrors how a "visit" is counted elsewhere) */
+  if (!sessionStorage.getItem('_gam_visit_counted')) {
+    visitor.count = (visitor.count || 0) + 1;
+    visitor.last  = Date.now();
+    sessionStorage.setItem('_gam_visit_counted', '1');
+    try { localStorage.setItem(VID_KEY, JSON.stringify(visitor)); } catch (e) {}
+  }
+  var vid    = visitor.vid;
+  var vnum   = visitor.count;   /* this visitor's visit number (1 = first ever) */
+  var vfirst = visitor.first;   /* first-ever-seen timestamp */
+
   /* ── Normalise page path ── */
   var page = location.pathname
     .replace(/\/index\.html$/, '/')
@@ -67,7 +88,7 @@
   var sh  = window.screen ? window.screen.height : 0;
 
   /* ── Pageview ── */
-  push({ sid: sid, type: 'pv', page: page, ref: ref, refHost: refHost, dev: dev, sw: sw, sh: sh, ts: pageStart });
+  push({ sid: sid, type: 'pv', page: page, ref: ref, refHost: refHost, dev: dev, sw: sw, sh: sh, vid: vid, vnum: vnum, vfirst: vfirst, ts: pageStart });
 
   /* ── Click tracking ── */
   document.addEventListener('click', function (e) {
