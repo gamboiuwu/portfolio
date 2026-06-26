@@ -851,6 +851,10 @@
 		.depth-tier-bar-wrap { flex: 1; height: 0.85em; background: rgba(255,255,255,0.05); border-radius: 3px; overflow: hidden; }
 		.depth-tier-bar { height: 100%; border-radius: 3px; transition: width 0.4s ease; }
 		.depth-tier-val { width: 3.2em; font-family: 'Courier New', monospace; font-size: 0.78em; color: #c9a87c; flex-shrink: 0; }
+
+		/* Orbit tab — returning-visitor / retention (reuses compass donut + legend) */
+		.orbit-donut-row { display: flex; gap: 1.4em; align-items: center; flex-wrap: wrap; }
+		#orbit-donut { display: block; flex-shrink: 0; }
 	</style>
 </head>
 <body class="is-preload">
@@ -928,6 +932,7 @@
 				<button class="admin-tab" data-tab="pulse">Pulse</button>
 				<button class="admin-tab" data-tab="compass">Compass</button>
 				<button class="admin-tab" data-tab="depth">Depth</button>
+				<button class="admin-tab" data-tab="orbit">Orbit</button>
 			</div>
 
 			<!-- ============ GALLERY TAB ============ -->
@@ -1669,6 +1674,47 @@
 						<h3>Average Scroll Depth by Page</h3>
 						<p class="hint">Mean furthest-point reached per visit, page by page. The deepest pages are the ones holding attention all the way through.</p>
 						<div id="depth-avg"></div>
+					</div>
+
+				</div>
+
+				<div id="tab-orbit" class="tab-content">
+
+					<div class="admin-card">
+						<h3>Orbit — Returning Visitors &amp; Loyalty</h3>
+						<p class="hint">Every other analytics tool keys off a per-tab session, so each visit looks brand-new. Orbit adds a persistent visitor id (stored in the browser) so you can finally tell a first-timer from someone who keeps coming back — how loyal your audience is, how often they return, and how recently. The single best signal that your work is building a following rather than just catching one-off clicks. Derived live from pageviews; the visitor id is the only new storage key.</p>
+						<div id="orbit-stats" class="analytics-stats" style="margin-bottom:1em"></div>
+						<div style="display:flex;gap:0.5em;flex-wrap:wrap">
+							<button class="button small" id="orbit-refresh-btn">Refresh</button>
+							<button class="button small" id="orbit-export-btn">Export JSON</button>
+						</div>
+					</div>
+
+					<div class="admin-card">
+						<h3>New vs. Returning</h3>
+						<p class="hint">First-time visitors (a single recorded visit) versus returning ones (two or more). A healthy, growing portfolio steadily grows the returning slice.</p>
+						<div class="orbit-donut-row">
+							<canvas id="orbit-donut" width="180" height="180"></canvas>
+							<div id="orbit-legend" class="compass-legend"></div>
+						</div>
+					</div>
+
+					<div class="admin-card">
+						<h3>Visit Frequency</h3>
+						<p class="hint">How many times visitors have come back, bucketed. A long tail toward the higher buckets means real regulars — people checking for new work, not just passing through once.</p>
+						<div id="orbit-frequency"></div>
+					</div>
+
+					<div class="admin-card">
+						<h3>Recency — Last Seen</h3>
+						<p class="hint">When each visitor was last here. A wall of "today / this week" means an active, warm audience; a pile in "30+ days" means people drifted off and could be worth a re-engagement post.</p>
+						<div id="orbit-recency"></div>
+					</div>
+
+					<div class="admin-card">
+						<h3>Most Loyal Visitors</h3>
+						<p class="hint">Your top returning visitors by visit count, with how long they've been following and when they last dropped in. These are the people your next drop should be aimed at first.</p>
+						<div id="orbit-loyal"></div>
 					</div>
 
 				</div>
@@ -2675,6 +2721,9 @@ document.addEventListener('click', function(e){
   }
   if (e.target.dataset && e.target.dataset.tab === 'depth') {
     renderDepthTab();
+  }
+  if (e.target.dataset && e.target.dataset.tab === 'orbit') {
+    renderOrbitTab();
   }
 });
 
@@ -4630,6 +4679,231 @@ document.getElementById('depth-export-btn').addEventListener('click', function()
   var url  = URL.createObjectURL(blob);
   var a    = document.createElement('a');
   a.href = url; a.download = 'depth-' + Date.now() + '.json'; a.click();
+  URL.revokeObjectURL(url);
+});
+
+/* ================================================================
+   ORBIT TAB — Returning Visitors & Loyalty
+   Every other tool keys off the per-tab session id (sid), so a
+   returning visitor is invisible. analytics.js now stamps each
+   pageview with a persistent visitor id (vid) + visit number (vnum)
+   + first-seen timestamp (vfirst). Orbit aggregates those into a
+   new-vs-returning / frequency / recency / loyalty view.
+   Legacy pageviews with no vid fall back to their sid as a synthetic
+   one-visit visitor so nothing breaks.
+================================================================ */
+
+var DAY_MS = 86400000;
+
+function buildOrbit() {
+  var events = CommissionData.getAnalytics();
+  var now    = Date.now();
+
+  /* vid -> aggregate */
+  var visitors = {};
+  events.forEach(function(e) {
+    if (e.type !== 'pv') return;
+    var vid = e.vid || ('legacy:' + (e.sid || 'unknown'));
+    var v = visitors[vid];
+    if (!v) {
+      v = visitors[vid] = {
+        vid:      vid,
+        legacy:   !e.vid,
+        sessions: {},
+        maxVnum:  0,
+        first:    e.vfirst || e.ts,
+        last:     e.ts,
+        pv:       0
+      };
+    }
+    if (e.sid) v.sessions[e.sid] = true;
+    if ((e.vnum || 1) > v.maxVnum)        v.maxVnum = e.vnum || 1;
+    if ((e.vfirst || e.ts) < v.first)     v.first   = e.vfirst || e.ts;
+    if (e.ts > v.last)                    v.last    = e.ts;
+    v.pv++;
+  });
+
+  var list = Object.keys(visitors).map(function(k) {
+    var v = visitors[k];
+    /* visits = best evidence of how many times they came: recorded visit
+       number, or distinct sessions seen, whichever is larger (min 1). */
+    v.visits   = Math.max(v.maxVnum, Object.keys(v.sessions).length, 1);
+    v.ageDays  = Math.floor((now - v.first) / DAY_MS);
+    v.sinceDays = Math.floor((now - v.last) / DAY_MS);
+    return v;
+  });
+
+  var unique    = list.length;
+  var returning = list.filter(function(v){ return v.visits >= 2; }).length;
+  var totalVisits = list.reduce(function(s, v){ return s + v.visits; }, 0);
+
+  /* Frequency buckets */
+  var freqDefs = [
+    { label: '1 visit',     test: function(n){ return n === 1; } },
+    { label: '2 visits',    test: function(n){ return n === 2; } },
+    { label: '3–5 visits',  test: function(n){ return n >= 3 && n <= 5; } },
+    { label: '6–10 visits', test: function(n){ return n >= 6 && n <= 10; } },
+    { label: '11+ visits',  test: function(n){ return n >= 11; } }
+  ];
+  var frequency = freqDefs.map(function(d) {
+    return { label: d.label, count: list.filter(function(v){ return d.test(v.visits); }).length };
+  });
+
+  /* Recency buckets (by last-seen) */
+  var recDefs = [
+    { label: 'Today',        test: function(d){ return d < 1; } },
+    { label: 'This week',    test: function(d){ return d >= 1 && d <= 7; } },
+    { label: '8–30 days',    test: function(d){ return d >= 8 && d <= 30; } },
+    { label: '30+ days ago', test: function(d){ return d > 30; } }
+  ];
+  var recency = recDefs.map(function(d) {
+    return { label: d.label, count: list.filter(function(v){ return d.test(v.sinceDays); }).length };
+  });
+
+  return {
+    list:        list,
+    unique:      unique,
+    returning:   returning,
+    newCount:    unique - returning,
+    totalVisits: totalVisits,
+    returnRate:  unique ? Math.round((returning / unique) * 100) : 0,
+    avgVisits:   unique ? Math.round((totalVisits / unique) * 10) / 10 : 0,
+    frequency:   frequency,
+    recency:     recency
+  };
+}
+
+var ORBIT_COLORS = { returning: 'rgba(176,122,74,0.95)', neu: 'rgba(214,190,150,0.9)' };
+
+function drawOrbitDonut(o) {
+  var canvas = document.getElementById('orbit-donut');
+  if (!canvas) return;
+  var ctx = canvas.getContext('2d');
+  var W = canvas.width, H = canvas.height;
+  ctx.clearRect(0, 0, W, H);
+  var cx = W / 2, cy = H / 2, rOut = 78, rIn = 46;
+
+  var total = o.unique;
+  if (!total) {
+    ctx.fillStyle = '#444';
+    ctx.font = '12px -apple-system, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('No visitors yet.', cx, cy);
+    return;
+  }
+
+  var segs = [
+    { v: o.returning, color: ORBIT_COLORS.returning },
+    { v: o.newCount,  color: ORBIT_COLORS.neu }
+  ];
+  var start = -Math.PI / 2;
+  segs.forEach(function(s) {
+    if (!s.v) return;
+    var ang = (s.v / total) * Math.PI * 2;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.arc(cx, cy, rOut, start, start + ang);
+    ctx.closePath();
+    ctx.fillStyle = s.color;
+    ctx.fill();
+    start += ang;
+  });
+
+  ctx.globalCompositeOperation = 'destination-out';
+  ctx.beginPath();
+  ctx.arc(cx, cy, rIn, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.globalCompositeOperation = 'source-over';
+
+  ctx.fillStyle = '#c9a87c';
+  ctx.font = 'bold 22px -apple-system, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(o.returnRate + '%', cx, cy - 6);
+  ctx.fillStyle = '#8c887f';
+  ctx.font = '10px "Courier New", monospace';
+  ctx.fillText('RETURN', cx, cy + 12);
+}
+
+function orbitSince(days) {
+  if (days < 1)  return 'today';
+  if (days === 1) return 'yesterday';
+  if (days <= 30) return days + 'd ago';
+  return Math.floor(days / 30) + 'mo ago';
+}
+
+function renderOrbitTab() {
+  var o = buildOrbit();
+
+  function chip(num, label) {
+    return '<div class="analytics-stat-chip"><span class="asc-num">' + num +
+      '</span><span class="asc-label">' + label + '</span></div>';
+  }
+  document.getElementById('orbit-stats').innerHTML =
+    chip(o.unique,             'Unique Visitors') +
+    chip(o.returning,          'Returning') +
+    chip(o.returnRate + '%',   'Return Rate') +
+    chip(o.avgVisits,          'Avg Visits / Visitor');
+
+  /* Donut + legend */
+  drawOrbitDonut(o);
+  var legendEl = document.getElementById('orbit-legend');
+  var legRows = [
+    { k: 'returning', label: 'Returning', v: o.returning, color: ORBIT_COLORS.returning },
+    { k: 'neu',       label: 'New',       v: o.newCount,  color: ORBIT_COLORS.neu }
+  ];
+  legendEl.innerHTML = legRows.map(function(r) {
+    var share = o.unique ? Math.round((r.v / o.unique) * 100) : 0;
+    return '<div class="compass-legend-item">' +
+      '<span class="compass-legend-swatch" style="background:' + r.color + '"></span>' +
+      '<span>' + r.label + '</span>' +
+      '<span class="compass-legend-val">' + r.v + ' · ' + share + '%</span>' +
+    '</div>';
+  }).join('');
+
+  /* Visit frequency */
+  document.getElementById('orbit-frequency').innerHTML = jBarList(o.frequency, o.unique, {
+    suffix: function(r, share) { return r.count + (r.count === 1 ? ' visitor' : ' visitors') + ' · ' + share + '%'; }
+  });
+
+  /* Recency */
+  document.getElementById('orbit-recency').innerHTML = jBarList(o.recency, o.unique, {
+    suffix: function(r, share) { return r.count + (r.count === 1 ? ' visitor' : ' visitors') + ' · ' + share + '%'; }
+  });
+
+  /* Most loyal visitors (top by visits, min 2) */
+  var loyal = o.list.filter(function(v){ return v.visits >= 2; })
+    .sort(function(a, b){ return b.visits - a.visits || b.last - a.last; })
+    .slice(0, 12)
+    .map(function(v, i) {
+      return {
+        label: '#' + (i + 1) + ' · ' + (v.legacy ? 'visitor (pre-Orbit)' : v.vid),
+        count: v.visits,
+        age:   v.ageDays,
+        since: v.sinceDays
+      };
+    });
+  var loyalEl = document.getElementById('orbit-loyal');
+  if (!loyal.length) {
+    loyalEl.innerHTML = '<p style="color:#444;font-size:0.85em;padding:0.5em 0">No returning visitors recorded yet. Once someone comes back in a new session they\'ll appear here.</p>';
+  } else {
+    loyalEl.innerHTML = jBarList(loyal, loyal[0].count, {
+      suffix: function(r) {
+        var followed = r.age >= 1 ? ('following ' + r.age + 'd' ) : 'new this week';
+        return r.count + ' visits · ' + followed + ' · last ' + orbitSince(r.since);
+      }
+    });
+  }
+}
+
+document.getElementById('orbit-refresh-btn').addEventListener('click', renderOrbitTab);
+
+document.getElementById('orbit-export-btn').addEventListener('click', function() {
+  var o = buildOrbit();
+  var blob = new Blob([JSON.stringify(o, null, 2)], { type: 'application/json' });
+  var url  = URL.createObjectURL(blob);
+  var a    = document.createElement('a');
+  a.href = url; a.download = 'orbit-' + Date.now() + '.json'; a.click();
   URL.revokeObjectURL(url);
 });
 </script>
