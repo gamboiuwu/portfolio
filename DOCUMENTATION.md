@@ -31,8 +31,10 @@ artwork. The palette is fixed (see `CLAUDE.md` → Design System); no blue/pink.
 
 All analytics are **first-party and client-side**. No third-party service, no
 cookies sent off-device. Everything lives in the visitor's own `localStorage`
-under `_gam_analytics_v1` (general events) and `_gam_spotlight_v1` (artwork
-viewport time). The `/admin/` page is excluded from tracking. Max 3000 general
+under `_gam_analytics_v1` (general events — pageviews, clicks, scroll, exits, and
+conversion `goal` milestones) and `_gam_spotlight_v1` (artwork viewport time), plus
+`_gam_visitor_v1` (a persistent visitor id that powers Orbit's returning-visitor
+analysis). The `/admin/` page is excluded from tracking. Max 3000 general
 events / 2000 spotlight events, oldest rotated out.
 
 The tracking answers the questions the portfolio owner actually cares about:
@@ -47,6 +49,8 @@ The tracking answers the questions the portfolio owner actually cares about:
 | *Where* does traffic come from? | `pv` `refHost` (referrer) | **Compass → Channel Mix / Top Referrers** |
 | How far do they scroll / read-through? | `scroll` (25/50/75/100%) | **Depth → Read-Through Funnel** |
 | Which artworks hold attention? | `tile_hover`, spotlight viewport time | Artwork Engagement / Spotlight |
+| Are visitors *returning*? | `pv` `vid` (persistent visitor id) | **Orbit → New vs. Returning / Loyalty** |
+| Do visitors become clients? (conversion) | `goal` (CTA click → form open → submit) | **Beacon → Conversion Funnel** |
 
 See `CLAUDE.md` → Analytics System for the exact event field schema.
 
@@ -97,6 +101,22 @@ Inquiries, Feedback.
   - **Where Readers Drop Off** — pages ranked by % who leave before the halfway point
   - **Average Scroll Depth by Page**
   - Derived live from `_gam_analytics_v1` — no extra tracking, no new storage key.
+- **Orbit** — **returning visitors & loyalty**. Uses a persistent visitor id
+  (`_gam_visitor_v1`) so a repeat visitor no longer looks brand-new: new vs.
+  returning donut, visit-frequency and recency buckets, and a loyalty leaderboard.
+  The only analytics tool that needs its own storage key.
+- **Beacon** *(newest)* — **conversion funnel & goal tracking**. Where every other
+  tool measures attention, Beacon measures *outcome*: how many visitors travel the
+  path to a commission inquiry. From lightweight `goal` events (commission CTA clicks,
+  form-open, contact-step, submit) plus pageviews it builds:
+  - Stats: sessions, reached-commissions, inquiries, conversion rate
+  - **Conversion Funnel** — landing → viewed commissions → opened form → reached
+    contact → submitted, each as a share of sessions
+  - **Biggest Drop-off Points** — stage transitions ranked by visitors lost
+  - **Commission CTA Clicks by Page** — which pages do the persuading
+  - **Which Sources Convert** — channels ranked by inquiries, not just visits
+  - **Recent Inquiries** — latest submissions with type + timestamp
+  - Derived live from `_gam_analytics_v1` — no new storage key.
 - **Revenue** — financial dashboard derived from the commission Queue: total earned,
   pipeline value, monthly earnings chart, revenue by type, top clients.
 - **Palette** — extract dominant colors from an uploaded artwork (k-means), save
@@ -127,4 +147,4 @@ Inquiries, Feedback.
 - `assets/js/analytics.js` owns all client-side event capture.
 - Keep the gallery light-mode and let the artwork lead; cyber accents stay subtle.
 
-*Last updated: 2026-06-24*
+*Last updated: 2026-06-29*

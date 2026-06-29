@@ -137,6 +137,7 @@ Each event is a flat object:
 | `scroll`     | `depth` (25 / 50 / 75 / 100)                                                           |
 | `exit`       | `ms` (milliseconds on page)                                                            |
 | `tile_hover` | `title` (h2 text of hovered `.tiles article`, up to 60 chars)                         |
+| `goal`       | `goal` (milestone name), `vid`, + optional meta. Marks a conversion milestone on the path to a commission inquiry. Auto-fired for commission CTA clicks (`cta_commission`); the commission form fires `form_open`, `form_step3`, and `form_submit` (with `ctype`). Powers the **Beacon** funnel. |
 
 - **`sid`**: session ID (per tab, stored in sessionStorage)
 - **`page`**: URL pathname, normalized (trailing slash, no index.html)
@@ -144,7 +145,7 @@ Each event is a flat object:
 - **`xp` / `yp`**: click position as 0–1 fraction of viewport width/height
 - Max 3000 events; oldest are rotated out automatically
 - Admin page is **excluded** from tracking
-- `window.GamAnalytics` is the public API (`.get()`, `.clear()`, `.getSpotlight()`, `.clearSpotlight()`)
+- `window.GamAnalytics` is the public API (`.get()`, `.clear()`, `.getSpotlight()`, `.clearSpotlight()`, `.goal(name, meta)`)
 
 ### Heatmap Visualizer (Admin → Analytics tab)
 Canvas-based click density map. Select a page from the dropdown, see click positions as color-coded dots (blue=low density → red=high). Uses proximity bucketing (32×32 grid cells) to aggregate nearby clicks.
@@ -191,6 +192,7 @@ Password-protected (SHA-256 hash in localStorage, 5-attempt lockout). Session tr
 | Compass     | Traffic sources & acquisition — channel mix, top referrers, device & screen breakdown |
 | Depth       | Scroll reach & read-through — per-page scroll funnel, drop-off points, avg depth     |
 | Orbit       | Returning visitors & loyalty — new vs returning, visit frequency, recency, loyalty leaderboard |
+| Beacon      | Conversion funnel & goal tracking — path-to-inquiry funnel, drop-off points, CTA clicks, converting sources |
 
 ---
 
@@ -516,6 +518,52 @@ Answers the *retention* question the rest of the analytics family structurally c
 
 ---
 
+## Beacon — Conversion Funnel & Goal Tracking (Admin → Beacon tab) — NEW TOOL
+
+Answers the question the rest of the analytics family structurally cannot: **do visitors actually become clients?** Compass = where traffic comes from, Journey = where it goes, Pulse = when it shows up, Spotlight = which artwork holds attention, Depth = read-through, Orbit = loyalty, Revenue = money already earned — **Beacon = conversion**: how many visitors travel the path to a commission inquiry, and exactly where the would-be clients fall away.
+
+**Why it's genuinely new:** every other analytics tool measures *attention* or *audience*. None measures *outcome* against the site's single business goal (the commission inquiry). Journey shows generic page-to-page flow; Beacon defines a named goal funnel and reports drop-off at each step, conversion rate, and which acquisition channels actually produce inquiries.
+
+**No new storage key** — derived live from `_gam_analytics_v1`. This required a new `goal` event type in `analytics.js` and a tiny public API (`GamAnalytics.goal(name, meta)`):
+- **`cta_commission`** — auto-fired from the click handler when a visitor clicks any commission CTA (href contains `newcommission` / `#commission-form`, or the link text reads like "commission inquiry / start your inquiry / commission me").
+- **`form_open`** — fired by `commissions/index.html` on the first `focusin` anywhere in the inquiry form (genuine engagement).
+- **`form_step3`** — fired when the multi-step form advances to the final Contact step.
+- **`form_submit`** — fired on a completed submission, carrying `ctype` (commission type).
+
+**Funnel stages (per session):**
+1. **Visited the site** — any `pv`
+2. **Viewed Commissions** — a `pv` whose page starts with `/commissions`
+3. **Opened the form** — `form_open` goal
+4. **Reached Contact step** — `form_step3` goal
+5. **Submitted inquiry** — `form_submit` goal
+
+**How it works:**
+1. `buildBeacon()` groups events by `sid`, sets the five funnel flags per session, captures the session's first-pageview `refHost`, and tallies `cta_commission` clicks by page.
+2. Stage counts are sessions matching each flag; drop-off is the loss between consecutive stages.
+3. Source conversion classifies each session's `refHost` via the shared `compassClassify()` and compares visits vs. inquiries per channel.
+
+**Admin tab sections:**
+- **Stats**: Sessions, Reached Commissions, Inquiries, Conversion Rate
+- **Conversion Funnel**: five horizontal bars (share of sessions), amber deepening with depth, each annotated with the count lost from the previous stage
+- **Biggest Drop-off Points**: stage transitions ranked by visitors lost (% of the upstream stage)
+- **Commission CTA Clicks by Page**: where CTA clicks happen across the site
+- **Which Sources Convert**: channels ranked by visits, annotated with inquiries + conversion %
+- **Recent Inquiries**: latest `form_submit` events with type + timestamp
+
+**Derived schema (for export):**
+```js
+{ counts:{visited,comm,open,contact,submit}, total, ctas:{page:count}, sources:{channel:{visited,converted}}, submits:[…], sessionCount }
+```
+
+**Technical notes:**
+- Funnel bars use the warm amber palette (`rgba(201,168,124,α)`, α deepening per tier) — no blue/pink. New `.beacon-*` CSS classes; reuses `jBarList()`, `analytics-stat-chip`, `compassClassify()`, `jPageLabel()`, `escHtml()`, `fmtDate()`.
+- Tab renders lazily on click, same pattern as Orbit/Depth/Compass/Journey/Pulse/Spotlight/Revenue.
+- Reach is per session, so one visitor across several tabs may count more than once (noted in the tab hint).
+
+**API:** none new on `CommissionData` — uses `CommissionData.getAnalytics()`. Goal events are written by `analytics.js` (`GamAnalytics.goal`) and the commission form; logic lives in `renderBeaconTab()` / `buildBeacon()` inside `admin/index.html`.
+
+---
+
 ## Commission System
 
 ### Pages
@@ -593,4 +641,4 @@ Stored in `_gam_prices_v1`. Three sections: `digital`, `stickers`, `animation`. 
 
 ---
 
-*Last updated: 2026-06-26*
+*Last updated: 2026-06-29*

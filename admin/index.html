@@ -855,6 +855,17 @@
 		/* Orbit tab — returning-visitor / retention (reuses compass donut + legend) */
 		.orbit-donut-row { display: flex; gap: 1.4em; align-items: center; flex-wrap: wrap; }
 		#orbit-donut { display: block; flex-shrink: 0; }
+
+		/* Beacon tab — conversion funnel */
+		.beacon-stage { padding: 0.55em 0; border-bottom: 1px solid rgba(255,255,255,0.06); }
+		.beacon-stage:last-child { border-bottom: none; }
+		.beacon-stage-head { display: flex; justify-content: space-between; align-items: baseline; gap: 1em; margin-bottom: 0.4em; }
+		.beacon-stage-name { font-size: 0.9em; color: #e7e4de; }
+		.beacon-stage-name .bcn-num { font-family: 'Courier New', monospace; font-size: 0.78em; color: #8c887f; margin-right: 0.5em; }
+		.beacon-stage-meta { font-family: 'Courier New', monospace; font-size: 0.78em; color: #c9a87c; white-space: nowrap; }
+		.beacon-bar-wrap { height: 1.1em; background: rgba(255,255,255,0.05); border-radius: 3px; overflow: hidden; }
+		.beacon-bar { height: 100%; border-radius: 3px; transition: width 0.4s ease; }
+		.beacon-drop { font-size: 0.72em; color: #b07a4a; margin-top: 0.25em; font-family: 'Courier New', monospace; }
 	</style>
 </head>
 <body class="is-preload">
@@ -933,6 +944,7 @@
 				<button class="admin-tab" data-tab="compass">Compass</button>
 				<button class="admin-tab" data-tab="depth">Depth</button>
 				<button class="admin-tab" data-tab="orbit">Orbit</button>
+				<button class="admin-tab" data-tab="beacon">Beacon</button>
 			</div>
 
 			<!-- ============ GALLERY TAB ============ -->
@@ -1718,6 +1730,50 @@
 					</div>
 
 				</div>
+
+					<div id="tab-beacon" class="tab-content">
+
+						<div class="admin-card">
+							<h3>Beacon — Conversion Funnel &amp; Goal Tracking</h3>
+							<p class="hint">Every other tool measures attention; Beacon measures <em>outcome</em> — how many visitors actually travel the path to a commission inquiry. It reconstructs the funnel from landing &rarr; viewing commissions &rarr; opening the form &rarr; reaching the contact step &rarr; submitting, and shows exactly where would-be clients fall away. Derived live from pageviews and a handful of lightweight goal events the form fires &mdash; no new storage key. Note: reach is per session, so a single visitor across several tabs may count more than once.</p>
+							<div id="beacon-stats" class="analytics-stats" style="margin-bottom:1em"></div>
+							<div style="display:flex;gap:0.5em;flex-wrap:wrap">
+								<button class="button small" id="beacon-refresh-btn">Refresh</button>
+								<button class="button small" id="beacon-export-btn">Export JSON</button>
+							</div>
+						</div>
+
+						<div class="admin-card">
+							<h3>Conversion Funnel</h3>
+							<p class="hint">Each stage as a share of all sessions. A healthy funnel narrows gently; a steep cliff between two stages marks the step that loses the most prospective clients &mdash; your highest-leverage fix.</p>
+							<div id="beacon-funnel"></div>
+						</div>
+
+						<div class="admin-card">
+							<h3>Biggest Drop-off Points</h3>
+							<p class="hint">Stage transitions ranked by the share of visitors lost between them. The top row is where you bleed the most commissions &mdash; worth a clearer call-to-action, a shorter form, or stronger reassurance at that exact point.</p>
+							<div id="beacon-dropoff"></div>
+						</div>
+
+						<div class="admin-card">
+							<h3>Commission CTA Clicks by Page</h3>
+							<p class="hint">Where visitors click a "commission me / inquiry" call-to-action across the site. Tells you which pages are doing the persuading &mdash; and which could use a CTA they're currently missing.</p>
+							<div id="beacon-cta"></div>
+						</div>
+
+						<div class="admin-card">
+							<h3>Which Sources Convert</h3>
+							<p class="hint">Of the channels that send traffic, which actually produce inquiries. A source with lots of visits but no conversions is reach without intent; one converting above its visit share is where your real clients come from.</p>
+							<div id="beacon-sources"></div>
+						</div>
+
+						<div class="admin-card">
+							<h3>Recent Inquiries</h3>
+							<p class="hint">The most recent completed submissions, with the commission type and when they landed. Cross-check against the Inquiries tab for the full message.</p>
+							<div id="beacon-recent"></div>
+						</div>
+
+					</div>
 
 		</div><!-- /#admin-dash -->
 		<input type="file" id="img-file-input" accept="image/*" style="display:none" />
@@ -2724,6 +2780,9 @@ document.addEventListener('click', function(e){
   }
   if (e.target.dataset && e.target.dataset.tab === 'orbit') {
     renderOrbitTab();
+  }
+  if (e.target.dataset && e.target.dataset.tab === 'beacon') {
+    renderBeaconTab();
   }
 });
 
@@ -4904,6 +4963,180 @@ document.getElementById('orbit-export-btn').addEventListener('click', function()
   var url  = URL.createObjectURL(blob);
   var a    = document.createElement('a');
   a.href = url; a.download = 'orbit-' + Date.now() + '.json'; a.click();
+  URL.revokeObjectURL(url);
+});
+
+/* ================================================================
+   BEACON TAB — conversion funnel & goal tracking
+   Derives the path-to-inquiry funnel from pageviews + `goal` events.
+   No new storage key — reads CommissionData.getAnalytics().
+================================================================ */
+
+/* Funnel stages, in order. Each tests a per-session flag set in buildBeacon(). */
+var BEACON_STAGES = [
+  { key: 'visited', label: 'Visited the site' },
+  { key: 'comm',    label: 'Viewed Commissions' },
+  { key: 'open',    label: 'Opened the form' },
+  { key: 'contact', label: 'Reached Contact step' },
+  { key: 'submit',  label: 'Submitted inquiry' }
+];
+
+function buildBeacon() {
+  var events = CommissionData.getAnalytics() || [];
+
+  var sessions = {};   /* sid -> flags + refHost */
+  var ctas     = {};   /* page -> cta_commission clicks */
+  var submits  = [];   /* recent submit goal events */
+
+  events.forEach(function(e) {
+    var sid = e.sid || '?';
+    var s = sessions[sid] || (sessions[sid] = { visited: false, comm: false, open: false, contact: false, submit: false, refHost: 'direct', refSet: false });
+
+    if (e.type === 'pv') {
+      s.visited = true;
+      if (!s.refSet) { s.refHost = compassHostOf(e); s.refSet = true; }
+      if ((e.page || '').indexOf('/commissions') === 0) s.comm = true;
+    } else if (e.type === 'goal') {
+      if (e.goal === 'form_open')        s.open = true;
+      else if (e.goal === 'form_step3')  s.contact = true;
+      else if (e.goal === 'form_submit') { s.submit = true; submits.push(e); }
+      else if (e.goal === 'cta_commission') ctas[e.page || '/'] = (ctas[e.page || '/'] || 0) + 1;
+    }
+  });
+
+  var sids = Object.keys(sessions);
+
+  /* Stage counts */
+  var counts = {};
+  BEACON_STAGES.forEach(function(st) {
+    counts[st.key] = sids.filter(function(id){ return sessions[id][st.key]; }).length;
+  });
+
+  /* Source breakdown — visited vs. converted by channel */
+  var srcMap = {};   /* channel -> { visited, converted } */
+  sids.forEach(function(id) {
+    var s = sessions[id];
+    if (!s.visited) return;
+    var ch = compassClassify(s.refHost);
+    var row = srcMap[ch] || (srcMap[ch] = { visited: 0, converted: 0 });
+    row.visited++;
+    if (s.submit) row.converted++;
+  });
+
+  submits.sort(function(a, b){ return (b.ts || 0) - (a.ts || 0); });
+
+  return {
+    counts:   counts,
+    total:    counts.visited,
+    ctas:     ctas,
+    sources:  srcMap,
+    submits:  submits,
+    sessionCount: sids.length
+  };
+}
+
+function renderBeaconTab() {
+  var b = buildBeacon();
+  var total = b.total || 0;
+
+  function statChip(num, label) {
+    return '<div class="analytics-stat-chip"><span class="asc-num">' + num +
+      '</span><span class="asc-label">' + label + '</span></div>';
+  }
+
+  var convRate = total ? Math.round((b.counts.submit / total) * 100) : 0;
+  document.getElementById('beacon-stats').innerHTML =
+    statChip(total,                 'Sessions')            +
+    statChip(b.counts.comm,         'Reached Commissions') +
+    statChip(b.counts.submit,       'Inquiries')           +
+    statChip(convRate + '%',        'Conversion Rate');
+
+  /* ── Funnel ── */
+  var funnelEl = document.getElementById('beacon-funnel');
+  if (!total) {
+    funnelEl.innerHTML = '<p style="color:#444;font-size:0.85em;padding:0.5em 0">No data yet. Visits and inquiries will populate this funnel automatically.</p>';
+  } else {
+    var prev = null;
+    funnelEl.innerHTML = BEACON_STAGES.map(function(st, i) {
+      var c     = b.counts[st.key];
+      var share = total ? Math.round((c / total) * 100) : 0;
+      var pct   = total ? Math.round((c / total) * 100) : 0;
+      /* deepen the amber as the funnel descends */
+      var alpha = (0.45 + (i / (BEACON_STAGES.length - 1)) * 0.5).toFixed(2);
+      var drop  = '';
+      if (prev !== null && prev > 0 && c < prev) {
+        var lost = prev - c;
+        var lostPct = Math.round((lost / prev) * 100);
+        drop = '<div class="beacon-drop">&darr; ' + lost + ' lost (' + lostPct + '%) from previous stage</div>';
+      }
+      prev = c;
+      return '<div class="beacon-stage">' +
+        '<div class="beacon-stage-head">' +
+          '<span class="beacon-stage-name"><span class="bcn-num">' + (i + 1) + '</span>' + escHtml(st.label) + '</span>' +
+          '<span class="beacon-stage-meta">' + c + ' &middot; ' + share + '%</span>' +
+        '</div>' +
+        '<div class="beacon-bar-wrap"><div class="beacon-bar" style="width:' + Math.max(pct, 1) + '%;background:rgba(201,168,124,' + alpha + ')"></div></div>' +
+        drop +
+      '</div>';
+    }).join('');
+  }
+
+  /* ── Drop-off transitions, ranked ── */
+  var dropRows = [];
+  for (var i = 1; i < BEACON_STAGES.length; i++) {
+    var up = b.counts[BEACON_STAGES[i - 1].key];
+    var dn = b.counts[BEACON_STAGES[i].key];
+    var lost = Math.max(0, up - dn);
+    dropRows.push({
+      label: BEACON_STAGES[i - 1].label + ' → ' + BEACON_STAGES[i].label,
+      count: lost,
+      lostPct: up ? Math.round((lost / up) * 100) : 0
+    });
+  }
+  dropRows.sort(function(a, b){ return b.count - a.count; });
+  document.getElementById('beacon-dropoff').innerHTML =
+    jBarList(dropRows, total, { suffix: function(r){ return r.lostPct + '% of that stage'; } });
+
+  /* ── CTA clicks by page ── */
+  var ctaRows = Object.keys(b.ctas).map(function(pg){
+    return { label: jPageLabel(pg), count: b.ctas[pg] };
+  }).sort(function(a, b){ return b.count - a.count; });
+  var ctaTotal = ctaRows.reduce(function(s, r){ return s + r.count; }, 0);
+  document.getElementById('beacon-cta').innerHTML =
+    jBarList(ctaRows, ctaTotal, { suffix: function(r, share){ return share + '% of CTA clicks'; } });
+
+  /* ── Which sources convert ── */
+  var srcRows = Object.keys(b.sources).map(function(ch){
+    var r = b.sources[ch];
+    return { label: ch, count: r.visited, converted: r.converted,
+             rate: r.visited ? Math.round((r.converted / r.visited) * 100) : 0 };
+  }).sort(function(a, b){ return b.count - a.count; });
+  document.getElementById('beacon-sources').innerHTML =
+    jBarList(srcRows, total, { suffix: function(r){ return r.converted + ' inquiries · ' + r.rate + '% conv'; } });
+
+  /* ── Recent inquiries ── */
+  var recentEl = document.getElementById('beacon-recent');
+  if (!b.submits.length) {
+    recentEl.innerHTML = '<p style="color:#444;font-size:0.85em;padding:0.5em 0">No completed inquiries recorded yet.</p>';
+  } else {
+    recentEl.innerHTML = '<div class="spotlight-board">' + b.submits.slice(0, 12).map(function(e){
+      var type = (e.ctype || 'Commission').toString();
+      return '<div class="spotlight-row">' +
+        '<div class="sp-info"><div class="sp-label" title="' + escHtml(type) + '">' + escHtml(type) + '</div></div>' +
+        '<div class="sp-meta"><span class="sp-views">' + escHtml(fmtDate(e.ts)) + '</span></div>' +
+      '</div>';
+    }).join('') + '</div>';
+  }
+}
+
+document.getElementById('beacon-refresh-btn').addEventListener('click', renderBeaconTab);
+
+document.getElementById('beacon-export-btn').addEventListener('click', function() {
+  var b = buildBeacon();
+  var blob = new Blob([JSON.stringify(b, null, 2)], { type: 'application/json' });
+  var url  = URL.createObjectURL(blob);
+  var a    = document.createElement('a');
+  a.href = url; a.download = 'beacon-' + Date.now() + '.json'; a.click();
   URL.revokeObjectURL(url);
 });
 </script>

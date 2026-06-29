@@ -1764,10 +1764,22 @@
       p.classList.toggle('done',   i < idx);
     });
     current = idx;
+    /* Beacon funnel: mark progression to the contact (final) step. */
+    if (!noScroll && idx === 2 && window.GamAnalytics && GamAnalytics.goal) {
+      GamAnalytics.goal('form_step3');
+    }
     if (!noScroll) {
       document.getElementById('commission-form').scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
   }
+
+  /* Beacon funnel: first interaction with the form = "opened / engaged". */
+  var formEngaged = false;
+  form.addEventListener('focusin', function () {
+    if (formEngaged) return;
+    formEngaged = true;
+    if (window.GamAnalytics && GamAnalytics.goal) GamAnalytics.goal('form_open');
+  }, { passive: true });
 
   function setErr(el, msg) {
     var id = el.id + '-err';
@@ -1919,6 +1931,11 @@
       }).catch(function(){});  // silent on failure
     }
     // ────────────────────────────────────────────────────────────────
+
+    // Beacon funnel: a completed submission is the conversion goal.
+    if (window.GamAnalytics && GamAnalytics.goal) {
+      GamAnalytics.goal('form_submit', { ctype: inquiry.commissionType.slice(0, 60) });
+    }
 
     // Show success
     steps.forEach(function (s) { s.hidden = true; });
