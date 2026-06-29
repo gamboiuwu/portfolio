@@ -90,6 +90,18 @@
   /* ── Pageview ── */
   push({ sid: sid, type: 'pv', page: page, ref: ref, refHost: refHost, dev: dev, sw: sw, sh: sh, vid: vid, vnum: vnum, vfirst: vfirst, ts: pageStart });
 
+  /* ── Goal / conversion tracking (powers the Beacon funnel tool) ──
+     A `goal` event marks a named milestone on the path to a commission
+     inquiry — the site's actual business outcome. Pages can fire one
+     explicitly via GamAnalytics.goal(name); commission CTA clicks are also
+     detected automatically below so even un-instrumented pages contribute. */
+  function logGoal(name, meta) {
+    if (!name) return;
+    var evt = { sid: sid, type: 'goal', page: page, goal: name, vid: vid, ts: Date.now() };
+    if (meta) { for (var k in meta) { if (meta.hasOwnProperty(k)) evt[k] = meta[k]; } }
+    push(evt);
+  }
+
   /* ── Click tracking ── */
   document.addEventListener('click', function (e) {
     var el = e.target;
@@ -119,6 +131,15 @@
       yp:   Math.round((e.clientY / Math.max(window.innerHeight, 1)) * 100) / 100,
       ts:   Date.now()
     });
+
+    /* Auto-detect commission CTA clicks as a conversion goal */
+    var hrefL = (href || '').toLowerCase();
+    var textL = (text || '').toLowerCase();
+    if (hrefL.indexOf('newcommission') !== -1 ||
+        hrefL.indexOf('#commission-form') !== -1 ||
+        /start your inquiry|commission inquiry|start an? inquiry|request a commission|commission me/.test(textL)) {
+      logGoal('cta_commission', { el: label, text: text, href: href });
+    }
   }, { passive: true });
 
   /* ── Scroll depth (logged at 25 / 50 / 75 / 100 %) ── */
@@ -307,7 +328,8 @@
     clear:        function () { localStorage.removeItem(KEY); },
     getKey:       function () { return KEY; },
     getSpotlight: loadSpotlight,
-    clearSpotlight: function () { localStorage.removeItem(SP_KEY); }
+    clearSpotlight: function () { localStorage.removeItem(SP_KEY); },
+    goal:         logGoal
   };
 
 }());
