@@ -866,6 +866,12 @@
 		.beacon-bar-wrap { height: 1.1em; background: rgba(255,255,255,0.05); border-radius: 3px; overflow: hidden; }
 		.beacon-bar { height: 100%; border-radius: 3px; transition: width 0.4s ease; }
 		.beacon-drop { font-size: 0.72em; color: #b07a4a; margin-top: 0.25em; font-family: 'Courier New', monospace; }
+
+		/* Friction tab — UX frustration signals */
+		.fric-tag { display: inline-block; font-family: 'Courier New', monospace; font-size: 0.66em; letter-spacing: 0.05em; text-transform: uppercase; padding: 0.12em 0.5em; border-radius: 3px; margin-left: 0.5em; vertical-align: middle; }
+		.fric-tag.rage { background: rgba(176,122,74,0.22); color: #d6a06a; border: 1px solid rgba(176,122,74,0.4); }
+		.fric-tag.dead { background: rgba(140,136,127,0.18); color: #b8b2a6; border: 1px solid rgba(140,136,127,0.35); }
+		.fric-spot { font-family: 'Courier New', monospace; font-size: 0.74em; color: #8c887f; }
 	</style>
 </head>
 <body class="is-preload">
@@ -945,6 +951,7 @@
 				<button class="admin-tab" data-tab="depth">Depth</button>
 				<button class="admin-tab" data-tab="orbit">Orbit</button>
 				<button class="admin-tab" data-tab="beacon">Beacon</button>
+				<button class="admin-tab" data-tab="friction">Friction</button>
 			</div>
 
 			<!-- ============ GALLERY TAB ============ -->
@@ -1771,6 +1778,44 @@
 							<h3>Recent Inquiries</h3>
 							<p class="hint">The most recent completed submissions, with the commission type and when they landed. Cross-check against the Inquiries tab for the full message.</p>
 							<div id="beacon-recent"></div>
+						</div>
+
+					</div>
+
+					<div id="tab-friction" class="tab-content">
+
+						<div class="admin-card">
+							<h3>Friction — UX Frustration &amp; Dead-Click Signals</h3>
+							<p class="hint">Every other tool measures what's working &mdash; attention, flow, conversion. Friction measures what <em>isn't</em>: the moments visitors get stuck. It reconstructs <strong>rage clicks</strong> (rapid repeated taps in one spot, a frustration tell) and <strong>dead clicks</strong> (taps on things that look clickable but do nothing) from the click stream the site already records &mdash; no new storage key. Different from the Analytics heatmap, which shows where clicks <em>land</em>; Friction shows where they <em>fail</em>. Fix the top rows and the path to a commission gets smoother.</p>
+							<div id="friction-stats" class="analytics-stats" style="margin-bottom:1em"></div>
+							<div style="display:flex;gap:0.5em;flex-wrap:wrap">
+								<button class="button small" id="friction-refresh-btn">Refresh</button>
+								<button class="button small" id="friction-export-btn">Export JSON</button>
+							</div>
+						</div>
+
+						<div class="admin-card">
+							<h3>Friction by Page</h3>
+							<p class="hint">Pages ranked by total friction events (rage + dead clicks). The top page is where visitors hit the most snags &mdash; the first place a UX pass pays off.</p>
+							<div id="friction-pages"></div>
+						</div>
+
+						<div class="admin-card">
+							<h3>Rage-Click Hotspots</h3>
+							<p class="hint">Spots where visitors clicked the same place 3+ times in quick succession &mdash; usually something they expected to respond and it didn't (an unclickable image, a slow control, a broken link). Each row is one element on one page.</p>
+							<div id="friction-rage"></div>
+						</div>
+
+						<div class="admin-card">
+							<h3>Dead-Click Magnets</h3>
+							<p class="hint">Elements visitors click that aren't actually links or buttons. High counts mean something <em>looks</em> interactive but isn't &mdash; a strong hint to make it clickable (e.g. an artwork they expect to enlarge) or restyle it so it doesn't invite the click.</p>
+							<div id="friction-dead"></div>
+						</div>
+
+						<div class="admin-card">
+							<h3>Recent Friction Events</h3>
+							<p class="hint">The latest rage and dead-click incidents with the page, element, and when they happened &mdash; useful for spotting a freshly-broken control.</p>
+							<div id="friction-recent"></div>
 						</div>
 
 					</div>
@@ -2783,6 +2828,9 @@ document.addEventListener('click', function(e){
   }
   if (e.target.dataset && e.target.dataset.tab === 'beacon') {
     renderBeaconTab();
+  }
+  if (e.target.dataset && e.target.dataset.tab === 'friction') {
+    renderFrictionTab();
   }
 });
 
@@ -5137,6 +5185,209 @@ document.getElementById('beacon-export-btn').addEventListener('click', function(
   var url  = URL.createObjectURL(blob);
   var a    = document.createElement('a');
   a.href = url; a.download = 'beacon-' + Date.now() + '.json'; a.click();
+  URL.revokeObjectURL(url);
+});
+
+/* ================================================================
+   FRICTION TAB — UX frustration signals (rage clicks + dead clicks)
+   Derived live from the existing `click` events in _gam_analytics_v1.
+   No new storage key. Measures where visitors get STUCK, the inverse
+   of what the attention/conversion tools measure.
+================================================================ */
+
+/* Tags whose clicks genuinely do something; anything else with no href
+   is treated as a "dead click" (looked clickable, did nothing). */
+var FRICTION_INTERACTIVE = ['a', 'button', 'input', 'select', 'textarea', 'label', 'summary'];
+
+function fricTagOf(e) {
+  return ((e.el || '').split('.')[0] || '').toLowerCase();
+}
+function fricInteractive(e) {
+  if (e.href) return true;
+  return FRICTION_INTERACTIVE.indexOf(fricTagOf(e)) !== -1;
+}
+/* Most-common element label within a rage run */
+function fricRepLabel(run) {
+  var counts = {}, best = run[0].el || '(unknown)', bestN = 0;
+  run.forEach(function(r) {
+    var l = r.el || '(unknown)';
+    counts[l] = (counts[l] || 0) + 1;
+    if (counts[l] > bestN) { bestN = counts[l]; best = l; }
+  });
+  return best;
+}
+
+function buildFriction() {
+  var events = CommissionData.getAnalytics() || [];
+  var clicks = events.filter(function(e) { return e.type === 'click'; });
+  var totalClicks = clicks.length;
+
+  /* Group clicks per session for rage detection */
+  var bySid = {};
+  clicks.forEach(function(e) {
+    var id = e.sid || '?';
+    (bySid[id] = bySid[id] || []).push(e);
+  });
+
+  /* ── Rage clicks: 3+ clicks in the same spot within a short window ── */
+  var RAGE_MS = 1500, RAGE_DIST = 0.06, RAGE_MIN = 3;
+  var rageIncidents = [];
+  Object.keys(bySid).forEach(function(id) {
+    var list = bySid[id].slice().sort(function(a, b) { return (a.ts || 0) - (b.ts || 0); });
+    var run = [];
+    function flush() {
+      if (run.length >= RAGE_MIN) {
+        var last = run[run.length - 1];
+        rageIncidents.push({
+          page:  last.page || '/',
+          el:    fricRepLabel(run),
+          xp:    run.reduce(function(s, r) { return s + (r.xp || 0); }, 0) / run.length,
+          yp:    run.reduce(function(s, r) { return s + (r.yp || 0); }, 0) / run.length,
+          count: run.length,
+          ts:    last.ts || 0,
+          sid:   id
+        });
+      }
+      run = [];
+    }
+    for (var i = 0; i < list.length; i++) {
+      var c = list[i];
+      if (!run.length) { run = [c]; continue; }
+      var p = run[run.length - 1];
+      var near = (c.page === p.page) &&
+                 (Math.abs((c.ts || 0) - (p.ts || 0)) <= RAGE_MS) &&
+                 (Math.abs((c.xp || 0) - (p.xp || 0)) <= RAGE_DIST) &&
+                 (Math.abs((c.yp || 0) - (p.yp || 0)) <= RAGE_DIST);
+      if (near) run.push(c); else { flush(); run = [c]; }
+    }
+    flush();
+  });
+
+  /* ── Dead clicks: taps on non-interactive elements ── */
+  var deadClicks = clicks.filter(function(e) { return !fricInteractive(e); });
+
+  /* ── Friction by page (rage + dead) ── */
+  var pages = {};
+  rageIncidents.forEach(function(r) { (pages[r.page] = pages[r.page] || { rage: 0, dead: 0 }).rage++; });
+  deadClicks.forEach(function(e) { var pg = e.page || '/'; (pages[pg] = pages[pg] || { rage: 0, dead: 0 }).dead++; });
+
+  /* ── Dead-click magnets (element + page) ── */
+  var deadMagnets = {};
+  deadClicks.forEach(function(e) {
+    var el = e.el || '(unknown)', pg = e.page || '/';
+    var key = pg + '|' + el;
+    var m = deadMagnets[key] || (deadMagnets[key] = { el: el, page: pg, text: e.text || '', count: 0 });
+    m.count++;
+    if (!m.text && e.text) m.text = e.text;
+  });
+
+  /* ── Sessions touched by any friction ── */
+  var fricSids = {};
+  rageIncidents.forEach(function(r) { fricSids[r.sid] = 1; });
+  deadClicks.forEach(function(e) { fricSids[e.sid || '?'] = 1; });
+
+  /* ── Recent timeline ── */
+  var recent = [];
+  rageIncidents.forEach(function(r) {
+    recent.push({ kind: 'rage', ts: r.ts, page: r.page, el: r.el, info: r.count + ' clicks in one spot' });
+  });
+  deadClicks.forEach(function(e) {
+    recent.push({ kind: 'dead', ts: e.ts || 0, page: e.page || '/', el: e.el || '(unknown)',
+                  info: e.text ? '“' + e.text.slice(0, 40) + '”' : 'no action' });
+  });
+  recent.sort(function(a, b) { return (b.ts || 0) - (a.ts || 0); });
+
+  return {
+    totalClicks:      totalClicks,
+    rageIncidents:    rageIncidents,
+    rageCount:        rageIncidents.length,
+    deadCount:        deadClicks.length,
+    deadPct:          totalClicks ? Math.round((deadClicks.length / totalClicks) * 100) : 0,
+    pages:            pages,
+    deadMagnets:      deadMagnets,
+    frictionSessions: Object.keys(fricSids).length,
+    sessionCount:     Object.keys(bySid).length,
+    recent:           recent.slice(0, 30)
+  };
+}
+
+function renderFrictionTab() {
+  var f = buildFriction();
+
+  function statChip(num, label) {
+    return '<div class="analytics-stat-chip"><span class="asc-num">' + num +
+      '</span><span class="asc-label">' + label + '</span></div>';
+  }
+
+  var fricSessPct = f.sessionCount ? Math.round((f.frictionSessions / f.sessionCount) * 100) : 0;
+  document.getElementById('friction-stats').innerHTML =
+    statChip(f.totalClicks,                  'Total Clicks')             +
+    statChip(f.rageCount,                    'Rage Incidents')          +
+    statChip(f.deadCount + ' · ' + f.deadPct + '%', 'Dead Clicks')      +
+    statChip(fricSessPct + '%',              'Sessions w/ Friction');
+
+  /* ── Friction by page ── */
+  var pageRows = Object.keys(f.pages).map(function(pg) {
+    var m = f.pages[pg];
+    return { label: jPageLabel(pg), count: m.rage + m.dead, rage: m.rage, dead: m.dead };
+  }).sort(function(a, b) { return b.count - a.count; });
+  var fricTotal = pageRows.reduce(function(s, r) { return s + r.count; }, 0);
+  document.getElementById('friction-pages').innerHTML =
+    jBarList(pageRows, fricTotal, { suffix: function(r) { return r.rage + ' rage · ' + r.dead + ' dead'; } });
+
+  /* ── Rage hotspots (aggregate incidents by element + page) ── */
+  var rageMap = {};
+  f.rageIncidents.forEach(function(r) {
+    var key = r.page + '|' + r.el;
+    var m = rageMap[key] || (rageMap[key] = { el: r.el, page: r.page, incidents: 0, clicks: 0, xp: r.xp, yp: r.yp, ts: r.ts });
+    m.incidents++; m.clicks += r.count;
+    if (r.ts > m.ts) { m.ts = r.ts; m.xp = r.xp; m.yp = r.yp; }
+  });
+  var rageRows = Object.keys(rageMap).map(function(k) {
+    var m = rageMap[k];
+    return { label: m.el + '  ·  ' + jPageLabel(m.page), count: m.incidents, clicks: m.clicks,
+             loc: Math.round(m.xp * 100) + '%,' + Math.round(m.yp * 100) + '%' };
+  }).sort(function(a, b) { return b.count - a.count; });
+  document.getElementById('friction-rage').innerHTML = rageRows.length
+    ? jBarList(rageRows, f.rageCount, { suffix: function(r) { return r.clicks + ' clicks · @' + r.loc; } })
+    : '<p style="color:#444;font-size:0.85em;padding:0.5em 0">No rage clicks detected — nobody is hammering a stuck control. 👍</p>';
+
+  /* ── Dead-click magnets ── */
+  var deadRows = Object.keys(f.deadMagnets).map(function(k) {
+    var m = f.deadMagnets[k];
+    var lab = m.el + (m.text ? '  “' + m.text.slice(0, 30) + '”' : '') + '  ·  ' + jPageLabel(m.page);
+    return { label: lab, count: m.count };
+  }).sort(function(a, b) { return b.count - a.count; });
+  document.getElementById('friction-dead').innerHTML = deadRows.length
+    ? jBarList(deadRows, f.deadCount, { suffix: function(r, share) { return share + '% of dead clicks'; } })
+    : '<p style="color:#444;font-size:0.85em;padding:0.5em 0">No dead clicks — every click is landing on something actionable. 👍</p>';
+
+  /* ── Recent friction events ── */
+  var recentEl = document.getElementById('friction-recent');
+  if (!f.recent.length) {
+    recentEl.innerHTML = '<p style="color:#444;font-size:0.85em;padding:0.5em 0">No friction recorded yet. As visitors browse, any rage or dead clicks will surface here.</p>';
+  } else {
+    recentEl.innerHTML = '<div class="spotlight-board">' + f.recent.slice(0, 16).map(function(r) {
+      var tag = '<span class="fric-tag ' + r.kind + '">' + r.kind + '</span>';
+      return '<div class="spotlight-row">' +
+        '<div class="sp-info">' +
+          '<div class="sp-label" title="' + escHtml(r.el) + '">' + escHtml(r.el) + tag + '</div>' +
+          '<div class="fric-spot">' + escHtml(jPageLabel(r.page)) + ' · ' + escHtml(r.info) + '</div>' +
+        '</div>' +
+        '<div class="sp-meta"><span class="sp-views">' + escHtml(fmtDate(r.ts)) + '</span></div>' +
+      '</div>';
+    }).join('') + '</div>';
+  }
+}
+
+document.getElementById('friction-refresh-btn').addEventListener('click', renderFrictionTab);
+
+document.getElementById('friction-export-btn').addEventListener('click', function() {
+  var f = buildFriction();
+  var blob = new Blob([JSON.stringify(f, null, 2)], { type: 'application/json' });
+  var url  = URL.createObjectURL(blob);
+  var a    = document.createElement('a');
+  a.href = url; a.download = 'friction-' + Date.now() + '.json'; a.click();
   URL.revokeObjectURL(url);
 });
 </script>
