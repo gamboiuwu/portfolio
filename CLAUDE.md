@@ -193,6 +193,7 @@ Password-protected (SHA-256 hash in localStorage, 5-attempt lockout). Session tr
 | Depth       | Scroll reach & read-through — per-page scroll funnel, drop-off points, avg depth     |
 | Orbit       | Returning visitors & loyalty — new vs returning, visit frequency, recency, loyalty leaderboard |
 | Beacon      | Conversion funnel & goal tracking — path-to-inquiry funnel, drop-off points, CTA clicks, converting sources |
+| Vector      | Outbound reach & link destinations — where visitors go when they leave via a link, destination mix, top platforms, outbound by page |
 
 ---
 
@@ -564,6 +565,41 @@ Answers the question the rest of the analytics family structurally cannot: **do 
 
 ---
 
+## Vector — Outbound Reach & Link Destinations (Admin → Vector tab) — NEW TOOL
+
+Answers the mirror question to Compass. Compass = where traffic *comes from*; **Vector = where it *goes next***: which of the artist's linked platforms and projects the portfolio actually drives follows to. Every other analytics tool measures what happens *on* the site (attention, flow, scroll, conversion); none measures the *hand-off* — the moment a viewer clicks an off-site link to go follow the artist on ArtStation, Instagram, Bandcamp, Yuka Designs, New York Furs, the Notion commission form, or email. For a working artist deciding where their portfolio should be pointing people, that follow-through is the whole point of the links.
+
+**No new storage key** — derived live from `_gam_analytics_v1` `click` events, which `analytics.js` already records with an `href` field. No change to `analytics.js` was needed. Same read-only pattern as Compass/Journey/Depth/Beacon.
+
+**How it works:**
+1. `buildVector()` walks every `click` event and runs `vectorParse(href)` on it.
+2. `vectorParse(href)` returns `null` for anything that is *not* a real off-site link — on-page anchors (`#…`), query/relative/root-relative paths, `javascript:` — and for absolute URLs pointing at an own host (`antryab.com`, `gamboiuwu.github.io`, reusing `COMPASS_OWN_HOSTS`). Those are internal navigation, already covered by Journey.
+3. For genuine outbound links it resolves a **named destination** and a **category** from the `VECTOR_DESTS` table (e.g. `yuka.design` → *Yuka Designs* / projects, `artstation.com` → *ArtStation* / social, `t.me` → *Telegram* / contact). `mailto:`/`tel:` map to *Email*/*Phone* (contact). Unrecognised hosts fall back to the bare hostname under the *other* category.
+4. Aggregates outbound clicks by category, by named destination, and by originating page; tracks which sessions produced at least one outbound click (for the follow-through rate).
+
+**Categories** (donut buckets): `social` · `projects` · `music` · `contact` · `other`.
+
+**Admin tab sections:**
+- **Stats**: Outbound Clicks, Top Destination, Follow-Through (% of visiting sessions that clicked at least one off-site link), Destinations (unique count)
+- **Destination Mix**: canvas donut + legend by category; centre shows total outbound clicks
+- **Top Destinations**: named platforms ranked by clicks (% of outbound)
+- **Outbound by Page**: which pages send visitors off-site the most
+- **Recent Outbound Clicks**: latest off-site clicks with destination, originating page badge, link text, and time
+
+**Derived schema (for export):**
+```js
+{ total, categories:{social,projects,music,contact,other}, dests:{name:count}, destCat:{name:category}, pages:{page:count}, recent:[{dest,cat,host,page,text,ts}], sessions, reached }
+```
+
+**Technical notes:**
+- Donut + swatches use the warm amber/sand/olive palette (`rgba(201,168,124…)` etc.) — no blue/pink, consistent with Compass/Orbit.
+- Reuses the shared `jBarList()` renderer, `analytics-stat-chip`, `.compass-donut-row`, and `.compass-legend` styles; only a small `#vector-donut` rule and a `.vector-dest-badge` chip are new.
+- Tab renders lazily on click, same pattern as Beacon/Orbit/Depth/Compass/Journey/Pulse/Spotlight/Revenue.
+
+**API:** none new on `CommissionData` — uses `CommissionData.getAnalytics()`. Logic lives in `renderVectorTab()` / `buildVector()` / `vectorParse()` inside `admin/index.html`.
+
+---
+
 ## Commission System
 
 ### Pages
@@ -641,4 +677,4 @@ Stored in `_gam_prices_v1`. Three sections: `digital`, `stickers`, `animation`. 
 
 ---
 
-*Last updated: 2026-06-29*
+*Last updated: 2026-07-01*

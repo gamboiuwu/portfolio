@@ -866,6 +866,10 @@
 		.beacon-bar-wrap { height: 1.1em; background: rgba(255,255,255,0.05); border-radius: 3px; overflow: hidden; }
 		.beacon-bar { height: 100%; border-radius: 3px; transition: width 0.4s ease; }
 		.beacon-drop { font-size: 0.72em; color: #b07a4a; margin-top: 0.25em; font-family: 'Courier New', monospace; }
+
+		/* Vector tab — outbound reach (reuses .compass-donut-row / .compass-legend / .spotlight-board) */
+		#vector-donut { display: block; flex-shrink: 0; }
+		.vector-dest-badge { display: inline-block; font-family: 'Courier New', monospace; font-size: 0.68em; letter-spacing: 0.04em; text-transform: uppercase; color: #8c887f; border: 1px solid rgba(255,255,255,0.12); border-radius: 3px; padding: 0.05em 0.4em; margin-left: 0.5em; }
 	</style>
 </head>
 <body class="is-preload">
@@ -945,6 +949,7 @@
 				<button class="admin-tab" data-tab="depth">Depth</button>
 				<button class="admin-tab" data-tab="orbit">Orbit</button>
 				<button class="admin-tab" data-tab="beacon">Beacon</button>
+				<button class="admin-tab" data-tab="vector">Vector</button>
 			</div>
 
 			<!-- ============ GALLERY TAB ============ -->
@@ -1774,6 +1779,47 @@
 						</div>
 
 					</div>
+
+						<div id="tab-vector" class="tab-content">
+
+						<div class="admin-card">
+							<h3>Vector — Outbound Reach</h3>
+							<p class="hint">Compass tells you where visitors <em>come from</em>; Vector tells you where they <em>go next</em> — which of your linked platforms and projects the portfolio actually drives follows to. Every off-site link click (ArtStation, Instagram, Bandcamp, Yuka Designs, New York Furs, the commission form, email&hellip;) is grouped by destination so you can see which platform is worth posting to and which link is being ignored. Derived live from the click events analytics already records &mdash; no new storage key. Note: internal navigation and on-page anchors are excluded; only true off-site links count.</p>
+							<div id="vector-stats" class="analytics-stats" style="margin-bottom:1em"></div>
+							<div style="display:flex;gap:0.5em;flex-wrap:wrap">
+								<button class="button small" id="vector-refresh-btn">Refresh</button>
+								<button class="button small" id="vector-export-btn">Export JSON</button>
+							</div>
+						</div>
+
+						<div class="admin-card">
+							<h3>Destination Mix</h3>
+							<p class="hint">Outbound clicks bucketed by destination type. Social = X/Instagram/ArtStation/etc., Projects = Yuka Designs &amp; New York Furs, Music = Bandcamp, Contact = Telegram/Discord/email, Other = any remaining off-site link.</p>
+							<div class="compass-donut-row">
+								<canvas id="vector-donut" width="180" height="180"></canvas>
+								<div id="vector-legend" class="compass-legend"></div>
+							</div>
+						</div>
+
+						<div class="admin-card">
+							<h3>Top Destinations</h3>
+							<p class="hint">Where the audience actually heads when they leave via a link, by named platform. The top rows are the channels your portfolio is genuinely feeding &mdash; where new followers and clients are most likely arriving from your site.</p>
+							<div id="vector-destinations"></div>
+						</div>
+
+						<div class="admin-card">
+							<h3>Outbound by Page</h3>
+							<p class="hint">Which pages send visitors off-site the most. A page with lots of outbound clicks is doing its job of pointing people onward; a key page with none may be missing the links that turn a viewer into a follower.</p>
+							<div id="vector-pages"></div>
+						</div>
+
+						<div class="admin-card">
+							<h3>Recent Outbound Clicks</h3>
+							<p class="hint">The latest off-site link clicks, with the destination, the page they left from, and the link text.</p>
+							<div id="vector-recent"></div>
+						</div>
+
+						</div>
 
 		</div><!-- /#admin-dash -->
 		<input type="file" id="img-file-input" accept="image/*" style="display:none" />
@@ -2783,6 +2829,9 @@ document.addEventListener('click', function(e){
   }
   if (e.target.dataset && e.target.dataset.tab === 'beacon') {
     renderBeaconTab();
+  }
+  if (e.target.dataset && e.target.dataset.tab === 'vector') {
+    renderVectorTab();
   }
 });
 
@@ -5137,6 +5186,251 @@ document.getElementById('beacon-export-btn').addEventListener('click', function(
   var url  = URL.createObjectURL(blob);
   var a    = document.createElement('a');
   a.href = url; a.download = 'beacon-' + Date.now() + '.json'; a.click();
+  URL.revokeObjectURL(url);
+});
+
+/* ================================================================
+   VECTOR TAB — outbound reach (where the audience goes when they
+   leave via a link). Derived live from click events' href field.
+   No new storage key; internal navigation is excluded.
+================================================================ */
+
+/* Named destinations for this artist. First matching entry wins;
+   `match` is tested as an exact host or a ".suffix" of the host. */
+var VECTOR_DESTS = [
+  { match: ['yuka.design'],                         dest: 'Yuka Designs',           cat: 'projects' },
+  { match: ['nyfurs.org'],                          dest: 'New York Furs',          cat: 'projects' },
+  { match: ['notion.so', 'notion.site'],            dest: 'Commission Form (Notion)', cat: 'contact' },
+  { match: ['artstation.com'],                      dest: 'ArtStation',             cat: 'social'   },
+  { match: ['bandcamp.com'],                        dest: 'Bandcamp',               cat: 'music'    },
+  { match: ['x.com', 'twitter.com', 't.co'],        dest: 'Twitter / X',            cat: 'social'   },
+  { match: ['instagram.com'],                       dest: 'Instagram',              cat: 'social'   },
+  { match: ['tiktok.com'],                          dest: 'TikTok',                 cat: 'social'   },
+  { match: ['t.me', 'telegram.org', 'telegram.me'], dest: 'Telegram',               cat: 'contact'  },
+  { match: ['discord.com', 'discordapp.com', 'discord.gg'], dest: 'Discord',        cat: 'contact'  },
+  { match: ['youtube.com', 'youtu.be'],             dest: 'YouTube',                cat: 'social'   },
+  { match: ['reddit.com'],                          dest: 'Reddit',                 cat: 'social'   },
+  { match: ['pinterest.com'],                       dest: 'Pinterest',              cat: 'social'   },
+  { match: ['bsky.app', 'bluesky.app'],             dest: 'Bluesky',                cat: 'social'   },
+  { match: ['tumblr.com'],                          dest: 'Tumblr',                 cat: 'social'   },
+  { match: ['facebook.com'],                        dest: 'Facebook',               cat: 'social'   },
+  { match: ['linkedin.com', 'lnkd.in'],             dest: 'LinkedIn',               cat: 'social'   },
+  { match: ['mastodon.social'],                     dest: 'Mastodon',               cat: 'social'   }
+];
+
+/* Parse an href into an outbound destination, or null if it's internal /
+   an on-page anchor / not a real off-site link. */
+function vectorParse(href) {
+  if (!href) return null;
+  var h = String(href).trim();
+  if (!h) return null;
+  var low = h.toLowerCase();
+
+  if (low.indexOf('mailto:') === 0) return { dest: 'Email',  cat: 'contact', host: 'email' };
+  if (low.indexOf('tel:')    === 0) return { dest: 'Phone',  cat: 'contact', host: 'phone' };
+
+  /* Internal / anchors / relative links — handled by Journey, not Vector */
+  if (low.charAt(0) === '#' || low.charAt(0) === '?' || low.charAt(0) === '/' && low.charAt(1) !== '/') return null;
+  if (low.indexOf('javascript:') === 0) return null;
+
+  var m = low.match(/^(?:https?:)?\/\/([^/]+)/);
+  if (!m) return null;                       /* not an absolute off-site URL */
+  var host = m[1].replace(/^www\./, '');
+
+  /* Own hosts = internal navigation, not outbound */
+  for (var i = 0; i < COMPASS_OWN_HOSTS.length; i++) {
+    if (host === COMPASS_OWN_HOSTS[i] || host.indexOf('.' + COMPASS_OWN_HOSTS[i]) !== -1) return null;
+  }
+
+  for (var d = 0; d < VECTOR_DESTS.length; d++) {
+    var rec = VECTOR_DESTS[d];
+    for (var j = 0; j < rec.match.length; j++) {
+      var mt = rec.match[j];
+      if (host === mt || host.indexOf('.' + mt) !== -1) return { dest: rec.dest, cat: rec.cat, host: host };
+    }
+  }
+  return { dest: host, cat: 'other', host: host };
+}
+
+function buildVector() {
+  var events = CommissionData.getAnalytics() || [];
+
+  var pvSids   = {};   /* sid -> true (sessions that loaded a page) */
+  var outSids  = {};   /* sid -> true (sessions with >=1 outbound click) */
+  var categories = { social: 0, projects: 0, music: 0, contact: 0, other: 0 };
+  var dests    = {};   /* destName -> count */
+  var destCat  = {};   /* destName -> category */
+  var pages    = {};   /* page -> outbound count */
+  var recent   = [];
+  var total    = 0;
+
+  events.forEach(function(e) {
+    if (e.type === 'pv') { pvSids[e.sid || '?'] = true; return; }
+    if (e.type !== 'click') return;
+    var v = vectorParse(e.href);
+    if (!v) return;
+    total++;
+    categories[v.cat] = (categories[v.cat] || 0) + 1;
+    dests[v.dest]   = (dests[v.dest] || 0) + 1;
+    destCat[v.dest] = v.cat;
+    pages[e.page || '/'] = (pages[e.page || '/'] || 0) + 1;
+    outSids[e.sid || '?'] = true;
+    recent.push({ dest: v.dest, cat: v.cat, host: v.host, page: e.page || '/', text: e.text || '', ts: e.ts || 0 });
+  });
+
+  recent.sort(function(a, b){ return (b.ts || 0) - (a.ts || 0); });
+
+  return {
+    total:       total,
+    categories:  categories,
+    dests:       dests,
+    destCat:     destCat,
+    pages:       pages,
+    recent:      recent,
+    sessions:    Object.keys(pvSids).length,
+    reached:     Object.keys(outSids).length
+  };
+}
+
+/* Warm amber/sand palette — consistent with Compass/Orbit donuts, no blue/pink. */
+var VECTOR_COLORS = {
+  social:   'rgba(201,168,124,0.92)',
+  projects: 'rgba(176,122,74,0.92)',
+  music:    'rgba(150,168,110,0.90)',
+  contact:  'rgba(214,190,150,0.92)',
+  other:    'rgba(120,110,96,0.85)'
+};
+var VECTOR_CAT_LABELS = { social: 'Social', projects: 'Projects', music: 'Music', contact: 'Contact', other: 'Other' };
+var VECTOR_CAT_ORDER  = ['social', 'projects', 'music', 'contact', 'other'];
+
+function drawVectorDonut(v) {
+  var canvas = document.getElementById('vector-donut');
+  if (!canvas) return;
+  var ctx = canvas.getContext('2d');
+  var W = canvas.width, H = canvas.height;
+  ctx.clearRect(0, 0, W, H);
+  var cx = W / 2, cy = H / 2, rOut = 78, rIn = 46;
+
+  var totalCat = VECTOR_CAT_ORDER.reduce(function(s, k){ return s + v.categories[k]; }, 0);
+  if (!totalCat) {
+    ctx.fillStyle = '#444';
+    ctx.font = '12px -apple-system, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('No outbound clicks yet.', cx, cy);
+    return;
+  }
+
+  var start = -Math.PI / 2;
+  VECTOR_CAT_ORDER.forEach(function(k) {
+    var val = v.categories[k];
+    if (!val) return;
+    var ang = (val / totalCat) * Math.PI * 2;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.arc(cx, cy, rOut, start, start + ang);
+    ctx.closePath();
+    ctx.fillStyle = VECTOR_COLORS[k];
+    ctx.fill();
+    start += ang;
+  });
+
+  ctx.globalCompositeOperation = 'destination-out';
+  ctx.beginPath();
+  ctx.arc(cx, cy, rIn, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.globalCompositeOperation = 'source-over';
+
+  ctx.fillStyle = '#c9a87c';
+  ctx.font = 'bold 22px -apple-system, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(totalCat, cx, cy - 6);
+  ctx.fillStyle = '#8c887f';
+  ctx.font = '10px "Courier New", monospace';
+  ctx.fillText('CLICKS', cx, cy + 12);
+}
+
+function renderVectorTab() {
+  var v = buildVector();
+  var total = v.total || 0;
+
+  function statChip(num, label) {
+    return '<div class="analytics-stat-chip"><span class="asc-num">' + num +
+      '</span><span class="asc-label">' + label + '</span></div>';
+  }
+
+  /* Top destination */
+  var topDest = '—', topDestMax = -1;
+  Object.keys(v.dests).forEach(function(d){
+    if (v.dests[d] > topDestMax) { topDestMax = v.dests[d]; topDest = d; }
+  });
+  if (topDestMax <= 0) topDest = '—';
+
+  var followRate = v.sessions ? Math.round((v.reached / v.sessions) * 100) : 0;
+  var uniqueDest = Object.keys(v.dests).length;
+
+  document.getElementById('vector-stats').innerHTML =
+    statChip(total,             'Outbound Clicks') +
+    statChip(topDest,           'Top Destination') +
+    statChip(followRate + '%',  'Follow-Through')  +
+    statChip(uniqueDest,        'Destinations');
+
+  /* ── Destination mix donut + legend ── */
+  drawVectorDonut(v);
+  var legendEl = document.getElementById('vector-legend');
+  legendEl.innerHTML = VECTOR_CAT_ORDER.map(function(k) {
+    var val = v.categories[k];
+    var share = total ? Math.round((val / total) * 100) : 0;
+    return '<div class="compass-legend-item">' +
+      '<span class="compass-legend-swatch" style="background:' + VECTOR_COLORS[k] + '"></span>' +
+      '<span>' + VECTOR_CAT_LABELS[k] + '</span>' +
+      '<span class="compass-legend-val">' + val + ' · ' + share + '%</span>' +
+    '</div>';
+  }).join('');
+
+  /* ── Top destinations ── */
+  var destRows = Object.keys(v.dests).map(function(d){
+    return { label: d, count: v.dests[d] };
+  }).sort(function(a, b){ return b.count - a.count; }).slice(0, 15);
+  document.getElementById('vector-destinations').innerHTML = jBarList(destRows, total, {
+    suffix: function(r, share){ return share + '% of outbound'; }
+  });
+
+  /* ── Outbound by page ── */
+  var pageRows = Object.keys(v.pages).map(function(p){
+    return { label: jPageLabel(p), count: v.pages[p] };
+  }).sort(function(a, b){ return b.count - a.count; });
+  document.getElementById('vector-pages').innerHTML = jBarList(pageRows, total, {
+    suffix: function(r, share){ return share + '% of outbound'; }
+  });
+
+  /* ── Recent outbound clicks ── */
+  var recentEl = document.getElementById('vector-recent');
+  if (!v.recent.length) {
+    recentEl.innerHTML = '<p style="color:#444;font-size:0.85em;padding:0.5em 0">No outbound clicks recorded yet. When visitors click a link that leaves the site, it will show up here.</p>';
+  } else {
+    recentEl.innerHTML = '<div class="spotlight-board">' + v.recent.slice(0, 15).map(function(r){
+      var txt = r.text ? '“' + r.text + '”' : (r.host || '');
+      return '<div class="spotlight-row">' +
+        '<div class="sp-info">' +
+          '<div class="sp-label" title="' + escHtml(r.dest) + '">' + escHtml(r.dest) +
+            '<span class="vector-dest-badge">' + escHtml(jPageLabel(r.page)) + '</span></div>' +
+          '<div class="sp-bar-wrap" style="background:none"><span style="font-size:0.78em;color:#8c887f">' + escHtml(txt.slice(0, 70)) + '</span></div>' +
+        '</div>' +
+        '<div class="sp-meta"><span class="sp-views">' + escHtml(fmtDate(r.ts)) + '</span></div>' +
+      '</div>';
+    }).join('') + '</div>';
+  }
+}
+
+document.getElementById('vector-refresh-btn').addEventListener('click', renderVectorTab);
+
+document.getElementById('vector-export-btn').addEventListener('click', function() {
+  var v = buildVector();
+  var blob = new Blob([JSON.stringify(v, null, 2)], { type: 'application/json' });
+  var url  = URL.createObjectURL(blob);
+  var a    = document.createElement('a');
+  a.href = url; a.download = 'vector-' + Date.now() + '.json'; a.click();
   URL.revokeObjectURL(url);
 });
 </script>
