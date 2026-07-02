@@ -193,6 +193,7 @@ Password-protected (SHA-256 hash in localStorage, 5-attempt lockout). Session tr
 | Depth       | Scroll reach & read-through — per-page scroll funnel, drop-off points, avg depth     |
 | Orbit       | Returning visitors & loyalty — new vs returning, visit frequency, recency, loyalty leaderboard |
 | Beacon      | Conversion funnel & goal tracking — path-to-inquiry funnel, drop-off points, CTA clicks, converting sources |
+| Relay       | Outbound clicks & off-site destinations — where visitors click *to* when they leave, by destination & channel |
 
 ---
 
@@ -564,6 +565,46 @@ Answers the question the rest of the analytics family structurally cannot: **do 
 
 ---
 
+## Relay — Outbound Clicks & Off-site Destinations (Admin → Relay tab) — NEW TOOL
+
+Closes the loop the other tools leave open. **Compass** answers where traffic comes *from*; **Journey** answers where it goes *within* the site and which page it leaves *from*; **Relay** answers what visitors click *to* when they leave — which social profile, project page, commission form, or contact link actually pulls them onward. For an artist whose whole funnel is "portfolio → follow / commission / project", this is the clearest single signal of what the site is successfully sending people toward.
+
+**Why it's genuinely new:** every existing analytics tool measures on-site behaviour or inbound acquisition. None reports the *destination* of outbound clicks. The raw data already exists — `analytics.js` records a `click` event with an `href` for every click — but until now nothing aggregated the off-site ones. Relay is a pure read layer over those events.
+
+**No new storage key** — derived live from the `click` events in `_gam_analytics_v1`, the same read-only pattern as Revenue/Journey/Compass/Beacon.
+
+**How it works:**
+1. `buildRelay()` walks every `click` event and passes its `href` through `relayDest(href)`, which decides whether the click leaves the site:
+   - `#…` anchors and relative/own-host URLs (`antryab.com`, `gamboiuwu.github.io`) → internal, ignored
+   - `mailto:` → **Email**, `tel:` → **Phone** (both `contact`)
+   - absolute `http(s)://` to any other host → outbound, keyed by www-stripped hostname
+2. `relayKind(host, href)` buckets each outbound click into a channel:
+   - **commission** — href contains `newcommission` / `#commission-form` / `notion.so` / `notion.site`
+   - **project** — the artist's own external properties (`yuka.design`, `nyfurs.org`, `artstation.com`, `letfexraut.bandcamp.com`), checked *before* social so ArtStation/Bandcamp read as portfolio, not feed
+   - **social** / **search** — delegated to the shared `compassClassify(host)`
+   - **contact** — mailto/tel; **other** — anything else
+3. Aggregates destination counts, channel counts, per-page outbound counts, and a recent-clicks list.
+
+**Admin tab sections:**
+- **Stats**: Outbound Clicks, Off-site Destinations (unique hosts), Outbound Rate (outbound ÷ all clicks), Top Destination
+- **Destination Mix**: canvas donut + legend (Projects / Social / Commission / Contact / Search / Other), centre shows total outbound clicks
+- **Top Destinations**: ranked bars of the actual off-site links, each tagged with its channel
+- **Outbound Clicks by Page**: which pages send the most visitors off-site
+- **Recent Outbound Clicks**: latest off-site clicks with destination, source page, channel, and time
+
+**Derived schema (for export):**
+```js
+{ total, clicks, dests:{host:count}, destKind:{host:kind}, channels:{project,social,commission,contact,search,other}, byPage:{page:count}, recent:[{dest,kind,href,page,ts}] }
+```
+
+**Technical notes:**
+- Donut + swatches use the warm amber/sand palette (`rgba(201,168,124…)`, clay/olive/sand variants) — no blue/pink. Reuses `drawCompassDonut`'s approach, `jBarList()`, `analytics-stat-chip`, and `.compass-legend` styles; no new CSS classes.
+- Tab renders lazily on click, same pattern as Beacon/Orbit/Depth/Compass/Journey/Pulse/Spotlight/Revenue.
+
+**API:** none new on `CommissionData` — uses `CommissionData.getAnalytics()`. Logic lives in `renderRelayTab()` / `buildRelay()` / `relayDest()` / `relayKind()` inside `admin/index.html`.
+
+---
+
 ## Commission System
 
 ### Pages
@@ -641,4 +682,4 @@ Stored in `_gam_prices_v1`. Three sections: `digital`, `stickers`, `animation`. 
 
 ---
 
-*Last updated: 2026-06-29*
+*Last updated: 2026-07-02*

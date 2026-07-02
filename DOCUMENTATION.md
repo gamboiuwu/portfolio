@@ -51,6 +51,7 @@ The tracking answers the questions the portfolio owner actually cares about:
 | Which artworks hold attention? | `tile_hover`, spotlight viewport time | Artwork Engagement / Spotlight |
 | Are visitors *returning*? | `pv` `vid` (persistent visitor id) | **Orbit → New vs. Returning / Loyalty** |
 | Do visitors become clients? (conversion) | `goal` (CTA click → form open → submit) | **Beacon → Conversion Funnel** |
+| Where do they click *off to* (off-site)? | `click` `href` (outbound links) | **Relay → Top Destinations / Destination Mix** |
 
 See `CLAUDE.md` → Analytics System for the exact event field schema.
 
@@ -116,6 +117,17 @@ Inquiries, Feedback.
   - **Commission CTA Clicks by Page** — which pages do the persuading
   - **Which Sources Convert** — channels ranked by inquiries, not just visits
   - **Recent Inquiries** — latest submissions with type + timestamp
+  - Derived live from `_gam_analytics_v1` — no new storage key.
+- **Relay** *(newest)* — **outbound clicks & off-site destinations**. Compass shows
+  where traffic comes *from* and Journey shows which page visitors leave *from*;
+  Relay shows what they click *to* when they go off-site — which social profile,
+  project page, commission form, or contact link pulls them onward. From the `href`
+  on existing `click` events it builds:
+  - Stats: outbound clicks, unique destinations, outbound rate, top destination
+  - **Destination Mix** — donut over Projects / Social / Commission / Contact / Search / Other
+  - **Top Destinations** — the actual off-site links, ranked and channel-tagged
+  - **Outbound Clicks by Page** — which pages send visitors onward
+  - **Recent Outbound Clicks** — latest off-site clicks with destination + source page
   - Derived live from `_gam_analytics_v1` — no new storage key.
 - **Revenue** — financial dashboard derived from the commission Queue: total earned,
   pipeline value, monthly earnings chart, revenue by type, top clients.
