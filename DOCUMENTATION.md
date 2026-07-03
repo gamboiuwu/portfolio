@@ -51,6 +51,7 @@ The tracking answers the questions the portfolio owner actually cares about:
 | Which artworks hold attention? | `tile_hover`, spotlight viewport time | Artwork Engagement / Spotlight |
 | Are visitors *returning*? | `pv` `vid` (persistent visitor id) | **Orbit → New vs. Returning / Loyalty** |
 | Do visitors become clients? (conversion) | `goal` (CTA click → form open → submit) | **Beacon → Conversion Funnel** |
+| Where do they click *out* to (socials/shops)? | `click` `href` (external targets) | **Relay → Destination Mix / Top Destinations** |
 
 See `CLAUDE.md` → Analytics System for the exact event field schema.
 
@@ -105,7 +106,7 @@ Inquiries, Feedback.
   (`_gam_visitor_v1`) so a repeat visitor no longer looks brand-new: new vs.
   returning donut, visit-frequency and recency buckets, and a loyalty leaderboard.
   The only analytics tool that needs its own storage key.
-- **Beacon** *(newest)* — **conversion funnel & goal tracking**. Where every other
+- **Beacon** — **conversion funnel & goal tracking**. Where every other
   tool measures attention, Beacon measures *outcome*: how many visitors travel the
   path to a commission inquiry. From lightweight `goal` events (commission CTA clicks,
   form-open, contact-step, submit) plus pageviews it builds:
@@ -116,6 +117,16 @@ Inquiries, Feedback.
   - **Commission CTA Clicks by Page** — which pages do the persuading
   - **Which Sources Convert** — channels ranked by inquiries, not just visits
   - **Recent Inquiries** — latest submissions with type + timestamp
+  - Derived live from `_gam_analytics_v1` — no new storage key.
+- **Relay** *(newest)* — **outbound reach & link-click tracking**. The outbound
+  mirror of Compass: Compass shows where visitors *come from*, Relay shows where
+  they *go* when they click a link off the portfolio. From the `href` on every
+  `click` event it builds:
+  - Stats: outbound clicks, unique destinations, social share %, top destination
+  - **Destination Mix** — donut split by kind: social / shop & projects / external / email
+  - **Top Destinations** — external hosts ranked (friendly-named: X, Instagram, ArtStation, Yuka…)
+  - **Where They Leave From** — which pages generate the most outbound clicks
+  - **Recent Outbound Clicks** — latest link-outs with destination, origin page, time
   - Derived live from `_gam_analytics_v1` — no new storage key.
 - **Revenue** — financial dashboard derived from the commission Queue: total earned,
   pipeline value, monthly earnings chart, revenue by type, top clients.

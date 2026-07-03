@@ -856,6 +856,10 @@
 		.orbit-donut-row { display: flex; gap: 1.4em; align-items: center; flex-wrap: wrap; }
 		#orbit-donut { display: block; flex-shrink: 0; }
 
+		/* Relay tab — outbound link tracking (reuses compass donut + legend) */
+		.relay-donut-row { display: flex; gap: 1.4em; align-items: center; flex-wrap: wrap; }
+		#relay-donut { display: block; flex-shrink: 0; }
+
 		/* Beacon tab — conversion funnel */
 		.beacon-stage { padding: 0.55em 0; border-bottom: 1px solid rgba(255,255,255,0.06); }
 		.beacon-stage:last-child { border-bottom: none; }
@@ -945,6 +949,7 @@
 				<button class="admin-tab" data-tab="depth">Depth</button>
 				<button class="admin-tab" data-tab="orbit">Orbit</button>
 				<button class="admin-tab" data-tab="beacon">Beacon</button>
+				<button class="admin-tab" data-tab="relay">Relay</button>
 			</div>
 
 			<!-- ============ GALLERY TAB ============ -->
@@ -1771,6 +1776,47 @@
 							<h3>Recent Inquiries</h3>
 							<p class="hint">The most recent completed submissions, with the commission type and when they landed. Cross-check against the Inquiries tab for the full message.</p>
 							<div id="beacon-recent"></div>
+						</div>
+
+					</div>
+
+					<div id="tab-relay" class="tab-content">
+
+						<div class="admin-card">
+							<h3>Relay — Outbound Reach &amp; Link Clicks</h3>
+							<p class="hint">Compass answers where visitors <em>come from</em>; Relay is its mirror — where they <em>go</em> when they click a link off the portfolio. Which social platform, shop, or external destination actually pulls the click-throughs, and which page sends them. The single clearest signal of which off-site profile the portfolio is driving traffic to. Derived live from the click events analytics already records (each carries its link target) &mdash; no new storage key.</p>
+							<div id="relay-stats" class="analytics-stats" style="margin-bottom:1em"></div>
+							<div style="display:flex;gap:0.5em;flex-wrap:wrap">
+								<button class="button small" id="relay-refresh-btn">Refresh</button>
+								<button class="button small" id="relay-export-btn">Export JSON</button>
+							</div>
+						</div>
+
+						<div class="admin-card">
+							<h3>Destination Mix</h3>
+							<p class="hint">Every outbound click split by kind of destination: social platforms, your shops &amp; projects (Yuka, NYFurs, commission form&hellip;), other external sites, and email. Tells you at a glance whether the portfolio is feeding your socials, your storefronts, or leaking to unrelated links.</p>
+							<div class="relay-donut-row">
+								<canvas id="relay-donut" width="180" height="180"></canvas>
+								<div id="relay-legend" class="compass-legend"></div>
+							</div>
+						</div>
+
+						<div class="admin-card">
+							<h3>Top Destinations</h3>
+							<p class="hint">Ranked list of the external destinations visitors click through to. This is where the portfolio is actually sending your audience &mdash; the profiles and shops worth keeping current, and the ones nobody is clicking.</p>
+							<div id="relay-destinations"></div>
+						</div>
+
+						<div class="admin-card">
+							<h3>Where They Leave From</h3>
+							<p class="hint">Which pages generate the most outbound clicks. A page sending lots of traffic off-site is doing its referral job; one with none may be missing the links your audience is looking for.</p>
+							<div id="relay-pages"></div>
+						</div>
+
+						<div class="admin-card">
+							<h3>Recent Outbound Clicks</h3>
+							<p class="hint">The latest link-outs, with destination, the page they left from, and when. A quick pulse on what's catching attention right now.</p>
+							<div id="relay-recent"></div>
 						</div>
 
 					</div>
@@ -2783,6 +2829,9 @@ document.addEventListener('click', function(e){
   }
   if (e.target.dataset && e.target.dataset.tab === 'beacon') {
     renderBeaconTab();
+  }
+  if (e.target.dataset && e.target.dataset.tab === 'relay') {
+    renderRelayTab();
   }
 });
 
@@ -5137,6 +5186,232 @@ document.getElementById('beacon-export-btn').addEventListener('click', function(
   var url  = URL.createObjectURL(blob);
   var a    = document.createElement('a');
   a.href = url; a.download = 'beacon-' + Date.now() + '.json'; a.click();
+  URL.revokeObjectURL(url);
+});
+
+/* ================================================================
+   RELAY TAB — outbound reach & link-click tracking
+   The outbound mirror of Compass. Compass answers where visitors
+   COME FROM; Relay answers where they GO when they click a link off
+   the portfolio — which social platform, shop, or external
+   destination pulls the click-throughs, and from which page.
+   Derived live from the `click` events analytics already records
+   (each carries its `href`) — no new storage key.
+================================================================ */
+
+/* Friendly display names for the destinations that matter to the artist. */
+var RELAY_NAMES = {
+  'x.com': 'X (Twitter)', 'twitter.com': 'X (Twitter)', 't.co': 'X (Twitter)',
+  'instagram.com': 'Instagram', 'l.instagram.com': 'Instagram',
+  'tiktok.com': 'TikTok',
+  'artstation.com': 'ArtStation',
+  'bandcamp.com': 'Bandcamp',
+  't.me': 'Telegram', 'telegram.me': 'Telegram', 'telegram.org': 'Telegram',
+  'discord.com': 'Discord', 'discordapp.com': 'Discord', 'discord.gg': 'Discord',
+  'youtube.com': 'YouTube', 'youtu.be': 'YouTube',
+  'yuka.design': 'Yuka Designs',
+  'nyfurs.org': 'New York Furs',
+  'notion.so': 'Commission Form', 'notion.site': 'Commission Form',
+  'ko-fi.com': 'Ko-fi', 'patreon.com': 'Patreon', 'gumroad.com': 'Gumroad',
+  'email': 'Email (mailto)'
+};
+
+function relayFriendly(host) {
+  if (!host) return host;
+  if (RELAY_NAMES[host]) return RELAY_NAMES[host];
+  var bare = host.replace(/^(www|l|m|out|mobile)\./, '');
+  return RELAY_NAMES[bare] || host;
+}
+
+/* Owned shops / project sites — count as "shop & projects", not generic external. */
+var RELAY_PROJECT_HOSTS = ['yuka.design', 'nyfurs.org', 'notion.so', 'notion.site',
+  'ko-fi.com', 'patreon.com', 'gumroad.com'];
+
+/* Classify an outbound href into a Relay channel + host, or null to skip
+   (empty, in-page anchors, tel:, and same-site internal links). */
+function relayChannel(href) {
+  if (!href) return null;
+  href = ('' + href).trim();
+  if (!href || href.charAt(0) === '#') return null;
+  if (/^mailto:/i.test(href)) return { channel: 'email', host: 'email' };
+  if (/^tel:/i.test(href) || /^javascript:/i.test(href)) return null;
+  var m = href.match(/^https?:\/\/([^/]+)/i);
+  if (!m) return null; /* relative / internal link — not an outbound click */
+  var host = m[1].replace(/^www\./i, '').toLowerCase();
+  var i;
+  /* Own hosts = internal navigation, not outbound */
+  for (i = 0; i < COMPASS_OWN_HOSTS.length; i++) {
+    if (host === COMPASS_OWN_HOSTS[i] || host.indexOf('.' + COMPASS_OWN_HOSTS[i]) !== -1) return null;
+  }
+  for (i = 0; i < COMPASS_SOCIAL.length; i++) {
+    if (host === COMPASS_SOCIAL[i] || host.indexOf('.' + COMPASS_SOCIAL[i]) !== -1) return { channel: 'social', host: host };
+  }
+  for (i = 0; i < RELAY_PROJECT_HOSTS.length; i++) {
+    if (host === RELAY_PROJECT_HOSTS[i] || host.indexOf('.' + RELAY_PROJECT_HOSTS[i]) !== -1) return { channel: 'project', host: host };
+  }
+  return { channel: 'external', host: host };
+}
+
+function buildRelay() {
+  var events = CommissionData.getAnalytics() || [];
+  var channels = { social: 0, project: 0, external: 0, email: 0 };
+  var hosts    = {};   /* host -> count */
+  var pages    = {};   /* page -> outbound-click count */
+  var recent   = [];   /* enriched outbound-click events */
+  var total    = 0;
+
+  events.forEach(function(e) {
+    if (e.type !== 'click') return;
+    var info = relayChannel(e.href);
+    if (!info) return;
+    total++;
+    channels[info.channel]++;
+    hosts[info.host] = (hosts[info.host] || 0) + 1;
+    var pg = e.page || '/';
+    pages[pg] = (pages[pg] || 0) + 1;
+    recent.push({ host: info.host, channel: info.channel, page: pg, href: e.href, text: e.text || '', ts: e.ts });
+  });
+
+  recent.sort(function(a, b){ return (b.ts || 0) - (a.ts || 0); });
+
+  return { channels: channels, hosts: hosts, pages: pages, recent: recent, total: total };
+}
+
+/* Warm amber/sand palette — consistent with Compass/Orbit donuts. */
+var RELAY_COLORS = {
+  social:   'rgba(176,122,74,0.92)',
+  project:  'rgba(201,168,124,0.92)',
+  external: 'rgba(214,190,150,0.92)',
+  email:    'rgba(150,168,110,0.90)'
+};
+var RELAY_CH_LABELS = { social: 'Social', project: 'Shop & Projects', external: 'External', email: 'Email' };
+var RELAY_CH_ORDER  = ['social', 'project', 'external', 'email'];
+
+function drawRelayDonut(r) {
+  var canvas = document.getElementById('relay-donut');
+  if (!canvas) return;
+  var ctx = canvas.getContext('2d');
+  var W = canvas.width, H = canvas.height;
+  ctx.clearRect(0, 0, W, H);
+  var cx = W / 2, cy = H / 2, rOut = 78, rIn = 46;
+
+  var tot = RELAY_CH_ORDER.reduce(function(s, k){ return s + r.channels[k]; }, 0);
+  if (!tot) {
+    ctx.fillStyle = '#444';
+    ctx.font = '12px -apple-system, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('No outbound clicks yet.', cx, cy);
+    return;
+  }
+
+  var start = -Math.PI / 2;
+  RELAY_CH_ORDER.forEach(function(k) {
+    var v = r.channels[k];
+    if (!v) return;
+    var ang = (v / tot) * Math.PI * 2;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.arc(cx, cy, rOut, start, start + ang);
+    ctx.closePath();
+    ctx.fillStyle = RELAY_COLORS[k];
+    ctx.fill();
+    start += ang;
+  });
+
+  ctx.globalCompositeOperation = 'destination-out';
+  ctx.beginPath();
+  ctx.arc(cx, cy, rIn, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.globalCompositeOperation = 'source-over';
+
+  ctx.fillStyle = '#c9a87c';
+  ctx.font = 'bold 22px -apple-system, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(tot, cx, cy - 6);
+  ctx.fillStyle = '#8c887f';
+  ctx.font = '10px "Courier New", monospace';
+  ctx.fillText('CLICKS', cx, cy + 12);
+}
+
+function renderRelayTab() {
+  var r = buildRelay();
+  var total = r.total || 0;
+
+  function chip(num, label) {
+    return '<div class="analytics-stat-chip"><span class="asc-num">' + num +
+      '</span><span class="asc-label">' + label + '</span></div>';
+  }
+
+  var destCount = Object.keys(r.hosts).length;
+  var socialPct = total ? Math.round((r.channels.social / total) * 100) : 0;
+
+  /* Top destination by host count */
+  var topHost = '—', topMax = -1;
+  Object.keys(r.hosts).forEach(function(h){
+    if (r.hosts[h] > topMax) { topMax = r.hosts[h]; topHost = relayFriendly(h); }
+  });
+  if (topMax <= 0) topHost = '—';
+
+  document.getElementById('relay-stats').innerHTML =
+    chip(total,             'Outbound Clicks') +
+    chip(destCount,         'Destinations')    +
+    chip(socialPct + '%',   'Social Share')    +
+    chip(topHost,           'Top Destination');
+
+  /* ── Destination mix donut + legend ── */
+  drawRelayDonut(r);
+  var legendEl = document.getElementById('relay-legend');
+  legendEl.innerHTML = RELAY_CH_ORDER.map(function(k) {
+    var v = r.channels[k];
+    var share = total ? Math.round((v / total) * 100) : 0;
+    return '<div class="compass-legend-item">' +
+      '<span class="compass-legend-swatch" style="background:' + RELAY_COLORS[k] + '"></span>' +
+      '<span>' + RELAY_CH_LABELS[k] + '</span>' +
+      '<span class="compass-legend-val">' + v + ' · ' + share + '%</span>' +
+    '</div>';
+  }).join('');
+
+  /* ── Top destinations ── */
+  var destRows = Object.keys(r.hosts).map(function(h){
+    return { label: relayFriendly(h), count: r.hosts[h] };
+  }).sort(function(a, b){ return b.count - a.count; }).slice(0, 15);
+  document.getElementById('relay-destinations').innerHTML =
+    jBarList(destRows, total, { suffix: function(row, share){ return share + '% of outbound'; } });
+
+  /* ── Where they leave from ── */
+  var pageRows = Object.keys(r.pages).map(function(pg){
+    return { label: jPageLabel(pg), count: r.pages[pg] };
+  }).sort(function(a, b){ return b.count - a.count; });
+  document.getElementById('relay-pages').innerHTML =
+    jBarList(pageRows, total, { suffix: function(row, share){ return share + '% of outbound'; } });
+
+  /* ── Recent outbound clicks ── */
+  var recentEl = document.getElementById('relay-recent');
+  if (!r.recent.length) {
+    recentEl.innerHTML = '<p style="color:#444;font-size:0.85em;padding:0.5em 0">No outbound clicks recorded yet. When visitors click a social or external link, they show up here.</p>';
+  } else {
+    recentEl.innerHTML = '<div class="spotlight-board">' + r.recent.slice(0, 20).map(function(c){
+      var dest = relayFriendly(c.host);
+      return '<div class="spotlight-row">' +
+        '<div class="sp-info">' +
+          '<div class="sp-label" title="' + escHtml(c.href) + '">' + escHtml(dest) + '</div>' +
+          '<div class="sp-sub" style="font-size:0.78em;color:#8c887f">from ' + escHtml(jPageLabel(c.page)) + '</div>' +
+        '</div>' +
+        '<div class="sp-meta"><span class="sp-views">' + escHtml(fmtDate(c.ts)) + '</span></div>' +
+      '</div>';
+    }).join('') + '</div>';
+  }
+}
+
+document.getElementById('relay-refresh-btn').addEventListener('click', renderRelayTab);
+
+document.getElementById('relay-export-btn').addEventListener('click', function() {
+  var r = buildRelay();
+  var blob = new Blob([JSON.stringify(r, null, 2)], { type: 'application/json' });
+  var url  = URL.createObjectURL(blob);
+  var a    = document.createElement('a');
+  a.href = url; a.download = 'relay-' + Date.now() + '.json'; a.click();
   URL.revokeObjectURL(url);
 });
 </script>
