@@ -193,6 +193,7 @@ Password-protected (SHA-256 hash in localStorage, 5-attempt lockout). Session tr
 | Depth       | Scroll reach & read-through — per-page scroll funnel, drop-off points, avg depth     |
 | Orbit       | Returning visitors & loyalty — new vs returning, visit frequency, recency, loyalty leaderboard |
 | Beacon      | Conversion funnel & goal tracking — path-to-inquiry funnel, drop-off points, CTA clicks, converting sources |
+| Relay       | Outbound reach & link clicks — destination mix (social/shop/external/email), top destinations, exit pages, recent link-outs |
 
 ---
 
@@ -564,6 +565,41 @@ Answers the question the rest of the analytics family structurally cannot: **do 
 
 ---
 
+## Relay — Outbound Reach & Link-Click Tracking (Admin → Relay tab) — NEW TOOL
+
+The **outbound mirror of Compass**. Compass answers where visitors *come from* (inbound acquisition); Relay answers where they *go* when they click a link off the portfolio — which social platform, shop, or external destination actually pulls the click-throughs, and from which page. For an artist whose portfolio exists partly to funnel an audience to their socials and storefronts, this is the single clearest read on whether that funnel is working and which profile it feeds.
+
+**Why it's genuinely new:** every existing analytics tool measures *on-site* behaviour (attention, flow, timing, scroll, retention, conversion) or *inbound* traffic (Compass). None measures *outbound* click-through — where the portfolio sends people when they leave via a link. Journey's "exit" only marks the last page viewed, not which external link was clicked.
+
+**No new storage key** — derived live from the `click` events `analytics.js` already records. Each click event carries its link target (`href`), so outbound destinations are reconstructed with no schema change, the same read-only pattern as Compass/Journey/Beacon.
+
+**How it works:**
+1. `buildRelay()` walks every `click` event and passes its `href` through `relayChannel(href)`.
+2. `relayChannel()` skips non-outbound links — empty hrefs, in-page anchors (`#…`), `tel:`/`javascript:`, relative/internal paths, and links back to own hosts (`antryab.com`, `gamboiuwu.github.io`). `mailto:` → **email**.
+3. Remaining external hosts (www-stripped) are classified: **social** (reuses `COMPASS_SOCIAL` — X, Instagram, TikTok, ArtStation, Bandcamp, Telegram, Discord, YouTube, …), **project** (`RELAY_PROJECT_HOSTS` — yuka.design, nyfurs.org, Notion commission form, Ko-fi, Patreon, Gumroad), else **external**.
+4. Aggregates channel counts, per-host counts, per-page counts, and a recent-clicks list. `relayFriendly(host)` maps known hosts to display names (e.g. `x.com` → "X (Twitter)", `yuka.design` → "Yuka Designs").
+
+**Admin tab sections:**
+- **Stats**: Outbound Clicks, Destinations (unique hosts), Social Share %, Top Destination
+- **Destination Mix**: canvas donut + legend (social / shop & projects / external / email); centre shows total outbound clicks
+- **Top Destinations**: ranked bar list of external destinations (friendly-named), % of outbound each
+- **Where They Leave From**: pages ranked by outbound clicks generated
+- **Recent Outbound Clicks**: latest link-outs with destination, origin page, and timestamp
+
+**Derived schema (for export):**
+```js
+{ channels:{social,project,external,email}, hosts:{host:count}, pages:{page:count}, recent:[{host,channel,page,href,text,ts}], total }
+```
+
+**Technical notes:**
+- Donut + swatches use the warm amber/sand palette (`rgba(176,122,74…)` social, `rgba(201,168,124…)` project, `rgba(214,190,150…)` external, muted olive email) — no blue/pink.
+- Reuses `jBarList()`, `analytics-stat-chip`, `compass-legend`/`compass-donut-row` styles, `escHtml()`, `fmtDate()`, `jPageLabel()`, and the `COMPASS_OWN_HOSTS`/`COMPASS_SOCIAL` host lists; only a small `.relay-donut-row` wrapper is new.
+- Tab renders lazily on click, same pattern as Beacon/Orbit/Depth/Compass/Journey/Pulse/Spotlight/Revenue.
+
+**API:** none new on `CommissionData` — uses `CommissionData.getAnalytics()`. Logic lives in `renderRelayTab()` / `buildRelay()` / `relayChannel()` inside `admin/index.html`.
+
+---
+
 ## Commission System
 
 ### Pages
@@ -641,4 +677,4 @@ Stored in `_gam_prices_v1`. Three sections: `digital`, `stickers`, `animation`. 
 
 ---
 
-*Last updated: 2026-06-29*
+*Last updated: 2026-07-03*
