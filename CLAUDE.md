@@ -194,6 +194,7 @@ Password-protected (SHA-256 hash in localStorage, 5-attempt lockout). Session tr
 | Orbit       | Returning visitors & loyalty — new vs returning, visit frequency, recency, loyalty leaderboard |
 | Beacon      | Conversion funnel & goal tracking — path-to-inquiry funnel, drop-off points, CTA clicks, converting sources |
 | Relay       | Outbound reach & link clicks — destination mix (social/shop/external/email), top destinations, exit pages, recent link-outs |
+| Snag        | UX friction & rage-click detector — friction composition donut, rage-click hotspots, dead-click elements, friction by page, recent friction feed |
 
 ---
 
@@ -600,6 +601,45 @@ The **outbound mirror of Compass**. Compass answers where visitors *come from* (
 
 ---
 
+## Snag — UX Friction & Rage-Click Detector (Admin → Snag tab) — NEW TOOL
+
+Answers a question no other analytics tool touches: **where does the site frustrate visitors?** Compass = where traffic comes from, Journey = where it goes, Pulse = when, Spotlight = which artwork holds attention, Depth = read-through, Orbit = loyalty, Beacon = conversion, Relay = outbound clicks, Revenue = money — every one measures *attention* or *audience*. **Snag = UX friction**: the exact spots where visitors click in frustration or click something that does nothing. These are the moments quietly bleeding engagement, and until now they were invisible.
+
+**Why it's genuinely new:** every existing tool measures *intent* or *destination*. None measures *breakage* — the gap between what a visitor expected to happen when they clicked and what actually happened. Journey's "exit" tells you a session ended, not that a dead button caused it. Snag is the site's UX health check.
+
+**No new storage key** — derived live from the `click` events `analytics.js` already records. Each click already carries its viewport position (`xp`/`yp`, 0–1 fractions), target element label (`el` = `tag.class`), link target (`href`), and text, so both friction signals are reconstructed with zero schema change — the same read-only pattern as Compass/Journey/Beacon/Relay.
+
+**Two friction signals:**
+1. **Rage clicks** — `buildSnag()` groups clicks by `sid`, walks each session in time order, and forms a burst when 3+ clicks land in the same spot (Δ`xp` ≤ 0.10, Δ`yp` ≤ 0.08) with < 2.5 s between consecutive clicks. Each burst is one *rage incident* (a broken, slow, or misleading element the visitor kept hammering).
+2. **Dead clicks** — a click whose `href` is empty/`#`/`javascript:` **and** whose element tag is non-interactive (not `a`/`button`/`input`/`select`/`textarea`/`label`/`summary`/`option`). The visitor clicked something that looks clickable and got no response — often a cue to actually make it a link/button.
+
+**Friction rate** = share of all clicks that are frictional (union of rage-burst members and dead clicks).
+
+**Admin tab sections:**
+- **Stats**: Total Clicks, Rage Incidents, Dead Clicks, Friction Rate
+- **Friction Composition**: canvas donut + legend splitting every click into clean / rage / dead; centre shows the overall friction rate %
+- **Rage-Click Hotspots**: rage incidents aggregated by element + page, ranked by total angry clicks, annotated with burst count
+- **Dead-Click Elements**: non-interactive elements ranked by futile-click count (what people expect to be interactive)
+- **Friction by Page**: pages ranked by friction rate (frictional clicks ÷ total clicks on that page)
+- **Recent Friction Events**: latest rage bursts and dead clicks, tagged `RAGE`/`DEAD`, with element, page, and time
+
+**Derived schema (for export):**
+```js
+{ total, rageClicks, deadClicks, cleanClicks, frictional, rageIncidents, frictionRate,
+  rageAgg:{key:{label,page,count,incidents}}, deadByEl:{key:{label,page,count}},
+  byPage:{page:{total,friction}}, recent:[{kind,label,page,count,ts}] }
+```
+
+**Technical notes:**
+- Donut + swatches use the warm amber/clay palette (`rgba(150,104,62…)` rage, `rgba(201,168,124…)` dead, muted `rgba(214,190,150,0.45)` clean) — no blue/pink.
+- Reuses `jBarList()`, `analytics-stat-chip`, `compass-legend`, `escHtml()`, `fmtDate()`, `jPageLabel()`; only a small `.snag-donut-row` wrapper and `.snag-tag` badge are new.
+- Tab renders lazily on click, same pattern as Relay/Beacon/Orbit/Depth/Compass/Journey/Pulse/Spotlight/Revenue.
+- Rage detection is per session, so bursts are attributed to one visitor; overlapping rage+dead clicks are counted once toward the friction rate.
+
+**API:** none new on `CommissionData` — uses `CommissionData.getAnalytics()`. Logic lives in `renderSnagTab()` / `buildSnag()` inside `admin/index.html`.
+
+---
+
 ## Commission System
 
 ### Pages
@@ -677,4 +717,4 @@ Stored in `_gam_prices_v1`. Three sections: `digital`, `stickers`, `animation`. 
 
 ---
 
-*Last updated: 2026-07-03*
+*Last updated: 2026-07-06*

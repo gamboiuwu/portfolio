@@ -52,6 +52,7 @@ The tracking answers the questions the portfolio owner actually cares about:
 | Are visitors *returning*? | `pv` `vid` (persistent visitor id) | **Orbit → New vs. Returning / Loyalty** |
 | Do visitors become clients? (conversion) | `goal` (CTA click → form open → submit) | **Beacon → Conversion Funnel** |
 | Where do they click *out* to (socials/shops)? | `click` `href` (external targets) | **Relay → Destination Mix / Top Destinations** |
+| Where does the site *frustrate* them? | `click` position + target (rage / dead clicks) | **Snag → Rage Hotspots / Dead-Click Elements** |
 
 See `CLAUDE.md` → Analytics System for the exact event field schema.
 
@@ -128,6 +129,18 @@ Inquiries, Feedback.
   - **Where They Leave From** — which pages generate the most outbound clicks
   - **Recent Outbound Clicks** — latest link-outs with destination, origin page, time
   - Derived live from `_gam_analytics_v1` — no new storage key.
+- **Snag** *(newest)* — **UX friction & rage-click detector**. Every other tool
+  measures where attention lands or where traffic comes and goes; Snag is the first
+  to measure where the site *fights back*. From the position + target already on every
+  `click` event it reconstructs two friction signals:
+  - **Rage clicks** — 3+ clicks by one session in the same spot within a short window
+    (a broken, slow, or misleading element)
+  - **Dead clicks** — clicks on a non-interactive element with no link target (the
+    visitor expected a response and got none)
+  - Sections: friction-rate stats, a clean/rage/dead **composition donut**, **Rage-Click
+    Hotspots**, **Dead-Click Elements**, **Friction by Page**, and a tagged **Recent
+    Friction Events** feed
+  - Derived live from `_gam_analytics_v1` — no new storage key.
 - **Revenue** — financial dashboard derived from the commission Queue: total earned,
   pipeline value, monthly earnings chart, revenue by type, top clients.
 - **Palette** — extract dominant colors from an uploaded artwork (k-means), save
@@ -158,4 +171,4 @@ Inquiries, Feedback.
 - `assets/js/analytics.js` owns all client-side event capture.
 - Keep the gallery light-mode and let the artwork lead; cyber accents stay subtle.
 
-*Last updated: 2026-06-29*
+*Last updated: 2026-07-06*

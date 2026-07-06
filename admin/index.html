@@ -860,6 +860,13 @@
 		.relay-donut-row { display: flex; gap: 1.4em; align-items: center; flex-wrap: wrap; }
 		#relay-donut { display: block; flex-shrink: 0; }
 
+		/* Snag tab — UX friction / rage-click (reuses compass donut + legend + spotlight bars) */
+		.snag-donut-row { display: flex; gap: 1.4em; align-items: center; flex-wrap: wrap; }
+		#snag-donut { display: block; flex-shrink: 0; }
+		.snag-tag { display: inline-block; font-family: 'Courier New', monospace; font-size: 0.62em; letter-spacing: 0.08em; text-transform: uppercase; padding: 0.12em 0.5em; border-radius: 3px; vertical-align: middle; margin-right: 0.5em; }
+		.snag-tag.rage { background: rgba(150,104,62,0.30); color: #d8a97a; }
+		.snag-tag.dead { background: rgba(201,168,124,0.22); color: #c9a87c; }
+
 		/* Beacon tab — conversion funnel */
 		.beacon-stage { padding: 0.55em 0; border-bottom: 1px solid rgba(255,255,255,0.06); }
 		.beacon-stage:last-child { border-bottom: none; }
@@ -950,6 +957,7 @@
 				<button class="admin-tab" data-tab="orbit">Orbit</button>
 				<button class="admin-tab" data-tab="beacon">Beacon</button>
 				<button class="admin-tab" data-tab="relay">Relay</button>
+				<button class="admin-tab" data-tab="snag">Snag</button>
 			</div>
 
 			<!-- ============ GALLERY TAB ============ -->
@@ -1817,6 +1825,53 @@
 							<h3>Recent Outbound Clicks</h3>
 							<p class="hint">The latest link-outs, with destination, the page they left from, and when. A quick pulse on what's catching attention right now.</p>
 							<div id="relay-recent"></div>
+						</div>
+
+					</div>
+
+					<div id="tab-snag" class="tab-content">
+
+						<div class="admin-card">
+							<h3>Snag — UX Friction &amp; Rage Clicks</h3>
+							<p class="hint">Every other analytics tool measures where attention lands or where traffic comes and goes. Snag measures where the site <em>fights back</em> &mdash; the spots where visitors click repeatedly in frustration (rage clicks) or click something that looks interactive but does nothing (dead clicks). These are the friction points quietly costing you engagement. Derived live from the click events analytics already records (position + target) &mdash; no new storage key.</p>
+							<div id="snag-stats" class="analytics-stats" style="margin-bottom:1em"></div>
+							<div style="display:flex;gap:0.5em;flex-wrap:wrap">
+								<button class="button small" id="snag-refresh-btn">Refresh</button>
+								<button class="button small" id="snag-export-btn">Export JSON</button>
+							</div>
+						</div>
+
+						<div class="admin-card">
+							<h3>Friction Composition</h3>
+							<p class="hint">Every recorded click split into clean, rage (part of a rapid repeat-click burst in one spot), and dead (landed on a non-interactive element and went nowhere). The centre shows your overall friction rate &mdash; lower is a smoother site.</p>
+							<div class="snag-donut-row">
+								<canvas id="snag-donut" width="180" height="180"></canvas>
+								<div id="snag-legend" class="compass-legend"></div>
+							</div>
+						</div>
+
+						<div class="admin-card">
+							<h3>Rage-Click Hotspots</h3>
+							<p class="hint">Where visitors clicked the same spot 3+ times in quick succession &mdash; a strong signal of a broken, slow, or misleading element. Ranked by total angry clicks. Fix these first: they mark the exact places people expected something to happen and it didn't.</p>
+							<div id="snag-rage"></div>
+						</div>
+
+						<div class="admin-card">
+							<h3>Dead-Click Elements</h3>
+							<p class="hint">Non-interactive elements (images, cards, headings, plain text) that visitors clicked expecting a response. A high count means people think it <em>should</em> be a link or button &mdash; often worth actually making it one.</p>
+							<div id="snag-dead"></div>
+						</div>
+
+						<div class="admin-card">
+							<h3>Friction by Page</h3>
+							<p class="hint">Pages ranked by the share of their clicks that are frustrated (rage or dead). The highest-friction pages are where the layout or interactivity is confusing visitors most.</p>
+							<div id="snag-pages"></div>
+						</div>
+
+						<div class="admin-card">
+							<h3>Recent Friction Events</h3>
+							<p class="hint">The latest rage bursts and dead clicks, tagged by kind, with the element, page, and time. A live pulse on where the site is snagging people right now.</p>
+							<div id="snag-recent"></div>
 						</div>
 
 					</div>
@@ -2832,6 +2887,9 @@ document.addEventListener('click', function(e){
   }
   if (e.target.dataset && e.target.dataset.tab === 'relay') {
     renderRelayTab();
+  }
+  if (e.target.dataset && e.target.dataset.tab === 'snag') {
+    renderSnagTab();
   }
 });
 
@@ -5412,6 +5470,271 @@ document.getElementById('relay-export-btn').addEventListener('click', function()
   var url  = URL.createObjectURL(blob);
   var a    = document.createElement('a');
   a.href = url; a.download = 'relay-' + Date.now() + '.json'; a.click();
+  URL.revokeObjectURL(url);
+});
+
+/* ================================================================
+   SNAG TAB — UX friction & rage-click detector
+   Reconstructs UX-friction signals from the click events analytics
+   already records (position + target), no new storage key. Two signals:
+   • Rage clicks — 3+ clicks by one session in one spot within a short
+     window (broken / slow / misleading element).
+   • Dead clicks — clicks that land on a non-interactive element with no
+     link target (the visitor expected a response and got none).
+   ================================================================ */
+
+var SNAG_RAGE_WINDOW = 2500;   /* ms between clicks to still count as one burst */
+var SNAG_DX = 0.10, SNAG_DY = 0.08; /* proximity as a fraction of the viewport */
+var SNAG_INTERACTIVE = { a:1, button:1, input:1, select:1, textarea:1, label:1, summary:1, option:1 };
+
+function snagTagOf(el) { return String(el || '').split('.')[0].toLowerCase(); }
+
+function snagIsDead(e) {
+  var href = String(e.href || '').trim();
+  var real = href && href !== '#' && href.toLowerCase().indexOf('javascript:') !== 0;
+  if (real) return false;
+  return !SNAG_INTERACTIVE[snagTagOf(e.el)];
+}
+
+/* Friendly element label for display (drops the leading tag noise where a class exists). */
+function snagElLabel(e) {
+  var el   = String(e.el || '').trim();
+  var text = String(e.text || '').trim();
+  if (text) return text.slice(0, 48) + (el ? '  (' + el + ')' : '');
+  return el || '(element)';
+}
+
+function buildSnag() {
+  var events = CommissionData.getAnalytics() || [];
+  var clicks = events.filter(function(e){ return e.type === 'click'; });
+  clicks.sort(function(a, b){ return (a.ts || 0) - (b.ts || 0); });
+
+  var total = clicks.length;
+
+  /* Group by session so a burst is one person, then walk each session in time order. */
+  var bySid = {};
+  clicks.forEach(function(e){ (bySid[e.sid] = bySid[e.sid] || []).push(e); });
+
+  var rageIncidents = [];  /* {page, label, count, ts} */
+  Object.keys(bySid).forEach(function(sid) {
+    var arr = bySid[sid];  /* already globally time-sorted */
+    var i = 0;
+    while (i < arr.length) {
+      var a = arr[i], j = i + 1, cluster = [a];
+      while (j < arr.length) {
+        var b = arr[j], last = cluster[cluster.length - 1];
+        if (b.page !== a.page) break;
+        if ((b.ts || 0) - (last.ts || 0) > SNAG_RAGE_WINDOW) break;
+        if (Math.abs((b.xp || 0) - (a.xp || 0)) <= SNAG_DX &&
+            Math.abs((b.yp || 0) - (a.yp || 0)) <= SNAG_DY) { cluster.push(b); j++; }
+        else break;
+      }
+      if (cluster.length >= 3) {
+        cluster.forEach(function(c){ c._rage = true; });
+        rageIncidents.push({ page: a.page || '/', label: snagElLabel(a), count: cluster.length, ts: cluster[cluster.length - 1].ts });
+        i = j;
+      } else { i++; }
+    }
+  });
+
+  /* Per-click classification for composition + friction rate (union of rage & dead). */
+  var rageClicks = 0, deadClicks = 0, frictional = 0;
+  var deadByEl = {};   /* "label¦page" -> {label, page, count} */
+  var byPage   = {};   /* page -> {total, friction} */
+  var deadEvents = [];
+
+  clicks.forEach(function(e) {
+    var pg = e.page || '/';
+    byPage[pg] = byPage[pg] || { total: 0, friction: 0 };
+    byPage[pg].total++;
+    var dead = snagIsDead(e);
+    if (e._rage) rageClicks++;
+    if (dead) {
+      deadClicks++;
+      deadEvents.push(e);
+      var lbl = snagElLabel(e);
+      var key = lbl + '¦' + pg;
+      if (!deadByEl[key]) deadByEl[key] = { label: lbl, page: pg, count: 0 };
+      deadByEl[key].count++;
+    }
+    if (e._rage || dead) { frictional++; byPage[pg].friction++; }
+  });
+
+  /* Rage hotspots aggregated by page + element. */
+  var rageAgg = {};
+  rageIncidents.forEach(function(r) {
+    var key = r.label + '¦' + r.page;
+    if (!rageAgg[key]) rageAgg[key] = { label: r.label, page: r.page, count: 0, incidents: 0 };
+    rageAgg[key].count += r.count;
+    rageAgg[key].incidents++;
+  });
+
+  /* Combined recent friction feed (rage incidents + non-rage dead clicks). */
+  var recent = [];
+  rageIncidents.forEach(function(r){ recent.push({ kind: 'rage', label: r.label, page: r.page, count: r.count, ts: r.ts }); });
+  deadEvents.forEach(function(e){ if (!e._rage) recent.push({ kind: 'dead', label: snagElLabel(e), page: e.page || '/', count: 1, ts: e.ts }); });
+  recent.sort(function(a, b){ return (b.ts || 0) - (a.ts || 0); });
+
+  return {
+    total: total,
+    rageClicks: rageClicks,
+    deadClicks: deadClicks,
+    cleanClicks: Math.max(0, total - frictional),
+    frictional: frictional,
+    rageIncidents: rageIncidents.length,
+    frictionRate: total ? Math.round((frictional / total) * 100) : 0,
+    rageAgg: rageAgg,
+    deadByEl: deadByEl,
+    byPage: byPage,
+    recent: recent
+  };
+}
+
+/* Warm amber/clay palette — consistent with the rest of the analytics family. */
+var SNAG_COLORS = { rage: 'rgba(150,104,62,0.92)', dead: 'rgba(201,168,124,0.92)', clean: 'rgba(214,190,150,0.45)' };
+var SNAG_ORDER  = ['clean', 'rage', 'dead'];
+var SNAG_LABELS = { clean: 'Clean clicks', rage: 'Rage clicks', dead: 'Dead clicks' };
+
+function drawSnagDonut(s) {
+  var canvas = document.getElementById('snag-donut');
+  if (!canvas) return;
+  var ctx = canvas.getContext('2d');
+  var W = canvas.width, H = canvas.height;
+  ctx.clearRect(0, 0, W, H);
+  var cx = W / 2, cy = H / 2, rOut = 78, rIn = 46;
+  var vals = { clean: s.cleanClicks, rage: s.rageClicks, dead: s.deadClicks };
+  var tot = s.total;
+
+  if (!tot) {
+    ctx.fillStyle = '#444';
+    ctx.font = '12px -apple-system, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('No clicks recorded yet.', cx, cy);
+    return;
+  }
+
+  var start = -Math.PI / 2;
+  SNAG_ORDER.forEach(function(k) {
+    var v = vals[k];
+    if (!v) return;
+    var ang = (v / tot) * Math.PI * 2;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.arc(cx, cy, rOut, start, start + ang);
+    ctx.closePath();
+    ctx.fillStyle = SNAG_COLORS[k];
+    ctx.fill();
+    start += ang;
+  });
+
+  ctx.globalCompositeOperation = 'destination-out';
+  ctx.beginPath();
+  ctx.arc(cx, cy, rIn, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.globalCompositeOperation = 'source-over';
+
+  ctx.fillStyle = '#c9a87c';
+  ctx.font = 'bold 22px -apple-system, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(s.frictionRate + '%', cx, cy - 6);
+  ctx.fillStyle = '#8c887f';
+  ctx.font = '10px "Courier New", monospace';
+  ctx.fillText('FRICTION', cx, cy + 12);
+}
+
+function renderSnagTab() {
+  var s = buildSnag();
+
+  function chip(num, label) {
+    return '<div class="analytics-stat-chip"><span class="asc-num">' + num +
+      '</span><span class="asc-label">' + label + '</span></div>';
+  }
+
+  document.getElementById('snag-stats').innerHTML =
+    chip(s.total,               'Total Clicks')   +
+    chip(s.rageIncidents,       'Rage Incidents') +
+    chip(s.deadClicks,          'Dead Clicks')    +
+    chip(s.frictionRate + '%',  'Friction Rate');
+
+  /* Composition donut + legend */
+  drawSnagDonut(s);
+  var vals = { clean: s.cleanClicks, rage: s.rageClicks, dead: s.deadClicks };
+  document.getElementById('snag-legend').innerHTML = SNAG_ORDER.map(function(k) {
+    var v = vals[k];
+    var share = s.total ? Math.round((v / s.total) * 100) : 0;
+    return '<div class="compass-legend-item">' +
+      '<span class="compass-legend-swatch" style="background:' + SNAG_COLORS[k] + '"></span>' +
+      '<span>' + SNAG_LABELS[k] + '</span>' +
+      '<span class="compass-legend-val">' + v + ' · ' + share + '%</span>' +
+    '</div>';
+  }).join('');
+
+  /* Rage hotspots */
+  var rageRows = Object.keys(s.rageAgg).map(function(k) {
+    var r = s.rageAgg[k];
+    return { label: r.label + '  —  ' + jPageLabel(r.page), count: r.count, incidents: r.incidents };
+  }).sort(function(a, b){ return b.count - a.count; }).slice(0, 15);
+  var rageEl = document.getElementById('snag-rage');
+  if (!rageRows.length) {
+    rageEl.innerHTML = '<p style="color:#444;font-size:0.85em;padding:0.5em 0">No rage clicks detected — nobody is stuck hammering a spot. That is the healthy state.</p>';
+  } else {
+    rageEl.innerHTML = jBarList(rageRows, s.rageClicks, { suffix: function(row){ return row.incidents + (row.incidents === 1 ? ' burst' : ' bursts'); } });
+  }
+
+  /* Dead-click elements */
+  var deadRows = Object.keys(s.deadByEl).map(function(k) {
+    var d = s.deadByEl[k];
+    return { label: d.label + '  —  ' + jPageLabel(d.page), count: d.count };
+  }).sort(function(a, b){ return b.count - a.count; }).slice(0, 15);
+  var deadEl = document.getElementById('snag-dead');
+  if (!deadRows.length) {
+    deadEl.innerHTML = '<p style="color:#444;font-size:0.85em;padding:0.5em 0">No dead clicks — visitors are only clicking things that respond.</p>';
+  } else {
+    deadEl.innerHTML = jBarList(deadRows, s.deadClicks, { suffix: function(row, share){ return share + '% of dead clicks'; } });
+  }
+
+  /* Friction by page */
+  var pageRows = Object.keys(s.byPage).map(function(pg) {
+    var p = s.byPage[pg];
+    var rate = p.total ? Math.round((p.friction / p.total) * 100) : 0;
+    return { label: jPageLabel(pg), count: p.friction, rate: rate, tot: p.total };
+  }).filter(function(r){ return r.count > 0; }).sort(function(a, b){ return b.rate - a.rate || b.count - a.count; });
+  var pagesEl = document.getElementById('snag-pages');
+  if (!pageRows.length) {
+    pagesEl.innerHTML = '<p style="color:#444;font-size:0.85em;padding:0.5em 0">No friction recorded on any page yet.</p>';
+  } else {
+    pagesEl.innerHTML = jBarList(pageRows, null, { suffix: function(row){ return row.rate + '% of ' + row.tot + ' clicks'; } });
+  }
+
+  /* Recent friction feed */
+  var recentEl = document.getElementById('snag-recent');
+  if (!s.recent.length) {
+    recentEl.innerHTML = '<p style="color:#444;font-size:0.85em;padding:0.5em 0">No friction events recorded yet. As visitors browse, any rage bursts or dead clicks show up here.</p>';
+  } else {
+    recentEl.innerHTML = '<div class="spotlight-board">' + s.recent.slice(0, 25).map(function(c) {
+      var tag = '<span class="snag-tag ' + c.kind + '">' + c.kind + '</span>';
+      var extra = c.kind === 'rage' ? ('<div class="sp-sub" style="font-size:0.78em;color:#8c887f">' + c.count + ' rapid clicks</div>') : '';
+      return '<div class="spotlight-row">' +
+        '<div class="sp-info">' +
+          '<div class="sp-label">' + tag + escHtml(c.label) + '</div>' +
+          '<div class="sp-sub" style="font-size:0.78em;color:#8c887f">on ' + escHtml(jPageLabel(c.page)) + '</div>' +
+          extra +
+        '</div>' +
+        '<div class="sp-meta"><span class="sp-views">' + escHtml(fmtDate(c.ts)) + '</span></div>' +
+      '</div>';
+    }).join('') + '</div>';
+  }
+}
+
+document.getElementById('snag-refresh-btn').addEventListener('click', renderSnagTab);
+
+document.getElementById('snag-export-btn').addEventListener('click', function() {
+  var s = buildSnag();
+  var blob = new Blob([JSON.stringify(s, null, 2)], { type: 'application/json' });
+  var url  = URL.createObjectURL(blob);
+  var a    = document.createElement('a');
+  a.href = url; a.download = 'snag-' + Date.now() + '.json'; a.click();
   URL.revokeObjectURL(url);
 });
 </script>
