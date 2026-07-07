@@ -52,6 +52,7 @@ The tracking answers the questions the portfolio owner actually cares about:
 | Are visitors *returning*? | `pv` `vid` (persistent visitor id) | **Orbit → New vs. Returning / Loyalty** |
 | Do visitors become clients? (conversion) | `goal` (CTA click → form open → submit) | **Beacon → Conversion Funnel** |
 | Where do they click *out* to (socials/shops)? | `click` `href` (external targets) | **Relay → Destination Mix / Top Destinations** |
+| Where does the interface *frustrate* them? | `click` clustering (rage) + non-interactive targets (dead) | **Friction → Hotspots / Signal Mix** |
 
 See `CLAUDE.md` → Analytics System for the exact event field schema.
 
@@ -118,7 +119,7 @@ Inquiries, Feedback.
   - **Which Sources Convert** — channels ranked by inquiries, not just visits
   - **Recent Inquiries** — latest submissions with type + timestamp
   - Derived live from `_gam_analytics_v1` — no new storage key.
-- **Relay** *(newest)* — **outbound reach & link-click tracking**. The outbound
+- **Relay** — **outbound reach & link-click tracking**. The outbound
   mirror of Compass: Compass shows where visitors *come from*, Relay shows where
   they *go* when they click a link off the portfolio. From the `href` on every
   `click` event it builds:
@@ -127,6 +128,19 @@ Inquiries, Feedback.
   - **Top Destinations** — external hosts ranked (friendly-named: X, Instagram, ArtStation, Yuka…)
   - **Where They Leave From** — which pages generate the most outbound clicks
   - **Recent Outbound Clicks** — latest link-outs with destination, origin page, time
+  - Derived live from `_gam_analytics_v1` — no new storage key.
+- **Friction** *(newest)* — **UX friction & frustration signals**. Every other
+  tool measures where visitors go or what holds their attention; Friction measures
+  where the interface *fights back*. From the `click` stream alone it reconstructs
+  two industry-standard frustration signals:
+  - **Rage clicks** — a tight burst of clicks by one session in nearly the same spot
+    (someone jabbing at an unresponsive target)
+  - **Unresponsive (dead) clicks** — clicks that resolved to a non-interactive element
+    with no link/button, so they almost certainly did nothing — often artwork or a card
+    people *expect* to open
+  - Stats: rage clicks, unresponsive clicks, friction sessions, friction rate
+  - **Signal Mix** donut, **Friction Hotspots** (the exact elements taking frustrated
+    clicks), **Friction by Page**, and a tagged **Recent Friction** feed
   - Derived live from `_gam_analytics_v1` — no new storage key.
 - **Revenue** — financial dashboard derived from the commission Queue: total earned,
   pipeline value, monthly earnings chart, revenue by type, top clients.
