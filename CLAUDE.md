@@ -194,6 +194,7 @@ Password-protected (SHA-256 hash in localStorage, 5-attempt lockout). Session tr
 | Orbit       | Returning visitors & loyalty — new vs returning, visit frequency, recency, loyalty leaderboard |
 | Beacon      | Conversion funnel & goal tracking — path-to-inquiry funnel, drop-off points, CTA clicks, converting sources |
 | Relay       | Outbound reach & link clicks — destination mix (social/shop/external/email), top destinations, exit pages, recent link-outs |
+| Friction    | UX friction & frustration signals — rage clicks (repeated clicks in one spot), unresponsive/dead clicks (non-interactive targets), friction hotspots, friction by page |
 
 ---
 
@@ -600,6 +601,44 @@ The **outbound mirror of Compass**. Compass answers where visitors *come from* (
 
 ---
 
+## Friction — UX Friction & Frustration Signals (Admin → Friction tab) — NEW TOOL
+
+Answers a question the rest of the analytics family structurally cannot: **where does the interface itself fight the visitor?** Compass = where traffic comes from, Journey = where it goes, Pulse = when it shows up, Spotlight = which artwork holds attention, Depth = read-through, Orbit = loyalty, Beacon = conversion, Relay = outbound reach, Revenue = money — every one of those measures *attention* or *audience*. **Friction = obstruction**: the spots where visitors get frustrated on the way through the portfolio.
+
+**Why it's genuinely new:** no existing tool measures *negative* UX signals. Beacon shows *that* a funnel leaks; Friction shows *why* — the concrete elements that stall or mislead people. It reconstructs two industry-standard frustration signals (Hotjar/FullStory-style rage & dead clicks) with zero new instrumentation.
+
+**No new storage key** — derived live from the `click` events `analytics.js` already records (each carries `sid`, `el`, `text`, `href`, `xp`, `yp`, `ts`), the same read-only pattern as Relay/Compass/Journey.
+
+**The two signals:**
+- **Rage clicks** — a burst of clicks by one session in nearly the same spot: `≥ RAGE_MIN` (3) clicks, each within `RAGE_MS` (2000 ms) of the previous and within `RAGE_DIST` (0.06 of the viewport) of the cluster origin. Classic "why won't this button work" jabbing. Each click in a qualifying cluster is a rage click; the cluster is one incident.
+- **Unresponsive (dead) clicks** — a click that resolved to a non-interactive element (no `href`; element tag not `a`/`button`/`input`/`select`/`textarea`/`label`/`summary`). The click tracker already walks up to the nearest interactive ancestor, so anything still non-interactive almost certainly did nothing when clicked. Often artwork or a card visitors *expect* to open. A rage click is never also counted as dead (rage is the stronger signal).
+
+**How it works:**
+1. `buildFriction()` groups `click` events by `sid`, sorts each session by `ts`, and walks them to flag rage clusters (transiently tagging events, then cleaning the tag off the shared event objects so other tabs are unaffected).
+2. Non-rage clicks are tested with `frictionIsInteractive()`; failures become dead clicks.
+3. Aggregates hotspots (keyed by element + short text via `frictionKey()`), per-page counts, a recent feed, and session-level friction rate.
+
+**Admin tab sections:**
+- **Stats**: Rage Clicks, Unresponsive, Friction Sessions, Friction Rate (% of clicking sessions with ≥1 friction event)
+- **Signal Mix**: canvas donut + legend (rage vs. unresponsive); centre shows total friction events
+- **Friction Hotspots**: the exact elements taking the most frustrated clicks, ranked, each annotated with its rage/dead split
+- **Friction by Page**: pages ranked by friction generated
+- **Recent Friction**: latest events tagged `RAGE` / `DEAD` with element, page, and time
+
+**Derived schema (for export):**
+```js
+{ rageCount, rageIncidents, deadCount, total, hotspots:{key:{label,rage,dead,count}}, pages:{page:count}, recent:[{kind,label,page,ts}], sessionsWithClicks, frictionSessions, frictionRate }
+```
+
+**Technical notes:**
+- Donut + swatches use the warm amber/sand palette (`rgba(176,122,74…)` rage, `rgba(201,168,124,0.55)` unresponsive) — no blue/pink. New `.friction-*` and `.fr-tag-*` CSS classes; reuses `jBarList()`, `analytics-stat-chip`, `compass-legend`/`compass-donut-row` styles, `escHtml()`, `fmtDate()`, `jPageLabel()`.
+- Dead-click detection is a heuristic from stored data, not a live DOM check — the tab hint notes these are clicks that *likely* did nothing; generic body/whitespace clicks naturally sort below real repeated hotspots.
+- Tab renders lazily on click, same pattern as Relay/Beacon/Orbit/Depth/Compass/Journey/Pulse/Spotlight/Revenue.
+
+**API:** none new on `CommissionData` — uses `CommissionData.getAnalytics()`. Logic lives in `renderFrictionTab()` / `buildFriction()` / `frictionIsInteractive()` inside `admin/index.html`.
+
+---
+
 ## Commission System
 
 ### Pages
@@ -677,4 +716,4 @@ Stored in `_gam_prices_v1`. Three sections: `digital`, `stickers`, `animation`. 
 
 ---
 
-*Last updated: 2026-07-03*
+*Last updated: 2026-07-07*

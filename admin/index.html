@@ -860,6 +860,15 @@
 		.relay-donut-row { display: flex; gap: 1.4em; align-items: center; flex-wrap: wrap; }
 		#relay-donut { display: block; flex-shrink: 0; }
 
+		/* Friction tab — UX friction / frustration signals (reuses compass donut + legend) */
+		.friction-donut-row { display: flex; gap: 1.4em; align-items: center; flex-wrap: wrap; }
+		#friction-donut { display: block; flex-shrink: 0; }
+		.fr-tag { display: inline-block; font-family: 'Courier New', monospace; font-size: 0.66em;
+			letter-spacing: 0.06em; padding: 0.12em 0.5em; border-radius: 3px; vertical-align: middle;
+			margin-right: 0.5em; }
+		.fr-tag-rage { background: rgba(176,122,74,0.22); color: #d6a878; border: 1px solid rgba(176,122,74,0.4); }
+		.fr-tag-dead { background: rgba(140,136,127,0.18); color: #b7b3aa; border: 1px solid rgba(140,136,127,0.35); }
+
 		/* Beacon tab — conversion funnel */
 		.beacon-stage { padding: 0.55em 0; border-bottom: 1px solid rgba(255,255,255,0.06); }
 		.beacon-stage:last-child { border-bottom: none; }
@@ -950,6 +959,7 @@
 				<button class="admin-tab" data-tab="orbit">Orbit</button>
 				<button class="admin-tab" data-tab="beacon">Beacon</button>
 				<button class="admin-tab" data-tab="relay">Relay</button>
+				<button class="admin-tab" data-tab="friction">Friction</button>
 			</div>
 
 			<!-- ============ GALLERY TAB ============ -->
@@ -1817,6 +1827,47 @@
 							<h3>Recent Outbound Clicks</h3>
 							<p class="hint">The latest link-outs, with destination, the page they left from, and when. A quick pulse on what's catching attention right now.</p>
 							<div id="relay-recent"></div>
+						</div>
+
+					</div>
+
+					<div id="tab-friction" class="tab-content">
+
+						<div class="admin-card">
+							<h3>Friction — UX Frustration Signals</h3>
+							<p class="hint">Every other analytics tool measures where visitors go and what holds their attention; Friction measures where the interface <em>fights back</em>. It reconstructs two well-known frustration signals from the click stream: <strong>rage clicks</strong> (the same spot hammered several times in quick succession &mdash; a visitor jabbing at something that isn't responding) and <strong>unresponsive clicks</strong> (clicks that landed on a non-interactive element and almost certainly did nothing &mdash; often artwork or a card people <em>expect</em> to open). Fixing these is the cheapest way to smooth the path to a commission. Derived live from the click events analytics already records &mdash; no new storage key.</p>
+							<div id="friction-stats" class="analytics-stats" style="margin-bottom:1em"></div>
+							<div style="display:flex;gap:0.5em;flex-wrap:wrap">
+								<button class="button small" id="friction-refresh-btn">Refresh</button>
+								<button class="button small" id="friction-export-btn">Export JSON</button>
+							</div>
+						</div>
+
+						<div class="admin-card">
+							<h3>Signal Mix</h3>
+							<p class="hint">The split between rage clicks and unresponsive clicks. A pile of rage clicks points at something that looks tappable but stalls; a pile of unresponsive clicks points at elements visitors keep trying to interact with that have no action wired up.</p>
+							<div class="friction-donut-row">
+								<canvas id="friction-donut" width="180" height="180"></canvas>
+								<div id="friction-legend" class="compass-legend"></div>
+							</div>
+						</div>
+
+						<div class="admin-card">
+							<h3>Friction Hotspots</h3>
+							<p class="hint">The specific elements taking the most frustrated clicks, ranked. Each row names the element and its nearby text so you can find it on the page &mdash; these are the concrete things to make clickable, more responsive, or visually less button-like.</p>
+							<div id="friction-hotspots"></div>
+						</div>
+
+						<div class="admin-card">
+							<h3>Friction by Page</h3>
+							<p class="hint">Which pages generate the most friction events. A page with heavy friction is quietly costing you visitors right where you least want to &mdash; on the way to inquiring.</p>
+							<div id="friction-pages"></div>
+						</div>
+
+						<div class="admin-card">
+							<h3>Recent Friction</h3>
+							<p class="hint">The latest frustration events, tagged <span class="fr-tag fr-tag-rage">RAGE</span> or <span class="fr-tag fr-tag-dead">DEAD</span>, with the element, the page it happened on, and when. A live feed of where the interface is snagging people.</p>
+							<div id="friction-recent"></div>
 						</div>
 
 					</div>
@@ -2832,6 +2883,9 @@ document.addEventListener('click', function(e){
   }
   if (e.target.dataset && e.target.dataset.tab === 'relay') {
     renderRelayTab();
+  }
+  if (e.target.dataset && e.target.dataset.tab === 'friction') {
+    renderFrictionTab();
   }
 });
 
@@ -5412,6 +5466,265 @@ document.getElementById('relay-export-btn').addEventListener('click', function()
   var url  = URL.createObjectURL(blob);
   var a    = document.createElement('a');
   a.href = url; a.download = 'relay-' + Date.now() + '.json'; a.click();
+  URL.revokeObjectURL(url);
+});
+
+/* ================================================================
+   FRICTION TAB — UX friction / frustration signals
+   Reconstructs two industry-standard frustration signals from the
+   `click` events analytics already records — no new storage key:
+     • RAGE clicks — a tight burst of clicks by one session in nearly
+       the same spot, i.e. someone jabbing at an unresponsive target.
+     • DEAD (unresponsive) clicks — clicks that resolved to a
+       non-interactive element with no link/button, so they almost
+       certainly did nothing.
+   Answers: where does the interface fight visitors on the way to a
+   commission? Every other tool measures attention or audience; this
+   one measures obstruction.
+================================================================ */
+
+/* Rage detection thresholds. A cluster of >= RAGE_MIN clicks by one
+   session, each within RAGE_MS of the previous and within RAGE_DIST
+   (fraction of viewport) of the cluster origin, counts as one rage
+   incident; every click in it is a rage click. */
+var RAGE_MIN  = 3;
+var RAGE_MS   = 2000;
+var RAGE_DIST = 0.06;
+
+/* Is this click's resolved element interactive? The tracker already
+   walks up to the nearest A / BUTTON / role=button, so an interactive
+   click surfaces as an <a>/<button> label or carries an href. */
+function frictionIsInteractive(e) {
+  if (e.href) return true;
+  var lbl = (e.el || '').toLowerCase();
+  var tag = lbl.split('.')[0];
+  return tag === 'a' || tag === 'button' || tag === 'select' ||
+         tag === 'input' || tag === 'textarea' || tag === 'label' ||
+         tag === 'summary';
+}
+
+/* Short, human key for an element so repeated hits on the same thing
+   aggregate into one hotspot row. */
+function frictionKey(e) {
+  var el = (e.el || 'element').trim();
+  var tx = (e.text || '').replace(/\s+/g, ' ').trim().slice(0, 32);
+  return tx ? el + ' · "' + tx + '"' : el;
+}
+
+function buildFriction() {
+  var events = CommissionData.getAnalytics() || [];
+
+  /* Group clicks by session, in time order, for rage clustering. */
+  var bySid = {};
+  events.forEach(function(e) {
+    if (e.type !== 'click') return;
+    (bySid[e.sid] = bySid[e.sid] || []).push(e);
+  });
+
+  var rageFlag = {};   /* index-in-array marker via a per-event tag */
+  var rageCount = 0, rageIncidents = 0;
+
+  Object.keys(bySid).forEach(function(sid) {
+    var clicks = bySid[sid].slice().sort(function(a, b){ return (a.ts||0) - (b.ts||0); });
+    var i = 0;
+    while (i < clicks.length) {
+      var origin = clicks[i];
+      var cluster = [origin];
+      var j = i + 1;
+      while (j < clicks.length) {
+        var c = clicks[j], prev = cluster[cluster.length - 1];
+        var dt = (c.ts || 0) - (prev.ts || 0);
+        var dx = Math.abs((c.xp || 0) - (origin.xp || 0));
+        var dy = Math.abs((c.yp || 0) - (origin.yp || 0));
+        if (dt <= RAGE_MS && dx <= RAGE_DIST && dy <= RAGE_DIST) {
+          cluster.push(c); j++;
+        } else break;
+      }
+      if (cluster.length >= RAGE_MIN) {
+        rageIncidents++;
+        cluster.forEach(function(c){ c.__rage = true; rageCount++; });
+        i = j;
+      } else {
+        i++;
+      }
+    }
+  });
+
+  /* Tally hotspots / pages / recent across rage + dead clicks. A rage
+     click is never also counted as dead (rage is the stronger signal). */
+  var hotspots = {};   /* key -> {label, rage, dead, count} */
+  var pages    = {};   /* page -> friction count */
+  var recent   = [];
+  var deadCount = 0;
+  var frictionSids = {};
+
+  events.forEach(function(e) {
+    if (e.type !== 'click') return;
+    var isRage = !!e.__rage;
+    var isDead = !isRage && !frictionIsInteractive(e);
+    if (!isRage && !isDead) return;
+
+    var kind = isRage ? 'rage' : 'dead';
+    if (isDead) deadCount++;
+    frictionSids[e.sid] = true;
+
+    var key = frictionKey(e);
+    var h = hotspots[key] || (hotspots[key] = { label: key, rage: 0, dead: 0, count: 0 });
+    h[kind]++; h.count++;
+
+    var pg = e.page || '/';
+    pages[pg] = (pages[pg] || 0) + 1;
+
+    recent.push({ kind: kind, label: key, page: pg, ts: e.ts });
+    delete e.__rage; /* keep the shared event objects clean for other tabs */
+  });
+
+  recent.sort(function(a, b){ return (b.ts || 0) - (a.ts || 0); });
+
+  var sessionsWithClicks = Object.keys(bySid).length;
+  var frictionSessions   = Object.keys(frictionSids).length;
+
+  return {
+    rageCount: rageCount, rageIncidents: rageIncidents, deadCount: deadCount,
+    total: rageCount + deadCount,
+    hotspots: hotspots, pages: pages, recent: recent,
+    sessionsWithClicks: sessionsWithClicks, frictionSessions: frictionSessions,
+    frictionRate: sessionsWithClicks ? Math.round((frictionSessions / sessionsWithClicks) * 100) : 0
+  };
+}
+
+/* Warm amber/sand palette — consistent with the other donuts. */
+var FRICTION_COLORS = { rage: 'rgba(176,122,74,0.92)', dead: 'rgba(201,168,124,0.55)' };
+var FRICTION_LABELS = { rage: 'Rage Clicks', dead: 'Unresponsive Clicks' };
+var FRICTION_ORDER  = ['rage', 'dead'];
+
+function drawFrictionDonut(f) {
+  var canvas = document.getElementById('friction-donut');
+  if (!canvas) return;
+  var ctx = canvas.getContext('2d');
+  var W = canvas.width, H = canvas.height;
+  ctx.clearRect(0, 0, W, H);
+  var cx = W / 2, cy = H / 2, rOut = 78, rIn = 46;
+  var vals = { rage: f.rageCount, dead: f.deadCount };
+  var tot = f.rageCount + f.deadCount;
+
+  if (!tot) {
+    ctx.fillStyle = '#444';
+    ctx.font = '12px -apple-system, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('No friction detected yet.', cx, cy);
+    return;
+  }
+
+  var start = -Math.PI / 2;
+  FRICTION_ORDER.forEach(function(k) {
+    var v = vals[k];
+    if (!v) return;
+    var ang = (v / tot) * Math.PI * 2;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.arc(cx, cy, rOut, start, start + ang);
+    ctx.closePath();
+    ctx.fillStyle = FRICTION_COLORS[k];
+    ctx.fill();
+    start += ang;
+  });
+
+  ctx.globalCompositeOperation = 'destination-out';
+  ctx.beginPath();
+  ctx.arc(cx, cy, rIn, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.globalCompositeOperation = 'source-over';
+
+  ctx.fillStyle = '#c9a87c';
+  ctx.font = 'bold 22px -apple-system, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(tot, cx, cy - 6);
+  ctx.fillStyle = '#8c887f';
+  ctx.font = '10px "Courier New", monospace';
+  ctx.fillText('EVENTS', cx, cy + 12);
+}
+
+function renderFrictionTab() {
+  var f = buildFriction();
+  var total = f.total || 0;
+
+  function chip(num, label) {
+    return '<div class="analytics-stat-chip"><span class="asc-num">' + num +
+      '</span><span class="asc-label">' + label + '</span></div>';
+  }
+
+  document.getElementById('friction-stats').innerHTML =
+    chip(f.rageCount,          'Rage Clicks')      +
+    chip(f.deadCount,          'Unresponsive')     +
+    chip(f.frictionSessions,   'Friction Sessions')+
+    chip(f.frictionRate + '%', 'Friction Rate');
+
+  /* ── Signal-mix donut + legend ── */
+  drawFrictionDonut(f);
+  var legendEl = document.getElementById('friction-legend');
+  legendEl.innerHTML = FRICTION_ORDER.map(function(k) {
+    var v = k === 'rage' ? f.rageCount : f.deadCount;
+    var share = total ? Math.round((v / total) * 100) : 0;
+    return '<div class="compass-legend-item">' +
+      '<span class="compass-legend-swatch" style="background:' + FRICTION_COLORS[k] + '"></span>' +
+      '<span>' + FRICTION_LABELS[k] + '</span>' +
+      '<span class="compass-legend-val">' + v + ' · ' + share + '%</span>' +
+    '</div>';
+  }).join('');
+
+  /* ── Friction hotspots ── */
+  var hotRows = Object.keys(f.hotspots).map(function(key) {
+    var h = f.hotspots[key];
+    var parts = [];
+    if (h.rage) parts.push(h.rage + ' rage');
+    if (h.dead) parts.push(h.dead + ' dead');
+    return { label: h.label, count: h.count, meta: parts.join(' · ') };
+  }).sort(function(a, b){ return b.count - a.count; }).slice(0, 15);
+  var hotEl = document.getElementById('friction-hotspots');
+  if (!hotRows.length) {
+    hotEl.innerHTML = '<p style="color:#444;font-size:0.85em;padding:0.5em 0">No friction hotspots yet. When visitors rage-click or click something unresponsive, the elements show up here ranked by how often it happens.</p>';
+  } else {
+    hotEl.innerHTML = jBarList(hotRows, total, { suffix: function(row){ return row.meta; } });
+  }
+
+  /* ── Friction by page ── */
+  var pageRows = Object.keys(f.pages).map(function(pg){
+    return { label: jPageLabel(pg), count: f.pages[pg] };
+  }).sort(function(a, b){ return b.count - a.count; });
+  document.getElementById('friction-pages').innerHTML = pageRows.length
+    ? jBarList(pageRows, total, { suffix: function(row, share){ return share + '% of friction'; } })
+    : '<p style="color:#444;font-size:0.85em;padding:0.5em 0">No friction recorded on any page yet.</p>';
+
+  /* ── Recent friction ── */
+  var recentEl = document.getElementById('friction-recent');
+  if (!f.recent.length) {
+    recentEl.innerHTML = '<p style="color:#444;font-size:0.85em;padding:0.5em 0">No friction events recorded yet. This is a good thing — the interface is not obviously snagging anyone.</p>';
+  } else {
+    recentEl.innerHTML = '<div class="spotlight-board">' + f.recent.slice(0, 20).map(function(c){
+      var tag = c.kind === 'rage'
+        ? '<span class="fr-tag fr-tag-rage">RAGE</span>'
+        : '<span class="fr-tag fr-tag-dead">DEAD</span>';
+      return '<div class="spotlight-row">' +
+        '<div class="sp-info">' +
+          '<div class="sp-label">' + tag + escHtml(c.label) + '</div>' +
+          '<div class="sp-sub" style="font-size:0.78em;color:#8c887f">on ' + escHtml(jPageLabel(c.page)) + '</div>' +
+        '</div>' +
+        '<div class="sp-meta"><span class="sp-views">' + escHtml(fmtDate(c.ts)) + '</span></div>' +
+      '</div>';
+    }).join('') + '</div>';
+  }
+}
+
+document.getElementById('friction-refresh-btn').addEventListener('click', renderFrictionTab);
+
+document.getElementById('friction-export-btn').addEventListener('click', function() {
+  var f = buildFriction();
+  var blob = new Blob([JSON.stringify(f, null, 2)], { type: 'application/json' });
+  var url  = URL.createObjectURL(blob);
+  var a    = document.createElement('a');
+  a.href = url; a.download = 'friction-' + Date.now() + '.json'; a.click();
   URL.revokeObjectURL(url);
 });
 </script>
