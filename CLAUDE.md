@@ -195,6 +195,7 @@ Password-protected (SHA-256 hash in localStorage, 5-attempt lockout). Session tr
 | Beacon      | Conversion funnel & goal tracking — path-to-inquiry funnel, drop-off points, CTA clicks, converting sources |
 | Relay       | Outbound reach & link clicks — destination mix (social/shop/external/email), top destinations, exit pages, recent link-outs |
 | Friction    | UX friction & frustration signals — rage clicks (repeated clicks in one spot), unresponsive/dead clicks (non-interactive targets), friction hotspots, friction by page |
+| Trace       | Session replay & event timeline — pick one visitor's session, replay every event (pageview/click/scroll/hover/goal/exit) in order on a single chronological timeline |
 
 ---
 
@@ -639,6 +640,42 @@ Answers a question the rest of the analytics family structurally cannot: **where
 
 ---
 
+## Trace — Session Replay & Event Timeline (Admin → Trace tab) — NEW TOOL
+
+Answers the question every other analytics tool structurally *cannot*: **what did one specific visitor actually do, step by step?** Compass/Journey/Pulse/Depth/Spotlight/Orbit/Beacon/Relay/Friction/Revenue all **aggregate** — they report averages and distributions across everyone. Trace is the opposite lens: it reconstructs a **single session** as an ordered, multi-event-type timeline you read top-to-bottom, turning the anonymous aggregate numbers back into one person you can follow.
+
+**Why it's genuinely new:** Journey is the closest existing tool, but it builds only an *aggregate* page-to-page flow and deliberately **collapses each session to a pageview sequence** — clicks, scrolls, artwork hovers, goals, and exit timing are all discarded. No existing tool shows a single session's full, time-ordered, every-event-type replay. Trace is the qualitative deep-dive complement to the quantitative family: when Beacon tells you the funnel leaks between "opened form" and "submitted," Trace lets you open an actual leaked session and watch *exactly* what that visitor did before they left.
+
+**No new storage key** — derived live from the `_gam_analytics_v1` events analytics already records (`pv`, `click`, `scroll`, `tile_hover`, `goal`, `exit`), the same read-only pattern as Journey/Compass/Friction. No new instrumentation.
+
+**How it works:**
+1. `buildTrace()` groups every event by `sid` and sorts each session's events by `ts`.
+2. Per session it derives: `start`/`end`/`durMs` (span, floored to the longest `exit.ms`), `eventCount`, `pvCount`, `clickCount`, `entry` (first pageview page), `exit` (exit event page, else last pageview), `dev`, `refHost` (first pageview referrer), and `converted` (session fired a `form_submit` goal).
+3. Sessions are sorted newest-first; the tab aggregates the summary stats and renders the picker + timeline.
+4. Selecting a session renders each event as a timeline row via `traceEventRow()`: a `+Δ` time-offset from session start, a per-type tag (VIEW / CLICK / SCROLL / HOVER / GOAL / EXIT), and a human description (page landed on, clicked text/href, scroll %, hovered tile, goal milestone, exit page + time-on-page). Goal codes map to friendly labels via `TRACE_GOAL_LABELS`; pageview referrers are annotated only when external (own-host referrers are suppressed via `compassClassify() !== 'internal'`).
+
+**Admin tab sections:**
+- **Stats**: Sessions, Avg Events / Session, Avg Duration, Longest (events)
+- **Sessions**: newest-first picker; each row shows entry page + timestamp, an event-count bar, device + source, a `CONVERTED` tag where applicable. Filters: **All / Converted / Mobile / Desktop** (each with a live count). Click a row to replay it. Capped to the 50 most recent matching sessions (noted in-tab).
+- **Session Timeline**: the selected session replayed in order — a header line (session id, device, source, event count, duration, converted flag) followed by one row per event, colour-tagged by kind on the warm amber/sand palette.
+
+**Derived schema (for export):**
+```js
+{ total, avgEvents, avgDurMs, longest,
+  sessions:[{ sid, vid, start, end, durMs, eventCount, pvCount, clickCount, entry, exit, dev, refHost, converted }] }
+```
+(Export omits the per-session raw `events` array to keep the file small; the timeline is rebuilt live in the tab.)
+
+**Technical notes:**
+- Timeline tags use the warm amber/clay/sand palette (`trace-tag-view/click/scroll/hover/goal/exit`, GOAL brightest as the important signal) — no blue/pink. New `.trace-*` CSS classes; reuses `analytics-stat-chip`, the `spotlight-row`/`sp-*` picker styles, `escHtml()`, `fmtDate()`, `jPageLabel()`, and `compassClassify()`.
+- Session picker + timeline are wired with event delegation (`data-sid` / `data-tf`); selected session and active filter live in a small `traceState` module object.
+- Reach is per session (`sid`), so one visitor across several tabs appears as several sessions — consistent with Journey/Beacon.
+- Tab renders lazily on click, same pattern as Friction/Relay/Beacon/Orbit/Depth/Compass/Journey/Pulse/Spotlight/Revenue.
+
+**API:** none new on `CommissionData` — uses `CommissionData.getAnalytics()`. Logic lives in `renderTraceTab()` / `buildTrace()` / `traceEventRow()` inside `admin/index.html`.
+
+---
+
 ## Commission System
 
 ### Pages
@@ -716,4 +753,4 @@ Stored in `_gam_prices_v1`. Three sections: `digital`, `stickers`, `animation`. 
 
 ---
 
-*Last updated: 2026-07-07*
+*Last updated: 2026-07-08*

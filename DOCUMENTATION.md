@@ -53,6 +53,7 @@ The tracking answers the questions the portfolio owner actually cares about:
 | Do visitors become clients? (conversion) | `goal` (CTA click → form open → submit) | **Beacon → Conversion Funnel** |
 | Where do they click *out* to (socials/shops)? | `click` `href` (external targets) | **Relay → Destination Mix / Top Destinations** |
 | Where does the interface *frustrate* them? | `click` clustering (rage) + non-interactive targets (dead) | **Friction → Hotspots / Signal Mix** |
+| What did *one specific visitor* do, step by step? | every event, grouped per session, time-ordered | **Trace → Sessions / Session Timeline** |
 
 See `CLAUDE.md` → Analytics System for the exact event field schema.
 
@@ -142,6 +143,18 @@ Inquiries, Feedback.
   - **Signal Mix** donut, **Friction Hotspots** (the exact elements taking frustrated
     clicks), **Friction by Page**, and a tagged **Recent Friction** feed
   - Derived live from `_gam_analytics_v1` — no new storage key.
+- **Trace** *(newest)* — **session replay & event timeline**. Every other analytics
+  tool *aggregates* across everyone; Trace is the opposite lens — it replays a
+  **single visitor's session** step by step. From the events analytics already
+  records it reconstructs, per session, the full time-ordered event stream and lets
+  you open any one and read it top-to-bottom:
+  - Stats: sessions, avg events/session, avg duration, longest session
+  - **Sessions** — newest-first picker (entry page, device, source, `CONVERTED` tag),
+    filterable by All / Converted / Mobile / Desktop
+  - **Session Timeline** — the chosen session replayed in order: each pageview, click,
+    scroll, artwork hover, conversion goal, and the exit, with the time between steps
+  - Where Beacon says the funnel leaks, Trace lets you open a leaked session and watch
+    exactly what happened. Derived live from `_gam_analytics_v1` — no new storage key.
 - **Revenue** — financial dashboard derived from the commission Queue: total earned,
   pipeline value, monthly earnings chart, revenue by type, top clients.
 - **Palette** — extract dominant colors from an uploaded artwork (k-means), save
@@ -172,4 +185,4 @@ Inquiries, Feedback.
 - `assets/js/analytics.js` owns all client-side event capture.
 - Keep the gallery light-mode and let the artwork lead; cyber accents stay subtle.
 
-*Last updated: 2026-06-29*
+*Last updated: 2026-07-08*
