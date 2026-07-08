@@ -869,6 +869,52 @@
 		.fr-tag-rage { background: rgba(176,122,74,0.22); color: #d6a878; border: 1px solid rgba(176,122,74,0.4); }
 		.fr-tag-dead { background: rgba(140,136,127,0.18); color: #b7b3aa; border: 1px solid rgba(140,136,127,0.35); }
 
+		/* Trace tab — single-session replay & event timeline */
+		.trace-filters { display: flex; gap: 0.4em; flex-wrap: wrap; margin-bottom: 0.85em; }
+		.trace-filter-btn {
+			font-family: 'Courier New', monospace; font-size: 0.72em; letter-spacing: 0.04em;
+			padding: 0.3em 0.75em; border-radius: 4px; cursor: pointer;
+			background: rgba(255,255,255,0.03); color: #b9b6b0;
+			border: 1px solid rgba(201,201,201,0.14); transition: all 0.15s;
+		}
+		.trace-filter-btn:hover { border-color: rgba(201,168,124,0.5); color: #d6b48c; }
+		.trace-filter-btn.active { background: rgba(201,168,124,0.16); color: #e4c79a; border-color: rgba(201,168,124,0.55); }
+		.spotlight-row.trace-session { cursor: pointer; }
+		.spotlight-row.trace-session.trace-active { border-color: rgba(201,168,124,0.6); background: rgba(201,168,124,0.07); }
+		.trace-conv-tag, .trace-conv {
+			display: inline-block; font-family: 'Courier New', monospace; font-size: 0.62em;
+			letter-spacing: 0.06em; padding: 0.1em 0.45em; border-radius: 3px; vertical-align: middle;
+			background: rgba(201,168,124,0.2); color: #e4c79a; border: 1px solid rgba(201,168,124,0.45);
+		}
+		.trace-sess-tags { display: flex; gap: 0.4em; align-items: center; margin-top: 0.2em; }
+		.trace-sess-dev { font-family: 'Courier New', monospace; font-size: 0.62em; color: #7d7a73; text-transform: uppercase; letter-spacing: 0.05em; }
+		/* Timeline */
+		.trace-tl { display: flex; flex-direction: column; }
+		.trace-tl-head {
+			font-family: 'Courier New', monospace; font-size: 0.74em; color: #8c887f;
+			padding-bottom: 0.7em; margin-bottom: 0.3em; border-bottom: 1px solid rgba(255,255,255,0.07);
+		}
+		.trace-tl-head strong { color: #c9a87c; }
+		.trace-row { display: flex; gap: 0.85em; align-items: flex-start; padding: 0.45em 0; position: relative; }
+		.trace-row + .trace-row { border-top: 1px solid rgba(255,255,255,0.04); }
+		.trace-time {
+			font-family: 'Courier New', monospace; font-size: 0.72em; color: #7d7a73;
+			min-width: 4.2em; text-align: right; flex-shrink: 0; padding-top: 0.15em; white-space: nowrap;
+		}
+		.trace-tag {
+			display: inline-block; font-family: 'Courier New', monospace; font-size: 0.62em;
+			letter-spacing: 0.05em; padding: 0.14em 0.5em; border-radius: 3px; flex-shrink: 0;
+			min-width: 4.6em; text-align: center; margin-top: 0.05em;
+		}
+		.trace-tag-view   { background: rgba(201,168,124,0.2);  color: #e4c79a; border: 1px solid rgba(201,168,124,0.42); }
+		.trace-tag-click  { background: rgba(176,122,74,0.2);   color: #d6a878; border: 1px solid rgba(176,122,74,0.42); }
+		.trace-tag-scroll { background: rgba(150,140,110,0.16); color: #c4bb98; border: 1px solid rgba(150,140,110,0.35); }
+		.trace-tag-hover  { background: rgba(190,170,130,0.15); color: #cdbd94; border: 1px solid rgba(190,170,130,0.34); }
+		.trace-tag-goal   { background: rgba(224,196,140,0.26); color: #f0d7a2; border: 1px solid rgba(224,196,140,0.55); font-weight: bold; }
+		.trace-tag-exit   { background: rgba(140,136,127,0.16); color: #b7b3aa; border: 1px solid rgba(140,136,127,0.34); }
+		.trace-detail { font-size: 0.82em; color: #cfccc5; line-height: 1.4; min-width: 0; word-break: break-word; }
+		.trace-detail .trace-sub { color: #8c887f; font-size: 0.9em; }
+
 		/* Beacon tab — conversion funnel */
 		.beacon-stage { padding: 0.55em 0; border-bottom: 1px solid rgba(255,255,255,0.06); }
 		.beacon-stage:last-child { border-bottom: none; }
@@ -960,6 +1006,7 @@
 				<button class="admin-tab" data-tab="beacon">Beacon</button>
 				<button class="admin-tab" data-tab="relay">Relay</button>
 				<button class="admin-tab" data-tab="friction">Friction</button>
+				<button class="admin-tab" data-tab="trace">Trace</button>
 			</div>
 
 			<!-- ============ GALLERY TAB ============ -->
@@ -1868,6 +1915,33 @@
 							<h3>Recent Friction</h3>
 							<p class="hint">The latest frustration events, tagged <span class="fr-tag fr-tag-rage">RAGE</span> or <span class="fr-tag fr-tag-dead">DEAD</span>, with the element, the page it happened on, and when. A live feed of where the interface is snagging people.</p>
 							<div id="friction-recent"></div>
+						</div>
+
+					</div>
+
+					<div id="tab-trace" class="tab-content">
+
+						<div class="admin-card">
+							<h3>Trace — Session Replay &amp; Event Timeline</h3>
+							<p class="hint">Every other analytics tool <em>aggregates</em> — it tells you what happens on average across everyone. Trace does the opposite: it lets you replay a <strong>single visitor</strong> step by step. Pick a session below and watch the exact order of what they did &mdash; every pageview, click, scroll, artwork hover, conversion goal, and where they finally left &mdash; laid out on one chronological timeline with the time between each step. It turns the anonymous numbers back into a person you can follow, which is where the real "why did they leave / why did they inquire" answers live. Reconstructed live from the events analytics already records &mdash; no new storage key.</p>
+							<div id="trace-stats" class="analytics-stats" style="margin-bottom:1em"></div>
+							<div style="display:flex;gap:0.5em;flex-wrap:wrap">
+								<button class="button small" id="trace-refresh-btn">Refresh</button>
+								<button class="button small" id="trace-export-btn">Export JSON</button>
+							</div>
+						</div>
+
+						<div class="admin-card">
+							<h3>Sessions</h3>
+							<p class="hint">Recent visitor sessions, newest first &mdash; each is one browsing session (one tab). The bar shows how many events it holds; a <span class="trace-conv-tag">CONVERTED</span> tag marks a session that submitted a commission inquiry. Click any row to replay it in the timeline below.</p>
+							<div id="trace-filters" class="trace-filters"></div>
+							<div id="trace-sessions"></div>
+						</div>
+
+						<div class="admin-card">
+							<h3>Session Timeline</h3>
+							<p class="hint">The selected session, replayed in order. The left column is the time elapsed since the session began; each row is one event, tagged by kind, with what it was. Read top-to-bottom to follow exactly how the visit unfolded &mdash; where they landed, what caught them, and the last thing they did before leaving.</p>
+							<div id="trace-timeline"><p style="color:#444;font-size:0.85em;padding:0.5em 0">Select a session above to replay its timeline here.</p></div>
 						</div>
 
 					</div>
@@ -2886,6 +2960,9 @@ document.addEventListener('click', function(e){
   }
   if (e.target.dataset && e.target.dataset.tab === 'friction') {
     renderFrictionTab();
+  }
+  if (e.target.dataset && e.target.dataset.tab === 'trace') {
+    renderTraceTab();
   }
 });
 
@@ -5725,6 +5802,268 @@ document.getElementById('friction-export-btn').addEventListener('click', functio
   var url  = URL.createObjectURL(blob);
   var a    = document.createElement('a');
   a.href = url; a.download = 'friction-' + Date.now() + '.json'; a.click();
+  URL.revokeObjectURL(url);
+});
+
+/* ================================================================
+   TRACE TAB — single-session replay & event timeline
+   Every other analytics tool aggregates across everyone; Trace does
+   the opposite — it reconstructs ONE visitor's session as an ordered,
+   multi-event-type timeline you can read top-to-bottom (pageview →
+   click → scroll → hover → goal → exit) with the time between steps.
+   It turns the anonymous aggregate numbers back into a single person
+   you can follow, which is where "why did they leave / why did they
+   inquire" actually gets answered. Derived live from the events
+   analytics already records — no new storage key.
+================================================================ */
+
+var TRACE_GOAL_LABELS = {
+  cta_commission: 'Clicked a commission CTA',
+  form_open:      'Opened the inquiry form',
+  form_step3:     'Reached the contact step',
+  form_submit:    'Submitted a commission inquiry'
+};
+
+/* Elapsed-since-session-start label for a timeline row. */
+function traceFmtOffset(ms) {
+  ms = ms || 0;
+  if (ms < 1000) return '+0s';
+  var s = Math.round(ms / 1000);
+  if (s < 60) return '+' + s + 's';
+  var m = Math.floor(s / 60), rs = s % 60;
+  if (m < 60) return '+' + m + 'm' + (rs ? rs + 's' : '');
+  var h = Math.floor(m / 60), rm = m % 60;
+  return '+' + h + 'h' + (rm ? rm + 'm' : '');
+}
+
+/* Compact human duration for stats / session meta. */
+function traceFmtDur(ms) {
+  var s = Math.round((ms || 0) / 1000);
+  if (s < 60) return s + 's';
+  var m = Math.floor(s / 60), rs = s % 60;
+  if (m < 60) return m + 'm' + (rs ? ' ' + rs + 's' : '');
+  var h = Math.floor(m / 60), rm = m % 60;
+  return h + 'h' + (rm ? ' ' + rm + 'm' : '');
+}
+
+function buildTrace() {
+  var events = CommissionData.getAnalytics() || [];
+  var bySid  = {};
+  events.forEach(function(e) {
+    if (!e || !e.sid) return;
+    (bySid[e.sid] = bySid[e.sid] || []).push(e);
+  });
+
+  var sessions = Object.keys(bySid).map(function(sid) {
+    var evs = bySid[sid].slice().sort(function(a, b){ return (a.ts || 0) - (b.ts || 0); });
+    var start = evs[0].ts || 0;
+    var end   = evs[evs.length - 1].ts || start;
+    var pvs   = evs.filter(function(e){ return e.type === 'pv'; });
+    var clicks= evs.filter(function(e){ return e.type === 'click'; });
+    var exitEv = null, exitMs = 0;
+    evs.forEach(function(e){ if (e.type === 'exit') { exitEv = e; if ((e.ms || 0) > exitMs) exitMs = e.ms || 0; } });
+    var converted = evs.some(function(e){ return e.type === 'goal' && e.goal === 'form_submit'; });
+    var first = pvs[0] || evs[0];
+    var last  = pvs.length ? pvs[pvs.length - 1] : evs[evs.length - 1];
+    return {
+      sid: sid,
+      vid: (first && first.vid) || '',
+      events: evs,
+      start: start, end: end,
+      durMs: Math.max(end - start, exitMs),
+      eventCount: evs.length, pvCount: pvs.length, clickCount: clicks.length,
+      entry: (first && first.page) || '/',
+      exit:  (exitEv && exitEv.page) || (last && last.page) || '/',
+      dev:   (first && first.dev) || '',
+      refHost: (first && first.refHost) || 'direct',
+      converted: converted
+    };
+  });
+  sessions.sort(function(a, b){ return (b.start || 0) - (a.start || 0); });
+
+  var total = sessions.length;
+  var evSum  = sessions.reduce(function(s, x){ return s + x.eventCount; }, 0);
+  var durSum = sessions.reduce(function(s, x){ return s + (x.durMs || 0); }, 0);
+  var longest = sessions.reduce(function(m, x){ return x.eventCount > m ? x.eventCount : m; }, 0);
+
+  return {
+    sessions: sessions, total: total,
+    avgEvents: total ? Math.round((evSum / total) * 10) / 10 : 0,
+    avgDurMs:  total ? Math.round(durSum / total) : 0,
+    longest: longest
+  };
+}
+
+/* Module-level UI state for the tab (selected session + active filter). */
+var traceState = { data: null, filter: 'all', sid: null };
+
+function traceMatchesFilter(s, f) {
+  if (f === 'converted') return s.converted;
+  if (f === 'mobile')    return s.dev === 'mobile' || s.dev === 'tablet';
+  if (f === 'desktop')   return s.dev === 'desktop';
+  return true;
+}
+
+/* One timeline row for a single event. */
+function traceEventRow(e, startTs) {
+  var off = traceFmtOffset((e.ts || startTs) - startTs);
+  var kind = 'exit', label = 'EVENT', detail = escHtml(e.type || 'event'), sub = '';
+
+  if (e.type === 'pv') {
+    kind = 'view'; label = 'VIEW';
+    detail = 'Viewed <strong>' + escHtml(jPageLabel(e.page)) + '</strong>';
+    if (e.refHost && e.refHost !== 'direct' && compassClassify(e.refHost) !== 'internal') {
+      sub = 'via ' + escHtml(e.refHost);
+    }
+  } else if (e.type === 'click') {
+    kind = 'click'; label = 'CLICK';
+    var t = (e.text || '').trim();
+    detail = t ? 'Clicked &ldquo;' + escHtml(t) + '&rdquo;' : 'Clicked ' + escHtml(e.el || 'element');
+    if (e.href) sub = '&rarr; ' + escHtml(e.href);
+  } else if (e.type === 'scroll') {
+    kind = 'scroll'; label = 'SCROLL';
+    detail = 'Scrolled to <strong>' + (e.depth || 0) + '%</strong> of the page';
+  } else if (e.type === 'tile_hover') {
+    kind = 'hover'; label = 'HOVER';
+    detail = 'Lingered on <strong>' + escHtml(e.title || 'a tile') + '</strong>';
+  } else if (e.type === 'goal') {
+    kind = 'goal'; label = 'GOAL';
+    detail = escHtml(TRACE_GOAL_LABELS[e.goal] || e.goal || 'goal');
+    if (e.ctype) sub = 'type: ' + escHtml(e.ctype);
+  } else if (e.type === 'exit') {
+    kind = 'exit'; label = 'EXIT';
+    detail = 'Left <strong>' + escHtml(jPageLabel(e.page)) + '</strong>';
+    if (e.ms) sub = 'after ' + traceFmtDur(e.ms) + ' on the page';
+  }
+
+  return '<div class="trace-row">' +
+      '<div class="trace-time">' + off + '</div>' +
+      '<span class="trace-tag trace-tag-' + kind + '">' + label + '</span>' +
+      '<div class="trace-detail">' + detail + (sub ? ' <span class="trace-sub">' + sub + '</span>' : '') + '</div>' +
+    '</div>';
+}
+
+function renderTraceFilters() {
+  var d = traceState.data;
+  var defs = [
+    { k: 'all',       label: 'All' },
+    { k: 'converted', label: 'Converted' },
+    { k: 'mobile',    label: 'Mobile' },
+    { k: 'desktop',   label: 'Desktop' }
+  ];
+  document.getElementById('trace-filters').innerHTML = defs.map(function(f) {
+    var n = d.sessions.filter(function(s){ return traceMatchesFilter(s, f.k); }).length;
+    var active = traceState.filter === f.k ? ' active' : '';
+    return '<button class="trace-filter-btn' + active + '" data-tf="' + f.k + '">' + f.label + ' (' + n + ')</button>';
+  }).join('');
+}
+
+function renderTraceSessions() {
+  var d = traceState.data;
+  var listEl = document.getElementById('trace-sessions');
+  var rows = d.sessions.filter(function(s){ return traceMatchesFilter(s, traceState.filter); });
+  if (!rows.length) {
+    listEl.innerHTML = '<p style="color:#444;font-size:0.85em;padding:0.5em 0">No sessions match this filter yet. Browse the public pages (in another tab/browser) and they will show up here.</p>';
+    return;
+  }
+  var shown = rows.slice(0, 50);
+  var max = shown.reduce(function(m, s){ return Math.max(m, s.eventCount); }, 1);
+  listEl.innerHTML = '<div class="spotlight-board">' + shown.map(function(s) {
+    var pct    = Math.round((s.eventCount / max) * 100);
+    var active = s.sid === traceState.sid ? ' trace-active' : '';
+    var conv   = s.converted ? '<span class="trace-conv-tag">CONVERTED</span>' : '';
+    var src    = (s.refHost && s.refHost !== 'direct') ? s.refHost : 'direct';
+    return '<div class="spotlight-row trace-session' + active + '" data-sid="' + escHtml(s.sid) + '">' +
+        '<div class="sp-info">' +
+          '<div class="sp-label">' + escHtml(jPageLabel(s.entry)) + ' &middot; ' + escHtml(fmtDate(s.start)) + '</div>' +
+          '<div class="sp-bar-wrap"><div class="sp-bar" style="width:' + pct + '%"></div></div>' +
+          '<div class="trace-sess-tags"><span class="trace-sess-dev">' + escHtml(s.dev || '—') + ' &middot; ' + escHtml(src) + '</span>' + conv + '</div>' +
+        '</div>' +
+        '<div class="sp-meta">' +
+          '<span class="sp-time">' + s.eventCount + ' ev</span>' +
+          '<span class="sp-views">' + traceFmtDur(s.durMs) + '</span>' +
+        '</div>' +
+      '</div>';
+  }).join('') + '</div>' +
+    (rows.length > 50 ? '<p style="color:#555;font-size:0.75em;margin-top:0.6em">Showing the 50 most recent of ' + rows.length + ' matching sessions.</p>' : '');
+}
+
+function renderTraceTimeline() {
+  var el = document.getElementById('trace-timeline');
+  var s  = null;
+  if (traceState.sid && traceState.data) {
+    var m = traceState.data.sessions.filter(function(x){ return x.sid === traceState.sid; });
+    s = m[0] || null;
+  }
+  if (!s) {
+    el.innerHTML = '<p style="color:#444;font-size:0.85em;padding:0.5em 0">Select a session above to replay its timeline here.</p>';
+    return;
+  }
+  var head = '<div class="trace-tl-head">Session <strong>' + escHtml(s.sid) + '</strong> &middot; ' +
+    escHtml(s.dev || '—') + ' &middot; from <strong>' + escHtml(s.refHost === 'direct' ? 'direct' : s.refHost) + '</strong> &middot; ' +
+    s.eventCount + ' events &middot; ' + traceFmtDur(s.durMs) +
+    (s.converted ? ' &middot; <span class="trace-conv-tag">CONVERTED</span>' : '') + '</div>';
+  var rows = s.events.map(function(e){ return traceEventRow(e, s.start); }).join('');
+  el.innerHTML = '<div class="trace-tl">' + head + rows + '</div>';
+}
+
+function renderTraceTab() {
+  var d = buildTrace();
+  traceState.data = d;
+  if (traceState.sid && !d.sessions.some(function(s){ return s.sid === traceState.sid; })) {
+    traceState.sid = null;
+  }
+  function chip(num, label) {
+    return '<div class="analytics-stat-chip"><span class="asc-num">' + num +
+      '</span><span class="asc-label">' + label + '</span></div>';
+  }
+  document.getElementById('trace-stats').innerHTML =
+    chip(d.total,                    'Sessions')             +
+    chip(d.avgEvents,                'Avg Events / Session') +
+    chip(traceFmtDur(d.avgDurMs),    'Avg Duration')         +
+    chip(d.longest,                  'Longest (events)');
+
+  renderTraceFilters();
+  renderTraceSessions();
+  renderTraceTimeline();
+}
+
+document.getElementById('trace-filters').addEventListener('click', function(e) {
+  var btn = e.target && e.target.closest ? e.target.closest('[data-tf]') : null;
+  if (!btn) return;
+  traceState.filter = btn.getAttribute('data-tf');
+  renderTraceFilters();
+  renderTraceSessions();
+});
+
+document.getElementById('trace-sessions').addEventListener('click', function(e) {
+  var row = e.target && e.target.closest ? e.target.closest('[data-sid]') : null;
+  if (!row) return;
+  traceState.sid = row.getAttribute('data-sid');
+  renderTraceSessions();
+  renderTraceTimeline();
+  var tl = document.getElementById('trace-timeline');
+  if (tl && tl.scrollIntoView) tl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+});
+
+document.getElementById('trace-refresh-btn').addEventListener('click', renderTraceTab);
+
+document.getElementById('trace-export-btn').addEventListener('click', function() {
+  var d = buildTrace();
+  var exp = {
+    total: d.total, avgEvents: d.avgEvents, avgDurMs: d.avgDurMs, longest: d.longest,
+    sessions: d.sessions.map(function(s) {
+      return {
+        sid: s.sid, vid: s.vid, start: s.start, end: s.end, durMs: s.durMs,
+        eventCount: s.eventCount, pvCount: s.pvCount, clickCount: s.clickCount,
+        entry: s.entry, exit: s.exit, dev: s.dev, refHost: s.refHost, converted: s.converted
+      };
+    })
+  };
+  var blob = new Blob([JSON.stringify(exp, null, 2)], { type: 'application/json' });
+  var url  = URL.createObjectURL(blob);
+  var a    = document.createElement('a');
+  a.href = url; a.download = 'trace-' + Date.now() + '.json'; a.click();
   URL.revokeObjectURL(url);
 });
 </script>
