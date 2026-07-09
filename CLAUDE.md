@@ -195,6 +195,7 @@ Password-protected (SHA-256 hash in localStorage, 5-attempt lockout). Session tr
 | Beacon      | Conversion funnel & goal tracking — path-to-inquiry funnel, drop-off points, CTA clicks, converting sources |
 | Relay       | Outbound reach & link clicks — destination mix (social/shop/external/email), top destinations, exit pages, recent link-outs |
 | Friction    | UX friction & frustration signals — rage clicks (repeated clicks in one spot), unresponsive/dead clicks (non-interactive targets), friction hotspots, friction by page |
+| Mosaic      | Artwork affinity & co-view — which pieces get viewed together per visit, top co-viewed pairs, hub/connective artworks, per-artwork companions explorer |
 
 ---
 
@@ -639,6 +640,39 @@ Answers a question the rest of the analytics family structurally cannot: **where
 
 ---
 
+## Mosaic — Artwork Affinity & Co-View Analysis (Admin → Mosaic tab) — NEW TOOL
+
+Answers a curation question no other tool can: **which artworks get looked at *together* in the same visit?** Spotlight ranks each artwork on its own (total viewport time); every other tool measures pages, timing, sources, retention, conversion, or money. None *relates artworks to one another*. Mosaic reads the same viewport events Spotlight records and builds a co-view affinity map — the works that resonate as a set, the connective "hub" pieces most visits pass through, and, for any single piece, what visitors most often view alongside it. A concrete signal for sequencing the portfolio, building a cohesive series, and deciding what to hang next to what.
+
+**No new storage key** — derived live from `_gam_spotlight_v1` (the artwork viewport events Spotlight already records via `IntersectionObserver`), the same read-only pattern as Journey/Depth reading from `_gam_analytics_v1`.
+
+**How it works:**
+1. `buildMosaic()` groups spotlight events by `sid` into the **set** of distinct artworks (`artId`) that session viewed, keeping the longest human `label` per `artId`.
+2. Sessions with `< 2` distinct artworks are skipped (a lone artwork has no companions).
+3. For each qualifying session it forms every unordered artwork **pair** and increments that pair's co-occurrence count; it also records each artwork's per-partner co-view counts (`companions`) and how many multi-art sessions the artwork appears in (`artSessions`).
+4. A **hub score** per artwork = the number of *distinct* other artworks it co-views with (breadth of connection), tie-broken by session count.
+
+**Admin tab sections:**
+- **Stats**: Multi-Art Sessions, Co-View Pairs (unique), Artworks Linked, Avg Arts / Session
+- **Top Co-Viewed Pairs**: artwork pairs ranked by how many sessions viewed both, shown as `A × B` bars
+- **Hub Artworks — Most Connective**: artworks ranked by distinct co-view partners (the connective anchors), annotated with companion + session counts
+- **Companions Explorer**: pick any artwork → ranked list of what visitors most often view alongside it (shared-visit counts)
+
+**Derived schema (for export):**
+```js
+{ multiArtSessions, uniquePairs, totalCoViews, artsLinked, avgArts,
+  pairs:[{a,b,count}], hubs:[{label,partners,sessions}] }
+```
+
+**Technical notes:**
+- Reuses the shared `jBarList()` renderer, `analytics-stat-chip`, `spotlight-board`/`sp-*` bar styles, `escHtml()`, and the `journey-select` dropdown style; only a small `.mosaic-pair-lbl` / `.mosaic-x` wrapper (warm amber `×` separator) is new — no blue/pink.
+- Co-view is per session (`sid`), so one visitor across several tabs may count as separate sessions (consistent with the rest of the analytics family).
+- Tab renders lazily on click, same pattern as Friction/Relay/Beacon/Orbit/Depth/Compass/Journey/Pulse/Spotlight/Revenue.
+
+**API:** none new on `CommissionData` — uses `CommissionData.getSpotlight()`. Logic lives in `renderMosaicTab()` / `buildMosaic()` inside `admin/index.html`.
+
+---
+
 ## Commission System
 
 ### Pages
@@ -716,4 +750,4 @@ Stored in `_gam_prices_v1`. Three sections: `digital`, `stickers`, `animation`. 
 
 ---
 
-*Last updated: 2026-07-07*
+*Last updated: 2026-07-09*
