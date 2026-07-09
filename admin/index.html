@@ -869,6 +869,11 @@
 		.fr-tag-rage { background: rgba(176,122,74,0.22); color: #d6a878; border: 1px solid rgba(176,122,74,0.4); }
 		.fr-tag-dead { background: rgba(140,136,127,0.18); color: #b7b3aa; border: 1px solid rgba(140,136,127,0.35); }
 
+		/* Mosaic tab — artwork affinity / co-view analysis (reuses spotlight bars) */
+		.mosaic-pair-lbl { display: flex; align-items: center; gap: 0.55em; flex-wrap: wrap; }
+		.mosaic-x { font-family: 'Courier New', monospace; font-size: 0.72em; color: #c9a87c;
+			border: 1px solid rgba(201,168,124,0.35); border-radius: 3px; padding: 0 0.35em; flex-shrink: 0; }
+
 		/* Beacon tab — conversion funnel */
 		.beacon-stage { padding: 0.55em 0; border-bottom: 1px solid rgba(255,255,255,0.06); }
 		.beacon-stage:last-child { border-bottom: none; }
@@ -960,6 +965,7 @@
 				<button class="admin-tab" data-tab="beacon">Beacon</button>
 				<button class="admin-tab" data-tab="relay">Relay</button>
 				<button class="admin-tab" data-tab="friction">Friction</button>
+				<button class="admin-tab" data-tab="mosaic">Mosaic</button>
 			</div>
 
 			<!-- ============ GALLERY TAB ============ -->
@@ -1868,6 +1874,39 @@
 							<h3>Recent Friction</h3>
 							<p class="hint">The latest frustration events, tagged <span class="fr-tag fr-tag-rage">RAGE</span> or <span class="fr-tag fr-tag-dead">DEAD</span>, with the element, the page it happened on, and when. A live feed of where the interface is snagging people.</p>
 							<div id="friction-recent"></div>
+						</div>
+
+					</div>
+
+					<div id="tab-mosaic" class="tab-content">
+
+						<div class="admin-card">
+							<h3>Mosaic — Artwork Affinity &amp; Co-View</h3>
+							<p class="hint">Spotlight ranks each artwork on its own; Mosaic asks a question none of the other tools can &mdash; which pieces get looked at <em>together</em> in the same visit? By pairing up the artworks each session views, it surfaces the works that resonate as a set, the connective &ldquo;hub&rdquo; pieces everyone passes through, and what to hang next to what. A curation signal for sequencing the portfolio, building a cohesive series, or picking which pieces to feature side-by-side. Derived live from the artwork viewport events Spotlight already records (<code>_gam_spotlight_v1</code>) &mdash; no new storage key.</p>
+							<div id="mosaic-stats" class="analytics-stats" style="margin-bottom:1em"></div>
+							<div style="display:flex;gap:0.5em;flex-wrap:wrap">
+								<button class="button small" id="mosaic-refresh-btn">Refresh</button>
+								<button class="button small" id="mosaic-export-btn">Export JSON</button>
+							</div>
+						</div>
+
+						<div class="admin-card">
+							<h3>Top Co-Viewed Pairs</h3>
+							<p class="hint">The artwork pairs seen together in the most visits, ranked by how many sessions viewed both. A strong pair means the two pieces pull the same eyes &mdash; good candidates to feature side-by-side, sequence back-to-back, or build a series around.</p>
+							<div id="mosaic-pairs"></div>
+						</div>
+
+						<div class="admin-card">
+							<h3>Hub Artworks — Most Connective</h3>
+							<p class="hint">The pieces that appear alongside the widest range of <em>other</em> artworks. These are the connective works most visits pass through &mdash; the natural anchors to lead with or place at a crossroads in the layout, since they bridge the rest of the collection.</p>
+							<div id="mosaic-hubs"></div>
+						</div>
+
+						<div class="admin-card">
+							<h3>Companions Explorer</h3>
+							<p class="hint">Pick any artwork to see what visitors most often view alongside it &mdash; its closest companions, ranked by shared visits. Use it to decide what to hang next to a given piece.</p>
+							<select id="mosaic-companion-select" class="journey-select" style="margin-bottom:0.9em"></select>
+							<div id="mosaic-companions"></div>
 						</div>
 
 					</div>
@@ -2886,6 +2925,9 @@ document.addEventListener('click', function(e){
   }
   if (e.target.dataset && e.target.dataset.tab === 'friction') {
     renderFrictionTab();
+  }
+  if (e.target.dataset && e.target.dataset.tab === 'mosaic') {
+    renderMosaicTab();
   }
 });
 
@@ -5725,6 +5767,186 @@ document.getElementById('friction-export-btn').addEventListener('click', functio
   var url  = URL.createObjectURL(blob);
   var a    = document.createElement('a');
   a.href = url; a.download = 'friction-' + Date.now() + '.json'; a.click();
+  URL.revokeObjectURL(url);
+});
+
+/* ================================================================
+   MOSAIC TAB — artwork affinity & co-view analysis
+   Spotlight ranks each artwork on its own; Mosaic relates them to
+   one another. For every session it takes the SET of artworks that
+   session viewed, forms all unordered pairs, and counts how often
+   each pair co-occurs across sessions. Surfaces:
+     • Top co-viewed pairs — pieces that pull the same eyes
+     • Hub artworks — pieces that co-view with the widest range of
+       other works (the connective anchors of the collection)
+     • Companions explorer — for any piece, what's seen alongside it
+   Derived live from _gam_spotlight_v1 (Spotlight's viewport events)
+   — no new storage key, same read-only pattern as Journey/Depth.
+================================================================ */
+
+function buildMosaic() {
+  var events = CommissionData.getSpotlight() || [];
+
+  /* session -> set of artIds viewed; artId -> best human label */
+  var bySid   = {};
+  var labelOf = {};
+  events.forEach(function(e) {
+    if (!e.sid || !e.artId) return;
+    var lbl = e.label || e.alt || e.artId.split('::').pop() || e.artId;
+    if (!labelOf[e.artId] || lbl.length > labelOf[e.artId].length) labelOf[e.artId] = lbl;
+    (bySid[e.sid] = bySid[e.sid] || {})[e.artId] = true;
+  });
+
+  var pairs        = {};   /* "a||b" -> {a, b, count} (a<b) */
+  var companions   = {};   /* artId -> { partnerArtId: count } */
+  var artSessions  = {};   /* artId -> multi-art sessions it appears in */
+  var multiArtSessions = 0;
+  var totalCoViews = 0;
+  var artsSeenInMulti = 0;
+
+  Object.keys(bySid).forEach(function(sid) {
+    var arts = Object.keys(bySid[sid]);
+    if (arts.length < 2) return;   /* a lone artwork has no companions */
+    multiArtSessions++;
+    artsSeenInMulti += arts.length;
+    arts.forEach(function(a) {
+      artSessions[a] = (artSessions[a] || 0) + 1;
+      companions[a]  = companions[a] || {};
+    });
+    for (var i = 0; i < arts.length; i++) {
+      for (var j = i + 1; j < arts.length; j++) {
+        var a = arts[i], b = arts[j];
+        var lo = a < b ? a : b, hi = a < b ? b : a;
+        var key = lo + '||' + hi;
+        (pairs[key] || (pairs[key] = { a: lo, b: hi, count: 0 })).count++;
+        companions[a][b] = (companions[a][b] || 0) + 1;
+        companions[b][a] = (companions[b][a] || 0) + 1;
+        totalCoViews++;
+      }
+    }
+  });
+
+  var pairList = Object.keys(pairs).map(function(k){ return pairs[k]; })
+    .sort(function(x, y){ return y.count - x.count; });
+
+  /* Hub score = how many DISTINCT other artworks a piece co-views with. */
+  var hubList = Object.keys(companions).map(function(id){
+    return { artId: id, partners: Object.keys(companions[id]).length, sessions: artSessions[id] || 0 };
+  }).sort(function(x, y){
+    return (y.partners - x.partners) || (y.sessions - x.sessions);
+  });
+
+  return {
+    labelOf: labelOf,
+    pairs: pairList,
+    companions: companions,
+    hubs: hubList,
+    artSessions: artSessions,
+    multiArtSessions: multiArtSessions,
+    uniquePairs: pairList.length,
+    totalCoViews: totalCoViews,
+    artsLinked: hubList.length,
+    avgArts: multiArtSessions ? (artsSeenInMulti / multiArtSessions) : 0
+  };
+}
+
+function mosaicLabel(m, artId) {
+  return m.labelOf[artId] || (artId ? artId.split('::').pop() : artId) || artId;
+}
+
+function renderMosaicTab() {
+  var m = buildMosaic();
+
+  function chip(num, label) {
+    return '<div class="analytics-stat-chip"><span class="asc-num">' + num +
+      '</span><span class="asc-label">' + label + '</span></div>';
+  }
+
+  document.getElementById('mosaic-stats').innerHTML =
+    chip(m.multiArtSessions,        'Multi-Art Sessions') +
+    chip(m.uniquePairs,             'Co-View Pairs')       +
+    chip(m.artsLinked,              'Artworks Linked')     +
+    chip(m.avgArts.toFixed(1),      'Avg Arts / Session');
+
+  /* ── Top co-viewed pairs ── */
+  var pairEl = document.getElementById('mosaic-pairs');
+  if (!m.pairs.length) {
+    pairEl.innerHTML = '<p style="color:#444;font-size:0.85em;padding:0.5em 0">No co-views yet. Once visitors view two or more artworks in the same session, the pairs they look at together show up here.</p>';
+  } else {
+    var maxPair = m.pairs[0].count;
+    pairEl.innerHTML = '<div class="spotlight-board">' + m.pairs.slice(0, 15).map(function(p) {
+      var pct = Math.round((p.count / maxPair) * 100);
+      var la = escHtml(mosaicLabel(m, p.a)), lb = escHtml(mosaicLabel(m, p.b));
+      return '<div class="spotlight-row">' +
+        '<div class="sp-info">' +
+          '<div class="sp-label mosaic-pair-lbl"><span>' + la + '</span>' +
+            '<span class="mosaic-x">&times;</span><span>' + lb + '</span></div>' +
+          '<div class="sp-bar-wrap"><div class="sp-bar" style="width:' + pct + '%"></div></div>' +
+        '</div>' +
+        '<div class="sp-meta">' +
+          '<span class="sp-time">' + p.count + '</span>' +
+          '<span class="sp-views">' + (p.count === 1 ? 'session' : 'sessions') + '</span>' +
+        '</div>' +
+      '</div>';
+    }).join('') + '</div>';
+  }
+
+  /* ── Hub artworks (most connective) ── */
+  var hubRows = m.hubs.slice(0, 15).map(function(h) {
+    return { label: mosaicLabel(m, h.artId), count: h.partners, sessions: h.sessions };
+  });
+  document.getElementById('mosaic-hubs').innerHTML = hubRows.length
+    ? jBarList(hubRows, 0, {
+        suffix: function(row) {
+          return row.count + (row.count === 1 ? ' companion' : ' companions') +
+                 ' · ' + row.sessions + (row.sessions === 1 ? ' session' : ' sessions');
+        }
+      })
+    : '<p style="color:#444;font-size:0.85em;padding:0.5em 0">No connective artworks yet. This fills in once visitors view multiple pieces per visit.</p>';
+
+  /* ── Companions explorer ── */
+  var sel = document.getElementById('mosaic-companion-select');
+  var options = m.hubs.slice();   /* already sorted by connectivity */
+  var prev = sel.value;
+  sel.innerHTML = options.map(function(h) {
+    return '<option value="' + escHtml(h.artId) + '">' +
+      escHtml(mosaicLabel(m, h.artId)) + ' (' + h.partners + ')</option>';
+  }).join('');
+  if (prev && options.some(function(h){ return h.artId === prev; })) sel.value = prev;
+
+  function drawCompanions() {
+    var id = sel.value;
+    var el = document.getElementById('mosaic-companions');
+    if (!id || !m.companions[id]) {
+      el.innerHTML = '<p style="color:#444;font-size:0.85em;padding:0.5em 0">Pick an artwork above to see its companions.</p>';
+      return;
+    }
+    var comp = m.companions[id];
+    var rows = Object.keys(comp).map(function(pid){
+      return { label: mosaicLabel(m, pid), count: comp[pid] };
+    }).sort(function(a, b){ return b.count - a.count; });
+    el.innerHTML = jBarList(rows, 0, {
+      suffix: function(row){ return row.count + (row.count === 1 ? ' shared visit' : ' shared visits'); }
+    });
+  }
+  sel.onchange = drawCompanions;
+  drawCompanions();
+}
+
+document.getElementById('mosaic-refresh-btn').addEventListener('click', renderMosaicTab);
+
+document.getElementById('mosaic-export-btn').addEventListener('click', function() {
+  var m = buildMosaic();
+  var out = {
+    multiArtSessions: m.multiArtSessions, uniquePairs: m.uniquePairs,
+    totalCoViews: m.totalCoViews, artsLinked: m.artsLinked, avgArts: m.avgArts,
+    pairs: m.pairs.map(function(p){ return { a: mosaicLabel(m, p.a), b: mosaicLabel(m, p.b), count: p.count }; }),
+    hubs: m.hubs.map(function(h){ return { label: mosaicLabel(m, h.artId), partners: h.partners, sessions: h.sessions }; })
+  };
+  var blob = new Blob([JSON.stringify(out, null, 2)], { type: 'application/json' });
+  var url  = URL.createObjectURL(blob);
+  var a    = document.createElement('a');
+  a.href = url; a.download = 'mosaic-' + Date.now() + '.json'; a.click();
   URL.revokeObjectURL(url);
 });
 </script>

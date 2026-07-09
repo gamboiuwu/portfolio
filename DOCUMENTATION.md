@@ -53,6 +53,7 @@ The tracking answers the questions the portfolio owner actually cares about:
 | Do visitors become clients? (conversion) | `goal` (CTA click → form open → submit) | **Beacon → Conversion Funnel** |
 | Where do they click *out* to (socials/shops)? | `click` `href` (external targets) | **Relay → Destination Mix / Top Destinations** |
 | Where does the interface *frustrate* them? | `click` clustering (rage) + non-interactive targets (dead) | **Friction → Hotspots / Signal Mix** |
+| Which artworks get viewed *together*? | spotlight viewport events grouped per session | **Mosaic → Top Co-Viewed Pairs / Hub Artworks** |
 
 See `CLAUDE.md` → Analytics System for the exact event field schema.
 
@@ -142,6 +143,16 @@ Inquiries, Feedback.
   - **Signal Mix** donut, **Friction Hotspots** (the exact elements taking frustrated
     clicks), **Friction by Page**, and a tagged **Recent Friction** feed
   - Derived live from `_gam_analytics_v1` — no new storage key.
+- **Mosaic** *(newest)* — **artwork affinity & co-view analysis**. Spotlight ranks each
+  artwork on its own; Mosaic is the only tool that *relates artworks to one another* —
+  which pieces get looked at **together** in the same visit. From the viewport events
+  Spotlight already records it builds:
+  - Stats: multi-art sessions, unique co-view pairs, artworks linked, avg artworks/session
+  - **Top Co-Viewed Pairs** — the pieces that pull the same eyes (`A × B`, ranked by shared visits)
+  - **Hub Artworks** — the connective pieces that co-view with the widest range of other works
+  - **Companions Explorer** — pick any artwork, see what visitors most view alongside it
+  - A curation signal for sequencing the portfolio and deciding what to hang next to what.
+  - Derived live from `_gam_spotlight_v1` — no new storage key.
 - **Revenue** — financial dashboard derived from the commission Queue: total earned,
   pipeline value, monthly earnings chart, revenue by type, top clients.
 - **Palette** — extract dominant colors from an uploaded artwork (k-means), save
@@ -172,4 +183,4 @@ Inquiries, Feedback.
 - `assets/js/analytics.js` owns all client-side event capture.
 - Keep the gallery light-mode and let the artwork lead; cyber accents stay subtle.
 
-*Last updated: 2026-06-29*
+*Last updated: 2026-07-09*
