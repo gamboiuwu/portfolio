@@ -54,6 +54,7 @@ The tracking answers the questions the portfolio owner actually cares about:
 | Where do they click *out* to (socials/shops)? | `click` `href` (external targets) | **Relay → Destination Mix / Top Destinations** |
 | Where does the interface *frustrate* them? | `click` clustering (rage) + non-interactive targets (dead) | **Friction → Hotspots / Signal Mix** |
 | Which artworks get viewed *together*? | spotlight viewport events grouped per session | **Mosaic → Top Co-Viewed Pairs / Hub Artworks** |
+| What did *one specific visitor* do, step by step? | all events + spotlight views, per session, in order | **Reel → Replay a Session** |
 
 See `CLAUDE.md` → Analytics System for the exact event field schema.
 
@@ -143,7 +144,7 @@ Inquiries, Feedback.
   - **Signal Mix** donut, **Friction Hotspots** (the exact elements taking frustrated
     clicks), **Friction by Page**, and a tagged **Recent Friction** feed
   - Derived live from `_gam_analytics_v1` — no new storage key.
-- **Mosaic** *(newest)* — **artwork affinity & co-view analysis**. Spotlight ranks each
+- **Mosaic** — **artwork affinity & co-view analysis**. Spotlight ranks each
   artwork on its own; Mosaic is the only tool that *relates artworks to one another* —
   which pieces get looked at **together** in the same visit. From the viewport events
   Spotlight already records it builds:
@@ -153,6 +154,17 @@ Inquiries, Feedback.
   - **Companions Explorer** — pick any artwork, see what visitors most view alongside it
   - A curation signal for sequencing the portfolio and deciding what to hang next to what.
   - Derived live from `_gam_spotlight_v1` — no new storage key.
+- **Reel** *(newest)* — **session replay & event timeline**. Every other tool
+  aggregates across visits; Reel is the only one that replays a *single* visit
+  step-by-step — the closest thing to a session screen-recording. Pick a session and
+  watch it unfold:
+  - Stats: sessions, avg events/session, longest session, sessions with a goal
+  - **Replay a Session** — a picker + a chronological timeline (VIEW / CLICK / SCROLL /
+    HOVER / ART / GOAL / EXIT) showing where they landed and from which source, every
+    page move, each click and its target, scroll reach, which artworks held their eye
+    and for how long, any conversion, and where they clicked off
+  - **Most Active Sessions** — the busiest, most-engaged visits worth replaying first
+  - Reconstructed live from `_gam_analytics_v1` + `_gam_spotlight_v1` — no new storage key.
 - **Revenue** — financial dashboard derived from the commission Queue: total earned,
   pipeline value, monthly earnings chart, revenue by type, top clients.
 - **Palette** — extract dominant colors from an uploaded artwork (k-means), save

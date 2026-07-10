@@ -196,6 +196,7 @@ Password-protected (SHA-256 hash in localStorage, 5-attempt lockout). Session tr
 | Relay       | Outbound reach & link clicks — destination mix (social/shop/external/email), top destinations, exit pages, recent link-outs |
 | Friction    | UX friction & frustration signals — rage clicks (repeated clicks in one spot), unresponsive/dead clicks (non-interactive targets), friction hotspots, friction by page |
 | Mosaic      | Artwork affinity & co-view — which pieces get viewed together per visit, top co-viewed pairs, hub/connective artworks, per-artwork companions explorer |
+| Reel        | Session replay & event timeline — replays a single visit step-by-step (landing + source, page moves, clicks, scrolls, artwork views, goals, exit), plus a most-active-sessions list |
 
 ---
 
@@ -673,6 +674,39 @@ Answers a curation question no other tool can: **which artworks get looked at *t
 
 ---
 
+## Reel — Session Replay & Event Timeline (Admin → Reel tab) — NEW TOOL
+
+Answers a question the rest of the analytics family structurally cannot: **what did one specific visitor actually do, moment by moment?** Every other tool aggregates across sessions — Journey shows page-to-page flow *in aggregate*, Compass shows sources, Spotlight ranks artworks, Beacon reports funnel drop-off. None lets you watch a *single* visit unfold. Reel is the closest thing to a session screen-recording: pick one session and replay its full event stream in chronological order — where the visitor landed and from which source, every page they moved to, what they clicked (with link target), how far they scrolled, which artworks held their eye and for how long, any conversion goal they hit, and exactly where they clicked off.
+
+**No new storage key** — reconstructed live from `_gam_analytics_v1` (the `pv` / `click` / `scroll` / `tile_hover` / `exit` / `goal` events analytics already records) merged with `_gam_spotlight_v1` (the artwork viewport events Spotlight records), the same read-only pattern as Journey/Mosaic. Nothing new is instrumented.
+
+**How it works:**
+1. `buildReel()` groups every analytics event by `sid`, then folds each session's Spotlight artwork-view events into that same session as synthetic `art` events.
+2. Each session's events are sorted by `ts`. Per session it derives: `entry` (first `pv` page), `exit` (last `pv` page), `refHost` / `dev` (from the first pageview), `pvCount`, `clicks`, `maxScroll`, `arts` (artwork views), `converted` (any `form_submit` goal), `durMs` (`max(last−first, longest exit ms)`), and total event `count`.
+3. Sessions are sorted most-recent-first for the picker; the timeline for the selected session renders each event via `reelDescribe()` into a tagged row (VIEW / CLICK / SCROLL / HOVER / ART / GOAL / EXIT) with a relative `+Ns` / `+m:ss` offset from the session's first event.
+
+**Admin tab sections:**
+- **Stats**: Sessions, Avg Events / Session, Longest Session, Sessions w/ Goal
+- **Replay a Session**: session picker (labelled with entry page, time, event count, device, ★ = converted) → a per-session summary line + a vertical event timeline with warm-amber tag chips and dotted spine
+- **Most Active Sessions**: the busiest visits by recorded event count, ranked bars annotated with pages / clicks / duration / ★
+
+**Derived schema (for export):**
+```js
+{ sessionCount, totalEvents, avgEvents, longestMs, goalSessions,
+  sessions:[{ sid, entry, exit, source, device, pageViews, clicks, artworkViews,
+              maxScroll, durationMs, events, converted,
+              timeline:[{ t, type, page, detail }] }] }
+```
+
+**Technical notes:**
+- Timeline tag chips and the timeline spine use the warm amber/sand palette (`rgba(201,168,124…)` view/goal, `rgba(176,122,74…)` click/art, muted `rgba(140,136,127…)` scroll/hover, clay `rgba(150,104,62…)` exit) — no blue/pink. New `.reel-*` CSS classes; reuses `analytics-stat-chip`, `jBarList()`, `jPageLabel()`, `escHtml()`, `fmtDate()`, and the `journey-select` dropdown style.
+- Co-viewed/session counts are per `sid`, so one visitor across several tabs counts as separate sessions (consistent with the rest of the analytics family).
+- Tab renders lazily on click, same pattern as Mosaic/Friction/Relay/Beacon/Orbit/Depth/Compass/Journey/Pulse/Spotlight/Revenue.
+
+**API:** none new on `CommissionData` — uses `CommissionData.getAnalytics()` + `.getSpotlight()`. Logic lives in `renderReelTab()` / `buildReel()` / `reelDescribe()` inside `admin/index.html`.
+
+---
+
 ## Commission System
 
 ### Pages
@@ -750,4 +784,4 @@ Stored in `_gam_prices_v1`. Three sections: `digital`, `stickers`, `animation`. 
 
 ---
 
-*Last updated: 2026-07-09*
+*Last updated: 2026-07-10*
