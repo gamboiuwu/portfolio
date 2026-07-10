@@ -884,6 +884,30 @@
 		.beacon-bar-wrap { height: 1.1em; background: rgba(255,255,255,0.05); border-radius: 3px; overflow: hidden; }
 		.beacon-bar { height: 100%; border-radius: 3px; transition: width 0.4s ease; }
 		.beacon-drop { font-size: 0.72em; color: #b07a4a; margin-top: 0.25em; font-family: 'Courier New', monospace; }
+
+		/* Reel tab — session replay & event timeline */
+		.reel-picker-row { display: flex; gap: 0.6em; flex-wrap: wrap; align-items: center; margin-bottom: 0.4em; }
+		.reel-sess-meta { font-family: 'Courier New', monospace; font-size: 0.78em; color: #8c887f; margin: 0.5em 0 0.2em; }
+		.reel-line { position: relative; margin: 0.6em 0 0; padding-left: 1.15em; border-left: 2px solid rgba(201,168,124,0.28); }
+		.reel-ev { position: relative; padding: 0.55em 0 0.55em 0.3em; border-bottom: 1px solid rgba(255,255,255,0.05); }
+		.reel-ev:last-child { border-bottom: none; }
+		.reel-ev::before { content: ''; position: absolute; left: -1.5em; top: 0.95em; width: 0.5em; height: 0.5em;
+			border-radius: 50%; background: #c9a87c; }
+		.reel-ev-head { display: flex; align-items: baseline; gap: 0.6em; flex-wrap: wrap; }
+		.reel-tag { display: inline-block; font-family: 'Courier New', monospace; font-size: 0.62em; letter-spacing: 0.06em;
+			padding: 0.14em 0.5em; border-radius: 3px; flex-shrink: 0; }
+		.reel-time { font-family: 'Courier New', monospace; font-size: 0.72em; color: #8c887f; margin-left: auto; flex-shrink: 0; }
+		.reel-ev-text { font-size: 0.88em; color: #e7e4de; }
+		.reel-ev-sub { font-size: 0.76em; color: #8c887f; margin-top: 0.15em; word-break: break-word; }
+		.reel-tag-view   { background: rgba(201,168,124,0.20); color: #d6b48c; border: 1px solid rgba(201,168,124,0.4); }
+		.reel-tag-click  { background: rgba(176,122,74,0.20); color: #d6a878; border: 1px solid rgba(176,122,74,0.4); }
+		.reel-tag-scroll { background: rgba(140,136,127,0.16); color: #b7b3aa; border: 1px solid rgba(140,136,127,0.32); }
+		.reel-tag-hover  { background: rgba(140,136,127,0.16); color: #b7b3aa; border: 1px solid rgba(140,136,127,0.32); }
+		.reel-tag-art    { background: rgba(176,122,74,0.28); color: #e0b98a; border: 1px solid rgba(176,122,74,0.5); }
+		.reel-tag-goal   { background: rgba(201,168,124,0.55); color: #201b13; border: 1px solid rgba(201,168,124,0.8); font-weight: 700; }
+		.reel-tag-exit   { background: rgba(150,104,62,0.18); color: #c79a6a; border: 1px solid rgba(150,104,62,0.35); }
+		.reel-ev-goal::before { background: #e0b98a; }
+		.reel-ev-goal .reel-ev-text { color: #e0b98a; }
 	</style>
 </head>
 <body class="is-preload">
@@ -966,6 +990,7 @@
 				<button class="admin-tab" data-tab="relay">Relay</button>
 				<button class="admin-tab" data-tab="friction">Friction</button>
 				<button class="admin-tab" data-tab="mosaic">Mosaic</button>
+				<button class="admin-tab" data-tab="reel">Reel</button>
 			</div>
 
 			<!-- ============ GALLERY TAB ============ -->
@@ -1907,6 +1932,36 @@
 							<p class="hint">Pick any artwork to see what visitors most often view alongside it &mdash; its closest companions, ranked by shared visits. Use it to decide what to hang next to a given piece.</p>
 							<select id="mosaic-companion-select" class="journey-select" style="margin-bottom:0.9em"></select>
 							<div id="mosaic-companions"></div>
+						</div>
+
+					</div>
+
+					<div id="tab-reel" class="tab-content">
+
+						<div class="admin-card">
+							<h3>Reel — Session Replay &amp; Event Timeline</h3>
+							<p class="hint">Journey shows where visitors go <em>in aggregate</em>; Reel replays a single visit as it actually happened &mdash; the exact step-by-step story of one person moving through the portfolio. Pick a session and watch it unfold: where they landed and from which source, every page they moved to, what they clicked, how far they scrolled, which artworks held their eye and for how long, any goal they hit, and where they finally clicked off. The closest thing to a screen-recording, reconstructed entirely from the <code>click</code>/<code>pv</code>/<code>scroll</code>/<code>exit</code>/<code>goal</code> events analytics already records (plus the artwork viewport events from Spotlight) &mdash; no new storage key.</p>
+							<div id="reel-stats" class="analytics-stats" style="margin-bottom:1em"></div>
+							<div style="display:flex;gap:0.5em;flex-wrap:wrap">
+								<button class="button small" id="reel-refresh-btn">Refresh</button>
+								<button class="button small" id="reel-export-btn">Export JSON</button>
+							</div>
+						</div>
+
+						<div class="admin-card">
+							<h3>Replay a Session</h3>
+							<p class="hint">Each visit is one tab-session. Pick one to replay its full event stream in order &mdash; relative times are measured from the session's first event.</p>
+							<div class="reel-picker-row">
+								<select id="reel-session-select" class="journey-select" style="flex:1;min-width:220px"></select>
+							</div>
+							<div id="reel-session-summary" class="reel-sess-meta"></div>
+							<div id="reel-timeline"></div>
+						</div>
+
+						<div class="admin-card">
+							<h3>Most Active Sessions</h3>
+							<p class="hint">The busiest visits by number of recorded events &mdash; the deepest, most engaged sessions worth replaying first.</p>
+							<div id="reel-active"></div>
 						</div>
 
 					</div>
@@ -2929,6 +2984,9 @@ document.addEventListener('click', function(e){
   if (e.target.dataset && e.target.dataset.tab === 'mosaic') {
     renderMosaicTab();
   }
+  if (e.target.dataset && e.target.dataset.tab === 'reel') {
+    renderReelTab();
+  }
 });
 
 /* ================================================================
@@ -3680,7 +3738,7 @@ function renderQueueTab() {
     col.innerHTML =
       '<div class="queue-col-head">'
       + '<span class="queue-col-head-dot ' + dotClass[status] + '"></span>'
-      + esc(QUEUE_STATUS_LABELS[status]) + ' (' + colItems.length + ')'
+      + escHtml(QUEUE_STATUS_LABELS[status]) + ' (' + colItems.length + ')'
       + '</div>';
     if (colItems.length === 0) {
       col.innerHTML += '<div style="font-size:0.72em;color:#444;padding:0.5em 0">— empty —</div>';
@@ -3717,21 +3775,21 @@ function buildQueueCard(item, today) {
   }
 
   card.innerHTML =
-    '<div class="queue-item-client">' + esc(item.client || '(no client)') + '</div>'
-    + '<div class="queue-item-type">' + esc(item.type || '') + (item.desc ? ' — ' + esc(item.desc) : '') + '</div>'
+    '<div class="queue-item-client">' + escHtml(item.client || '(no client)') + '</div>'
+    + '<div class="queue-item-type">' + escHtml(item.type || '') + (item.desc ? ' — ' + escHtml(item.desc) : '') + '</div>'
     + (item.price ? '<div class="queue-item-price">$' + parseFloat(item.price).toFixed(0) + '</div>' : '')
     + dueHtml
-    + (item.notes ? '<div style="font-size:0.7em;color:#555;margin-top:0.35em;line-height:1.5">' + esc(item.notes).replace(/\n/g,'<br>') + '</div>' : '')
+    + (item.notes ? '<div style="font-size:0.7em;color:#555;margin-top:0.35em;line-height:1.5">' + escHtml(item.notes).replace(/\n/g,'<br>') + '</div>' : '')
     + '<div class="queue-item-actions">'
-    +   '<button class="queue-item-btn" data-action="edit" data-id="' + esc(String(item.id)) + '">Edit</button>';
+    +   '<button class="queue-item-btn" data-action="edit" data-id="' + escHtml(String(item.id)) + '">Edit</button>';
 
   if (item.status !== 'done' && item.status !== 'cancelled') {
     card.innerHTML +=
-      '<button class="queue-item-btn" data-action="next" data-id="' + esc(String(item.id)) + '">'
+      '<button class="queue-item-btn" data-action="next" data-id="' + escHtml(String(item.id)) + '">'
       + nextStatusLabel(item.status) + '</button>';
   }
   card.innerHTML +=
-    '<button class="queue-item-btn del" data-action="del" data-id="' + esc(String(item.id)) + '">Delete</button>'
+    '<button class="queue-item-btn del" data-action="del" data-id="' + escHtml(String(item.id)) + '">Delete</button>'
     + '</div>';
 
   card.addEventListener('click', function(e) {
@@ -3891,7 +3949,7 @@ function renderRevenueDashboard() {
   tbody.innerHTML = clients.slice(0, 12).map(function(c) {
     var d = clientData[c];
     var avg = d.count > 0 ? '$' + (d.earned / d.count).toFixed(0) : '—';
-    return '<tr><td>' + esc(c) + '</td><td>$' + d.earned.toFixed(0) + '</td><td>' + d.count + '</td><td>' + avg + '</td></tr>';
+    return '<tr><td>' + escHtml(c) + '</td><td>$' + d.earned.toFixed(0) + '</td><td>' + d.count + '</td><td>' + avg + '</td></tr>';
   }).join('');
 }
 
@@ -5947,6 +6005,273 @@ document.getElementById('mosaic-export-btn').addEventListener('click', function(
   var url  = URL.createObjectURL(blob);
   var a    = document.createElement('a');
   a.href = url; a.download = 'mosaic-' + Date.now() + '.json'; a.click();
+  URL.revokeObjectURL(url);
+});
+
+/* ================================================================
+   REEL TAB — session replay & event timeline
+   Journey aggregates paths across all sessions; Reel reconstructs a
+   SINGLE visit as a chronological event stream — the closest thing
+   to a screen-recording. For each session it merges the analytics
+   events (pv / click / scroll / tile_hover / exit / goal) with the
+   artwork viewport events Spotlight records, sorts by ts, and renders
+   a step-by-step timeline: where they landed & from which source,
+   every page/click/scroll, which artworks held their eye and for how
+   long, any goal hit, and where they clicked off.
+   Derived live from _gam_analytics_v1 (+ _gam_spotlight_v1) — no new
+   storage key, same read-only pattern as Journey/Mosaic.
+================================================================ */
+
+function buildReel() {
+  var events = (CommissionData.getAnalytics() || []);
+  var spots  = (CommissionData.getSpotlight()  || []);
+
+  var bySid = {};
+  events.forEach(function(e) {
+    if (!e.sid) return;
+    (bySid[e.sid] = bySid[e.sid] || []).push(e);
+  });
+  /* Fold artwork viewport events into sessions we already know about,
+     so the replay can show "viewed artwork X for 3.2s" inline. */
+  spots.forEach(function(s) {
+    if (!s.sid || !bySid[s.sid]) return;
+    bySid[s.sid].push({
+      sid: s.sid, type: 'art', page: s.page,
+      label: s.label || s.alt || (s.artId ? s.artId.split('::').pop() : 'artwork'),
+      ms: s.ms, ts: s.ts
+    });
+  });
+
+  var sessions = Object.keys(bySid).map(function(sid) {
+    var evs = bySid[sid].slice().sort(function(a, b) { return (a.ts || 0) - (b.ts || 0); });
+    var first = evs.length ? (evs[0].ts || 0) : 0;
+    var last  = evs.length ? (evs[evs.length - 1].ts || first) : 0;
+
+    var firstPv = null, lastPv = null, clicks = 0, maxScroll = 0, maxExit = 0, converted = false, arts = 0;
+    evs.forEach(function(e) {
+      if (e.type === 'pv')   { if (!firstPv) firstPv = e; lastPv = e; }
+      if (e.type === 'click') clicks++;
+      if (e.type === 'scroll' && e.depth > maxScroll) maxScroll = e.depth;
+      if (e.type === 'exit'  && (e.ms || 0) > maxExit) maxExit = e.ms;
+      if (e.type === 'art')  arts++;
+      if (e.type === 'goal'  && e.goal === 'form_submit') converted = true;
+    });
+    var pvCount = evs.filter(function(e) { return e.type === 'pv'; }).length;
+    var durMs   = Math.max(last - first, maxExit);
+
+    return {
+      sid: sid, evs: evs, first: first, last: last,
+      entry: firstPv ? firstPv.page : (evs.length ? (evs[0].page || '/') : '/'),
+      exit:  lastPv  ? lastPv.page  : (firstPv ? firstPv.page : '/'),
+      refHost: firstPv ? (firstPv.refHost || 'direct') : 'direct',
+      dev: firstPv ? (firstPv.dev || '') : '',
+      vnum: firstPv ? firstPv.vnum : undefined,
+      clicks: clicks, maxScroll: maxScroll, pvCount: pvCount,
+      arts: arts, converted: converted, durMs: durMs, count: evs.length
+    };
+  }).sort(function(a, b) { return b.last - a.last; });   /* most recent first */
+
+  var totalEv = sessions.reduce(function(s, x) { return s + x.count; }, 0);
+  var longest = sessions.reduce(function(m, x) { return Math.max(m, x.durMs); }, 0);
+  var goalSess = sessions.filter(function(x) { return x.converted; }).length;
+
+  return {
+    sessions: sessions,
+    sessionCount: sessions.length,
+    totalEv: totalEv,
+    avgEv: sessions.length ? (totalEv / sessions.length) : 0,
+    longest: longest,
+    goalSess: goalSess
+  };
+}
+
+/* Relative-time label from session start. */
+function reelRelTime(ms) {
+  if (ms < 0) ms = 0;
+  if (ms < 60000) return '+' + (ms / 1000).toFixed(1) + 's';
+  var s = Math.round(ms / 1000);
+  return '+' + Math.floor(s / 60) + ':' + ('0' + (s % 60)).slice(-2);
+}
+
+/* Human duration for stats/summary. */
+function reelDur(ms) {
+  if (!ms) return '0s';
+  var s = Math.round(ms / 1000);
+  if (s < 60) return s + 's';
+  return Math.floor(s / 60) + 'm ' + (s % 60) + 's';
+}
+
+function reelSourceLabel(host) {
+  if (!host || host === 'direct') return 'direct (typed or bookmarked)';
+  return host;
+}
+
+/* Describe one event → { cls, tag, text, sub }. */
+function reelDescribe(e, session, isFirstPv) {
+  switch (e.type) {
+    case 'pv':
+      return {
+        cls: 'view', tag: 'VIEW',
+        text: (isFirstPv ? 'Landed on ' : 'Moved to ') + jPageLabel(e.page),
+        sub:  isFirstPv ? ('entered via ' + reelSourceLabel(e.refHost) +
+                (e.dev ? ' · ' + e.dev : '')) : ''
+      };
+    case 'click':
+      var what = (e.text && e.text.trim()) ? '“' + e.text.trim().slice(0, 60) + '”'
+                                           : (e.el || 'an element');
+      return {
+        cls: 'click', tag: 'CLICK',
+        text: 'Clicked ' + what,
+        sub:  e.href ? ('→ ' + e.href) : (e.el ? e.el : '')
+      };
+    case 'scroll':
+      return { cls: 'scroll', tag: 'SCROLL', text: 'Scrolled to ' + e.depth + '% of the page', sub: '' };
+    case 'tile_hover':
+      return { cls: 'hover', tag: 'HOVER', text: 'Lingered on “' + (e.title || 'a tile') + '”', sub: '' };
+    case 'art':
+      return {
+        cls: 'art', tag: 'ART',
+        text: 'Studied artwork — ' + (e.label || 'artwork'),
+        sub:  (e.ms ? (e.ms / 1000).toFixed(1) + 's in view' : '')
+      };
+    case 'goal':
+      return { cls: 'goal', tag: 'GOAL', text: reelGoalLabel(e.goal), sub: e.ctype ? ('type: ' + e.ctype) : '' };
+    case 'exit':
+      return {
+        cls: 'exit', tag: 'EXIT',
+        text: 'Clicked off ' + jPageLabel(e.page),
+        sub:  (e.ms ? 'after ' + reelDur(e.ms) + ' on the page' : '')
+      };
+    default:
+      return { cls: 'view', tag: (e.type || 'EVENT').toUpperCase().slice(0, 6), text: e.type || 'event', sub: '' };
+  }
+}
+
+function reelGoalLabel(goal) {
+  var map = {
+    cta_commission: 'Clicked a commission call-to-action',
+    form_open:      'Opened the commission form',
+    form_step3:     'Reached the Contact step of the form',
+    form_submit:    'Submitted a commission inquiry ✓'
+  };
+  return map[goal] || ('Goal: ' + goal);
+}
+
+function reelSessionOptionLabel(s) {
+  var when = s.first ? fmtDate(s.first) : 'unknown time';
+  return jPageLabel(s.entry) + ' · ' + when + ' · ' + s.count +
+         (s.count === 1 ? ' event' : ' events') + (s.dev ? ' · ' + s.dev : '') +
+         (s.converted ? ' ★' : '');
+}
+
+function renderReelTab() {
+  var r = buildReel();
+
+  function chip(num, label) {
+    return '<div class="analytics-stat-chip"><span class="asc-num">' + num +
+      '</span><span class="asc-label">' + label + '</span></div>';
+  }
+  document.getElementById('reel-stats').innerHTML =
+    chip(r.sessionCount,        'Sessions')          +
+    chip(r.avgEv.toFixed(1),    'Avg Events / Sess.') +
+    chip(reelDur(r.longest),    'Longest Session')   +
+    chip(r.goalSess,            'Sessions w/ Goal');
+
+  /* ── Session picker ── */
+  var sel = document.getElementById('reel-session-select');
+  var prev = sel.value;
+  if (!r.sessions.length) {
+    sel.innerHTML = '<option value="">No sessions recorded yet</option>';
+    document.getElementById('reel-session-summary').innerHTML = '';
+    document.getElementById('reel-timeline').innerHTML =
+      '<p style="color:#444;font-size:0.85em;padding:0.5em 0">No sessions yet. Browse the public pages and each visit will show up here to replay.</p>';
+  } else {
+    sel.innerHTML = r.sessions.map(function(s) {
+      return '<option value="' + escHtml(s.sid) + '">' + escHtml(reelSessionOptionLabel(s)) + '</option>';
+    }).join('');
+    if (prev && r.sessions.some(function(s) { return s.sid === prev; })) sel.value = prev;
+
+    var drawTimeline = function() {
+      var sid = sel.value;
+      var s = r.sessions.filter(function(x) { return x.sid === sid; })[0];
+      var sumEl  = document.getElementById('reel-session-summary');
+      var lineEl = document.getElementById('reel-timeline');
+      if (!s) { sumEl.innerHTML = ''; lineEl.innerHTML = ''; return; }
+
+      sumEl.innerHTML =
+        'Source: ' + escHtml(reelSourceLabel(s.refHost)) +
+        ' · ' + s.pvCount + (s.pvCount === 1 ? ' page' : ' pages') +
+        ' · ' + s.clicks + (s.clicks === 1 ? ' click' : ' clicks') +
+        ' · ' + s.arts + ' artwork views' +
+        ' · max scroll ' + s.maxScroll + '%' +
+        ' · ' + reelDur(s.durMs) + ' total' +
+        (s.converted ? ' · ★ converted' : '');
+
+      var seenFirstPv = false;
+      lineEl.innerHTML = '<div class="reel-line">' + s.evs.map(function(e) {
+        var isFirstPv = false;
+        if (e.type === 'pv' && !seenFirstPv) { isFirstPv = true; seenFirstPv = true; }
+        var d = reelDescribe(e, s, isFirstPv);
+        var rel = reelRelTime((e.ts || s.first) - s.first);
+        return '<div class="reel-ev' + (d.cls === 'goal' ? ' reel-ev-goal' : '') + '">' +
+          '<div class="reel-ev-head">' +
+            '<span class="reel-tag reel-tag-' + d.cls + '">' + d.tag + '</span>' +
+            '<span class="reel-ev-text">' + escHtml(d.text) + '</span>' +
+            '<span class="reel-time">' + rel + '</span>' +
+          '</div>' +
+          (d.sub ? '<div class="reel-ev-sub">' + escHtml(d.sub) + '</div>' : '') +
+        '</div>';
+      }).join('') + '</div>';
+    };
+    sel.onchange = drawTimeline;
+    drawTimeline();
+  }
+
+  /* ── Most active sessions ── */
+  var activeRows = r.sessions.slice()
+    .sort(function(a, b) { return b.count - a.count; })
+    .slice(0, 12)
+    .map(function(s) {
+      return {
+        label: jPageLabel(s.entry) + ' · ' + (s.first ? fmtDate(s.first) : '?'),
+        count: s.count,
+        _s: s
+      };
+    });
+  document.getElementById('reel-active').innerHTML = activeRows.length
+    ? jBarList(activeRows, 0, {
+        suffix: function(row) {
+          var s = row._s;
+          return s.pvCount + 'p · ' + s.clicks + 'c · ' + reelDur(s.durMs) +
+                 (s.converted ? ' · ★' : '');
+        }
+      })
+    : '<p style="color:#444;font-size:0.85em;padding:0.5em 0">No sessions recorded yet.</p>';
+}
+
+document.getElementById('reel-refresh-btn').addEventListener('click', renderReelTab);
+
+document.getElementById('reel-export-btn').addEventListener('click', function() {
+  var r = buildReel();
+  var out = {
+    sessionCount: r.sessionCount, totalEvents: r.totalEv,
+    avgEvents: r.avgEv, longestMs: r.longest, goalSessions: r.goalSess,
+    sessions: r.sessions.map(function(s) {
+      return {
+        sid: s.sid, entry: s.entry, exit: s.exit, source: s.refHost, device: s.dev,
+        pageViews: s.pvCount, clicks: s.clicks, artworkViews: s.arts,
+        maxScroll: s.maxScroll, durationMs: s.durMs, events: s.count, converted: s.converted,
+        timeline: s.evs.map(function(e) {
+          return { t: (e.ts || s.first) - s.first, type: e.type, page: e.page,
+                   detail: reelDescribe(e, s, false).text };
+        })
+      };
+    })
+  };
+  var blob = new Blob([JSON.stringify(out, null, 2)], { type: 'application/json' });
+  var url  = URL.createObjectURL(blob);
+  var a    = document.createElement('a');
+  a.href = url; a.download = 'reel-' + Date.now() + '.json'; a.click();
   URL.revokeObjectURL(url);
 });
 </script>
