@@ -54,6 +54,7 @@ The tracking answers the questions the portfolio owner actually cares about:
 | Where do they click *out* to (socials/shops)? | `click` `href` (external targets) | **Relay → Destination Mix / Top Destinations** |
 | Where does the interface *frustrate* them? | `click` clustering (rage) + non-interactive targets (dead) | **Friction → Hotspots / Signal Mix** |
 | Which artworks get viewed *together*? | spotlight viewport events grouped per session | **Mosaic → Top Co-Viewed Pairs / Hub Artworks** |
+| How long do visits actually *stay* on each page? | `exit` (time-on-page in ms) | **Dwell → Stickiest Pages / Attention Share** |
 
 See `CLAUDE.md` → Analytics System for the exact event field schema.
 
@@ -153,6 +154,20 @@ Inquiries, Feedback.
   - **Companions Explorer** — pick any artwork, see what visitors most view alongside it
   - A curation signal for sequencing the portfolio and deciding what to hang next to what.
   - Derived live from `_gam_spotlight_v1` — no new storage key.
+- **Dwell** *(newest)* — **attention time per page**. Depth measures how far *down* a
+  page people scroll; Spotlight measures time on individual artworks; Journey measures
+  whole-session duration. Dwell is the only tool that answers how long a typical visit
+  actually *stays* on each page, reading the time-on-page every visit records on `exit`:
+  - Stats: total page-exits, average & **median** time-on-page, stickiest page
+  - **Attention Share by Page** — a donut splitting the audience's *total* on-site time
+    across pages (where attention really lives, which isn't always the most-visited page)
+  - **Stickiest Pages — Median Dwell** — pages ranked by the median visit's time-on-page
+    (robust to a few very long sessions), with average and visit count
+  - **Glance-and-Leave Rate** — pages ranked by the share of visits under five seconds
+    (opened and abandoned — weak first impressions to fix)
+  - **Time-on-Page Distribution** — the overall shape of engagement, bucketed from a
+    quick glance (`<5s`) to a long read (`3 min+`)
+  - Derived live from `_gam_analytics_v1` `exit` events — no new storage key.
 - **Revenue** — financial dashboard derived from the commission Queue: total earned,
   pipeline value, monthly earnings chart, revenue by type, top clients.
 - **Palette** — extract dominant colors from an uploaded artwork (k-means), save

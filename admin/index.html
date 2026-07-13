@@ -966,6 +966,7 @@
 				<button class="admin-tab" data-tab="relay">Relay</button>
 				<button class="admin-tab" data-tab="friction">Friction</button>
 				<button class="admin-tab" data-tab="mosaic">Mosaic</button>
+				<button class="admin-tab" data-tab="dwell">Dwell</button>
 			</div>
 
 			<!-- ============ GALLERY TAB ============ -->
@@ -1907,6 +1908,47 @@
 							<p class="hint">Pick any artwork to see what visitors most often view alongside it &mdash; its closest companions, ranked by shared visits. Use it to decide what to hang next to a given piece.</p>
 							<select id="mosaic-companion-select" class="journey-select" style="margin-bottom:0.9em"></select>
 							<div id="mosaic-companions"></div>
+						</div>
+
+					</div>
+
+					<div id="tab-dwell" class="tab-content">
+
+						<div class="admin-card">
+							<h3>Dwell — Attention Time per Page</h3>
+							<p class="hint">Depth measures how far <em>down</em> a page people scroll; Spotlight measures time on individual artworks; Journey measures whole-session duration. Dwell asks the one thing none of them do &mdash; how long does a typical visit actually <em>stay</em> on each page? It reads the time-on-page every visit already records on exit and turns it into a per-page attention profile: which pages hold people, which are glanced at and abandoned, and where the total attention of the whole audience is really being spent. The clearest read on which pages are earning their place. Derived live from the <code>exit</code> events analytics already records (<code>_gam_analytics_v1</code>) &mdash; no new storage key.</p>
+							<div id="dwell-stats" class="analytics-stats" style="margin-bottom:1em"></div>
+							<div style="display:flex;gap:0.5em;flex-wrap:wrap">
+								<button class="button small" id="dwell-refresh-btn">Refresh</button>
+								<button class="button small" id="dwell-export-btn">Export JSON</button>
+							</div>
+						</div>
+
+						<div class="admin-card">
+							<h3>Attention Share by Page</h3>
+							<p class="hint">Of all the time visitors spend on the site, how it splits across pages. A page owning a large slice is where the audience's collective attention actually lives &mdash; the real centre of gravity of the portfolio, which isn't always the page with the most visits.</p>
+							<div class="compass-donut-row">
+								<canvas id="dwell-donut" width="180" height="180"></canvas>
+								<div id="dwell-legend" class="compass-legend"></div>
+							</div>
+						</div>
+
+						<div class="admin-card">
+							<h3>Stickiest Pages — Median Dwell</h3>
+							<p class="hint">Pages ranked by the <em>median</em> visit's time-on-page &mdash; a robust "how long does a normal visit last here" that a few very long sessions can't skew. The pages at the top are the ones genuinely holding attention; lead with them and mirror what makes them work.</p>
+							<div id="dwell-sticky"></div>
+						</div>
+
+						<div class="admin-card">
+							<h3>Glance-and-Leave Rate</h3>
+							<p class="hint">Pages ranked by the share of visits that lasted under five seconds &mdash; opened and abandoned almost immediately. A high rate flags a weak first impression or a page that isn't delivering what its link promised; these are the strongest candidates for a stronger hook or a rethink.</p>
+							<div id="dwell-glance"></div>
+						</div>
+
+						<div class="admin-card">
+							<h3>Time-on-Page Distribution</h3>
+							<p class="hint">The shape of engagement across every tracked page-visit, bucketed from a quick glance to a long read. A distribution weighted toward the longer buckets means the work is holding people; a spike in the shortest bucket means a lot of visits end almost as soon as they begin.</p>
+							<div id="dwell-dist"></div>
 						</div>
 
 					</div>
@@ -2929,6 +2971,9 @@ document.addEventListener('click', function(e){
   if (e.target.dataset && e.target.dataset.tab === 'mosaic') {
     renderMosaicTab();
   }
+  if (e.target.dataset && e.target.dataset.tab === 'dwell') {
+    renderDwellTab();
+  }
 });
 
 /* ================================================================
@@ -3680,7 +3725,7 @@ function renderQueueTab() {
     col.innerHTML =
       '<div class="queue-col-head">'
       + '<span class="queue-col-head-dot ' + dotClass[status] + '"></span>'
-      + esc(QUEUE_STATUS_LABELS[status]) + ' (' + colItems.length + ')'
+      + escHtml(QUEUE_STATUS_LABELS[status]) + ' (' + colItems.length + ')'
       + '</div>';
     if (colItems.length === 0) {
       col.innerHTML += '<div style="font-size:0.72em;color:#444;padding:0.5em 0">— empty —</div>';
@@ -3717,21 +3762,21 @@ function buildQueueCard(item, today) {
   }
 
   card.innerHTML =
-    '<div class="queue-item-client">' + esc(item.client || '(no client)') + '</div>'
-    + '<div class="queue-item-type">' + esc(item.type || '') + (item.desc ? ' — ' + esc(item.desc) : '') + '</div>'
+    '<div class="queue-item-client">' + escHtml(item.client || '(no client)') + '</div>'
+    + '<div class="queue-item-type">' + escHtml(item.type || '') + (item.desc ? ' — ' + escHtml(item.desc) : '') + '</div>'
     + (item.price ? '<div class="queue-item-price">$' + parseFloat(item.price).toFixed(0) + '</div>' : '')
     + dueHtml
-    + (item.notes ? '<div style="font-size:0.7em;color:#555;margin-top:0.35em;line-height:1.5">' + esc(item.notes).replace(/\n/g,'<br>') + '</div>' : '')
+    + (item.notes ? '<div style="font-size:0.7em;color:#555;margin-top:0.35em;line-height:1.5">' + escHtml(item.notes).replace(/\n/g,'<br>') + '</div>' : '')
     + '<div class="queue-item-actions">'
-    +   '<button class="queue-item-btn" data-action="edit" data-id="' + esc(String(item.id)) + '">Edit</button>';
+    +   '<button class="queue-item-btn" data-action="edit" data-id="' + escHtml(String(item.id)) + '">Edit</button>';
 
   if (item.status !== 'done' && item.status !== 'cancelled') {
     card.innerHTML +=
-      '<button class="queue-item-btn" data-action="next" data-id="' + esc(String(item.id)) + '">'
+      '<button class="queue-item-btn" data-action="next" data-id="' + escHtml(String(item.id)) + '">'
       + nextStatusLabel(item.status) + '</button>';
   }
   card.innerHTML +=
-    '<button class="queue-item-btn del" data-action="del" data-id="' + esc(String(item.id)) + '">Delete</button>'
+    '<button class="queue-item-btn del" data-action="del" data-id="' + escHtml(String(item.id)) + '">Delete</button>'
     + '</div>';
 
   card.addEventListener('click', function(e) {
@@ -3891,7 +3936,7 @@ function renderRevenueDashboard() {
   tbody.innerHTML = clients.slice(0, 12).map(function(c) {
     var d = clientData[c];
     var avg = d.count > 0 ? '$' + (d.earned / d.count).toFixed(0) : '—';
-    return '<tr><td>' + esc(c) + '</td><td>$' + d.earned.toFixed(0) + '</td><td>' + d.count + '</td><td>' + avg + '</td></tr>';
+    return '<tr><td>' + escHtml(c) + '</td><td>$' + d.earned.toFixed(0) + '</td><td>' + d.count + '</td><td>' + avg + '</td></tr>';
   }).join('');
 }
 
@@ -5947,6 +5992,249 @@ document.getElementById('mosaic-export-btn').addEventListener('click', function(
   var url  = URL.createObjectURL(blob);
   var a    = document.createElement('a');
   a.href = url; a.download = 'mosaic-' + Date.now() + '.json'; a.click();
+  URL.revokeObjectURL(url);
+});
+
+/* ================================================================
+   DWELL TAB — Attention Time per Page
+   Reads the `exit` events analytics records (each carries page + ms,
+   the time that visit spent on the page). Builds a per-page attention
+   profile: median dwell, average dwell, glance-and-leave rate, and the
+   share of the audience's total on-site time each page owns. No new
+   storage key — pure read over _gam_analytics_v1, same pattern as
+   Journey/Depth/Compass.
+================================================================ */
+
+var DWELL_GLANCE_MS = 5000;    /* under 5s = opened-and-abandoned */
+
+/* Ordered time-on-page buckets for the distribution chart. */
+var DWELL_BUCKETS = [
+  { label: 'Under 5s',   test: function(ms){ return ms < 5000; } },
+  { label: '5–15s',      test: function(ms){ return ms >= 5000  && ms < 15000; } },
+  { label: '15–60s',     test: function(ms){ return ms >= 15000 && ms < 60000; } },
+  { label: '1–3 min',    test: function(ms){ return ms >= 60000 && ms < 180000; } },
+  { label: '3 min+',     test: function(ms){ return ms >= 180000; } }
+];
+
+/* Warm amber/sand ramp for the attention-share donut (no blue/pink). */
+var DWELL_DONUT_COLORS = [
+  'rgba(176,122,74,0.92)',
+  'rgba(201,168,124,0.92)',
+  'rgba(190,150,96,0.90)',
+  'rgba(214,190,150,0.90)',
+  'rgba(150,120,80,0.88)',
+  'rgba(224,206,176,0.88)'
+];
+var DWELL_OTHER_COLOR = 'rgba(120,112,100,0.55)';
+
+function dwellMedian(sorted) {
+  var n = sorted.length;
+  if (!n) return 0;
+  var mid = Math.floor(n / 2);
+  return n % 2 ? sorted[mid] : Math.round((sorted[mid - 1] + sorted[mid]) / 2);
+}
+
+function buildDwell() {
+  var events = CommissionData.getAnalytics() || [];
+
+  var byPage = {};            /* page -> { ms:[…] } */
+  var dist   = DWELL_BUCKETS.map(function(){ return 0; });
+  var totalMs = 0, totalVisits = 0;
+
+  events.forEach(function(e) {
+    if (e.type !== 'exit') return;
+    var ms = e.ms || 0;
+    if (ms <= 0) return;                       /* ignore zero/blank durations */
+    if (ms > 3600000) ms = 3600000;            /* clamp runaway tabs to 1h */
+    var pg = e.page || '/';
+    (byPage[pg] || (byPage[pg] = { ms: [] })).ms.push(ms);
+    totalMs += ms; totalVisits++;
+    for (var b = 0; b < DWELL_BUCKETS.length; b++) {
+      if (DWELL_BUCKETS[b].test(ms)) { dist[b]++; break; }
+    }
+  });
+
+  var pages = Object.keys(byPage).map(function(pg) {
+    var arr = byPage[pg].ms.slice().sort(function(a, b){ return a - b; });
+    var sum = arr.reduce(function(s, v){ return s + v; }, 0);
+    var glances = arr.filter(function(v){ return v < DWELL_GLANCE_MS; }).length;
+    return {
+      page:      pg,
+      label:     jPageLabel(pg),
+      visits:    arr.length,
+      totalMs:   sum,
+      avgMs:     arr.length ? Math.round(sum / arr.length) : 0,
+      medianMs:  dwellMedian(arr),
+      glances:   glances,
+      glanceRate: arr.length ? Math.round((glances / arr.length) * 100) : 0
+    };
+  });
+
+  return {
+    pages:       pages,
+    dist:        dist,
+    total:       totalMs,
+    totalVisits: totalVisits,
+    pageCount:   pages.length
+  };
+}
+
+function drawDwellDonut(shareRows, totalMs) {
+  var canvas = document.getElementById('dwell-donut');
+  if (!canvas) return;
+  var ctx = canvas.getContext('2d');
+  var W = canvas.width, H = canvas.height;
+  ctx.clearRect(0, 0, W, H);
+  var cx = W / 2, cy = H / 2, rOut = 78, rIn = 46;
+
+  if (!totalMs || !shareRows.length) {
+    ctx.fillStyle = '#444';
+    ctx.font = '12px -apple-system, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('No dwell data yet.', cx, cy);
+    return;
+  }
+
+  var start = -Math.PI / 2;
+  shareRows.forEach(function(r) {
+    if (!r.totalMs) return;
+    var ang = (r.totalMs / totalMs) * Math.PI * 2;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.arc(cx, cy, rOut, start, start + ang);
+    ctx.closePath();
+    ctx.fillStyle = r.color;
+    ctx.fill();
+    start += ang;
+  });
+
+  ctx.globalCompositeOperation = 'destination-out';
+  ctx.beginPath();
+  ctx.arc(cx, cy, rIn, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.globalCompositeOperation = 'source-over';
+
+  ctx.fillStyle = '#c9a87c';
+  ctx.font = 'bold 20px -apple-system, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(jFmtDur(totalMs), cx, cy - 6);
+  ctx.fillStyle = '#8c887f';
+  ctx.font = '10px "Courier New", monospace';
+  ctx.fillText('TOTAL', cx, cy + 12);
+}
+
+function renderDwellTab() {
+  var d = buildDwell();
+
+  function chip(num, label) {
+    return '<div class="analytics-stat-chip"><span class="asc-num">' + num +
+      '</span><span class="asc-label">' + label + '</span></div>';
+  }
+
+  /* ── Stats ── */
+  var avgAll = d.totalVisits ? Math.round(d.total / d.totalVisits) : 0;
+  /* Global median across every visit: gather sorted durations once. */
+  var medianAll = (function() {
+    var events = CommissionData.getAnalytics() || [];
+    var arr = [];
+    events.forEach(function(e){
+      if (e.type === 'exit' && (e.ms || 0) > 0) arr.push(Math.min(e.ms, 3600000));
+    });
+    arr.sort(function(a, b){ return a - b; });
+    return dwellMedian(arr);
+  })();
+
+  /* Stickiest page = highest median dwell (min 2 visits to be meaningful). */
+  var stickyRank = d.pages.filter(function(p){ return p.visits >= 2; })
+    .sort(function(a, b){ return b.medianMs - a.medianMs; });
+  var stickiest = stickyRank.length ? stickyRank[0]
+    : (d.pages.slice().sort(function(a, b){ return b.medianMs - a.medianMs; })[0]);
+
+  document.getElementById('dwell-stats').innerHTML =
+    chip(d.totalVisits,                          'Page-Exits')       +
+    chip(jFmtDur(avgAll),                        'Avg Time / Page')  +
+    chip(jFmtDur(medianAll),                     'Median / Page')    +
+    chip(stickiest ? stickiest.label : '—',      'Stickiest Page');
+
+  /* ── Attention share donut ── */
+  var shareSorted = d.pages.slice().sort(function(a, b){ return b.totalMs - a.totalMs; });
+  var TOP = 6;
+  var shareRows = shareSorted.slice(0, TOP).map(function(p, i) {
+    return { label: p.label, totalMs: p.totalMs, color: DWELL_DONUT_COLORS[i % DWELL_DONUT_COLORS.length] };
+  });
+  var restMs = shareSorted.slice(TOP).reduce(function(s, p){ return s + p.totalMs; }, 0);
+  if (restMs > 0) shareRows.push({ label: 'Other pages', totalMs: restMs, color: DWELL_OTHER_COLOR });
+
+  drawDwellDonut(shareRows, d.total);
+  document.getElementById('dwell-legend').innerHTML = shareRows.length
+    ? shareRows.map(function(r) {
+        var share = d.total ? Math.round((r.totalMs / d.total) * 100) : 0;
+        return '<div class="compass-legend-item">' +
+          '<span class="compass-legend-swatch" style="background:' + r.color + '"></span>' +
+          '<span title="' + escHtml(r.label) + '">' + escHtml(r.label) + '</span>' +
+          '<span class="compass-legend-val">' + jFmtDur(r.totalMs) + ' · ' + share + '%</span>' +
+        '</div>';
+      }).join('')
+    : '<p style="color:#444;font-size:0.85em;padding:0.5em 0">No dwell data yet.</p>';
+
+  /* ── Stickiest pages — median dwell ── */
+  var stickyRows = d.pages.slice()
+    .sort(function(a, b){ return b.medianMs - a.medianMs; })
+    .map(function(p){ return { label: p.label, count: p.medianMs, visits: p.visits, avgMs: p.avgMs }; });
+  document.getElementById('dwell-sticky').innerHTML = stickyRows.length
+    ? jBarList(stickyRows, 0, {
+        suffix: function(row){
+          return jFmtDur(row.count) + ' median · ' + jFmtDur(row.avgMs) + ' avg · ' +
+                 row.visits + (row.visits === 1 ? ' visit' : ' visits');
+        }
+      }).replace(/<span class="sp-time">(\d+)<\/span>/g, function(_, n){
+        /* jBarList prints the raw count; swap the numeric median for a formatted duration */
+        return '<span class="sp-time">' + jFmtDur(parseInt(n, 10)) + '</span>';
+      })
+    : '<p style="color:#444;font-size:0.85em;padding:0.5em 0">No dwell data yet. Time-on-page is recorded when a visitor leaves a page; browse the public site and it will fill in here.</p>';
+
+  /* ── Glance-and-leave rate ── */
+  var glanceRows = d.pages.filter(function(p){ return p.visits >= 2; })
+    .map(function(p){ return { label: p.label, count: p.glanceRate, glances: p.glances, visits: p.visits }; })
+    .sort(function(a, b){ return b.count - a.count; });
+  document.getElementById('dwell-glance').innerHTML = glanceRows.length
+    ? jBarList(glanceRows, 0, {
+        suffix: function(row){
+          return row.glances + ' of ' + row.visits + ' visits under 5s';
+        }
+      }).replace(/<span class="sp-time">(\d+)<\/span>/g, '<span class="sp-time">$1%</span>')
+    : '<p style="color:#444;font-size:0.85em;padding:0.5em 0">Not enough visits yet to flag glance-and-leave pages (needs at least two page-exits per page).</p>';
+
+  /* ── Time-on-page distribution ── */
+  var distRows = DWELL_BUCKETS.map(function(b, i){
+    return { label: b.label, count: d.dist[i] };
+  });
+  var distTotal = d.dist.reduce(function(s, v){ return s + v; }, 0);
+  document.getElementById('dwell-dist').innerHTML = distTotal
+    ? jBarList(distRows, distTotal, {
+        suffix: function(row, share){ return row.count + ' visits · ' + share + '%'; }
+      })
+    : '<p style="color:#444;font-size:0.85em;padding:0.5em 0">No time-on-page data yet.</p>';
+}
+
+document.getElementById('dwell-refresh-btn').addEventListener('click', renderDwellTab);
+
+document.getElementById('dwell-export-btn').addEventListener('click', function() {
+  var d = buildDwell();
+  var out = {
+    totalVisits: d.totalVisits,
+    totalMs: d.total,
+    pages: d.pages.map(function(p){
+      return { page: p.page, visits: p.visits, totalMs: p.totalMs,
+               avgMs: p.avgMs, medianMs: p.medianMs, glanceRate: p.glanceRate };
+    }).sort(function(a, b){ return b.totalMs - a.totalMs; }),
+    distribution: DWELL_BUCKETS.map(function(b, i){ return { bucket: b.label, count: d.dist[i] }; })
+  };
+  var blob = new Blob([JSON.stringify(out, null, 2)], { type: 'application/json' });
+  var url  = URL.createObjectURL(blob);
+  var a    = document.createElement('a');
+  a.href = url; a.download = 'dwell-' + Date.now() + '.json'; a.click();
   URL.revokeObjectURL(url);
 });
 </script>
