@@ -196,6 +196,7 @@ Password-protected (SHA-256 hash in localStorage, 5-attempt lockout). Session tr
 | Relay       | Outbound reach & link clicks — destination mix (social/shop/external/email), top destinations, exit pages, recent link-outs |
 | Friction    | UX friction & frustration signals — rage clicks (repeated clicks in one spot), unresponsive/dead clicks (non-interactive targets), friction hotspots, friction by page |
 | Mosaic      | Artwork affinity & co-view — which pieces get viewed together per visit, top co-viewed pairs, hub/connective artworks, per-artwork companions explorer |
+| Dwell       | Attention time per page — per-page time-on-page from `exit` events: median/avg dwell, attention-share donut, glance-and-leave rate, time-on-page distribution |
 
 ---
 
@@ -673,6 +674,38 @@ Answers a curation question no other tool can: **which artworks get looked at *t
 
 ---
 
+## Dwell — Attention Time per Page (Admin → Dwell tab) — NEW TOOL
+
+Answers a question none of the other analytics tools structurally can: **how long does a typical visit actually stay on each page?** Depth measures how far *down* a page people scroll (vertical reach), Spotlight measures time on individual artworks, Journey measures whole-session duration and flow, Pulse measures *when* visits arrive — none of them report per-page **time-on-page**. The Analytics tab computes a single global "avg time on page" number, but never breaks it down by page. Dwell fills that gap: a per-page attention profile showing which pages hold people, which are glanced at and abandoned, and where the audience's *total* on-site attention is really spent.
+
+**No new storage key** — derived live from `_gam_analytics_v1`. `analytics.js` already records an `exit` event on every page-leave carrying `ms` (milliseconds the visit spent on that page) and `page`; Dwell aggregates those, the same read-only pattern as Journey/Depth/Compass.
+
+**How it works:**
+1. `buildDwell()` walks every `exit` event with `ms > 0` (clamping runaway/backgrounded tabs to 1h) and buckets each by `page`.
+2. Per page it derives: `visits` (page-exits), `totalMs`, `avgMs`, `medianMs` (robust central time via `dwellMedian()` on the sorted durations), `glances` (visits under `DWELL_GLANCE_MS` = 5000ms) and `glanceRate`.
+3. It also tallies an overall time-on-page distribution across five buckets (`DWELL_BUCKETS`: `<5s / 5–15s / 15–60s / 1–3m / 3m+`).
+
+**Admin tab sections:**
+- **Stats**: Page-Exits, Avg Time / Page, Median / Page (global median across every visit), Stickiest Page
+- **Attention Share by Page**: canvas donut + legend splitting *total* on-site time across pages (top 6 + "Other pages"); centre shows total attention time. This is where the audience's collective attention lives — not always the most-visited page.
+- **Stickiest Pages — Median Dwell**: pages ranked by median time-on-page (a few long sessions can't skew it), annotated with median · avg · visit count
+- **Glance-and-Leave Rate**: pages ranked by % of visits under 5s (opened-and-abandoned — weak first impressions)
+- **Time-on-Page Distribution**: the overall shape of engagement across the five buckets
+
+**Derived schema (for export):**
+```js
+{ totalVisits, totalMs, pages:[{ page, visits, totalMs, avgMs, medianMs, glanceRate }], distribution:[{ bucket, count }] }
+```
+
+**Technical notes:**
+- Donut + swatches use the warm amber/sand ramp (`rgba(176,122,74…)` → `rgba(224,206,176…)`, plus a muted grey for "Other") — no blue/pink. Reuses `compass-donut-row`/`compass-legend` styles, `jBarList()`, `analytics-stat-chip`, `jFmtDur()`, `jPageLabel()`, `escHtml()`; no new CSS classes.
+- Durations in the ranked bars are formatted with `jFmtDur()` by post-processing the numeric `sp-time` count `jBarList()` emits; glance bars append `%`.
+- Tab renders lazily on click, same pattern as Mosaic/Friction/Relay/Beacon/Orbit/Depth/Compass/Journey/Pulse/Spotlight/Revenue.
+
+**API:** none new on `CommissionData` — uses `CommissionData.getAnalytics()`. Logic lives in `renderDwellTab()` / `buildDwell()` / `drawDwellDonut()` inside `admin/index.html`.
+
+---
+
 ## Commission System
 
 ### Pages
@@ -750,4 +783,4 @@ Stored in `_gam_prices_v1`. Three sections: `digital`, `stickers`, `animation`. 
 
 ---
 
-*Last updated: 2026-07-09*
+*Last updated: 2026-07-13*
