@@ -196,6 +196,7 @@ Password-protected (SHA-256 hash in localStorage, 5-attempt lockout). Session tr
 | Relay       | Outbound reach & link clicks — destination mix (social/shop/external/email), top destinations, exit pages, recent link-outs |
 | Friction    | UX friction & frustration signals — rage clicks (repeated clicks in one spot), unresponsive/dead clicks (non-interactive targets), friction hotspots, friction by page |
 | Mosaic      | Artwork affinity & co-view — which pieces get viewed together per visit, top co-viewed pairs, hub/connective artworks, per-artwork companions explorer |
+| Tide        | Traffic momentum & trends — recent window vs the prior equal window: visits/viewers/inquiries movement, daily-visits chart, metric movers, rising & fading sources/artworks/pages |
 
 ---
 
@@ -673,6 +674,47 @@ Answers a curation question no other tool can: **which artworks get looked at *t
 
 ---
 
+## Tide — Traffic Momentum & Trends (Admin → Tide tab) — NEW TOOL
+
+Answers the one question the rest of the analytics family structurally cannot: **is the portfolio growing?** Every other tool photographs a single moment — Compass = where traffic comes from, Journey = where it goes, Pulse = when it shows up (intra-week rhythm), Spotlight = which artwork holds attention, Depth = read-through, Orbit = loyalty, Beacon = conversion, Relay = outbound reach, Friction = obstruction, Mosaic = affinity, Revenue = money. None compares one span of time against another. **Tide = momentum**: it lays a recent window against the equal window right before it and reports what moved — up or down, and by how much.
+
+**Why it's genuinely new:** Pulse is the closest neighbour, but Pulse buckets visits by day-of-week/hour to find the *rhythm within* a period; it never compares one period to the next, so it cannot tell you whether traffic is rising or falling. No existing tool performs any period-over-period (Δ vs prior) calculation. Tide is the family's first trend/growth lens.
+
+**No new storage key** — derived live from `_gam_analytics_v1` (`pv`, `goal`, `click` events) plus `_gam_spotlight_v1` (artwork viewport events for the rising-artworks list), the same read-only pattern as Compass/Journey/Mosaic.
+
+**How it works:**
+1. A window size **W** is chosen in the tab (7 / 14 / 30 days, default 7). Tide defines two adjacent spans: **current** = `[now − W, now]` and **prior** = `[now − 2W, now − W]`.
+2. `buildTide(W)` walks every event once, bucketing each by which window its `ts` falls in (`win()` → 1 current / 2 prior / 0 outside). Per window it tallies visits (`pv`), unique sessions (`sid`), unique viewers (`vid`, falling back to `sid:<sid>`), inquiries (`form_submit` goals), outbound clicks (via `relayChannel()`), and bounces (single-pageview sessions).
+3. Referrer channel per pageview is classified with the shared `compassClassify()` (`internal` folded into `direct`, matching Compass). Pageviews also feed a per-page map and a `2W`-length daily-visits array.
+4. Spotlight events feed a per-artwork current/prior view-count map.
+5. `tideDeltaInfo(cur, prev)` turns any pair into a direction + badge: `▲ N%` (gain), `▼ N%` (decline), `±0%` (flat), or `▲ new` (prior was zero).
+
+**Admin tab sections:**
+- **Verdict line**: a one-sentence plain-language read ("Traffic is up 100% — 8 visits in the last 7 days vs 4 in the 7 before. Inquiries 1 (new activity).")
+- **Stats**: Visits (current), Δ vs Prior badge, Unique Viewers, Inquiries
+- **Daily Visits chart**: canvas bar chart across both windows — lighter sand bars = prior window, deeper amber = current, split by a dashed divider, so the trend shape reads at a glance
+- **Metric Movers**: Visits, Unique Viewers, Sessions, Commission Inquiries, Outbound Clicks, Bounces — each as `prior → current` with a movement badge
+- **Rising & Fading Sources**: acquisition channels ranked by absolute change, bar = current volume, badge = movement
+- **Rising & Fading Artworks**: artworks ranked by change in viewport attention (from Spotlight events)
+- **Rising & Fading Pages**: pages ranked by change in pageviews
+
+**Derived schema (for export):**
+```js
+{ windowDays, visits:{current,prior}, viewers:{…}, sessions:{…}, inquiries:{…},
+  outbound:{…}, bounces:{…}, dailyVisits:[…2W], sources:[{label,current,prior,delta}],
+  arts:[…], pages:[…] }
+```
+
+**Technical notes:**
+- Daily chart + badges use the warm amber/sand palette (`rgba(214,190,150,0.55)` prior, `rgba(176,122,74,0.92)` current; up-badges amber, down-badges muted grey) — no blue/pink, no red/green.
+- Reuses `escHtml()`, `jPageLabel()`, `compassClassify()`, `relayChannel()`, `COMPASS_CH_LABELS`, `analytics-stat-chip`, and the `spotlight-board`/`sp-*` bar styles; new `.tide-*` CSS classes and a `tideMoverList()` renderer.
+- Bounce = single-pageview session per window; unique viewers prefer the persistent `vid` (Orbit's id) and fall back to `sid`. Reach is per session, so one visitor across several tabs may count more than once (consistent with the rest of the family).
+- Tab renders lazily on click and re-renders on window-size change, same pattern as Mosaic/Friction/Relay/Beacon/Orbit/Depth/Compass/Journey/Pulse/Spotlight/Revenue.
+
+**API:** none new on `CommissionData` — uses `CommissionData.getAnalytics()` and `CommissionData.getSpotlight()`. Logic lives in `renderTideTab()` / `buildTide()` / `drawTideSpark()` / `tideDeltaInfo()` inside `admin/index.html`.
+
+---
+
 ## Commission System
 
 ### Pages
@@ -750,4 +792,4 @@ Stored in `_gam_prices_v1`. Three sections: `digital`, `stickers`, `animation`. 
 
 ---
 
-*Last updated: 2026-07-09*
+*Last updated: 2026-07-14*
