@@ -839,6 +839,25 @@
 		.compass-legend-swatch { width: 0.85em; height: 0.85em; border-radius: 2px; flex-shrink: 0; }
 		.compass-legend-val { margin-left: auto; font-family: 'Courier New', monospace; color: #c9a87c; font-size: 0.9em; }
 
+		/* Tide tab — momentum & period-over-period trends */
+		.tide-window-row { display: flex; align-items: center; gap: 0.6em; margin-bottom: 0.9em; flex-wrap: wrap; }
+		.tide-verdict { font-size: 0.92em; color: #b9b6b0; margin: 0.2em 0 1em; line-height: 1.5; }
+		.tide-verdict b { color: #c9a87c; }
+		.tide-verdict .tide-v-up { color: #d8a878; }
+		.tide-verdict .tide-v-down { color: #a7a39b; }
+		#tide-spark { display: block; }
+		.tide-mover-row { display: flex; align-items: center; justify-content: space-between; gap: 0.8em; padding: 0.55em 0; border-bottom: 1px solid rgba(255,255,255,0.05); }
+		.tide-mover-row:last-child { border-bottom: none; }
+		.tide-mover-main { display: flex; flex-direction: column; gap: 0.15em; min-width: 0; }
+		.tide-mover-label { font-size: 0.9em; color: #d8d5cf; }
+		.tide-mover-nums { font-family: 'Courier New', monospace; font-size: 0.8em; color: #8c887f; }
+		.tide-mover-nums b { color: #c9a87c; }
+		.tide-arrowto { color: #57534c; padding: 0 0.15em; }
+		.tide-delta { font-family: 'Courier New', monospace; font-size: 0.8em; padding: 0.22em 0.6em; border-radius: 3px; white-space: nowrap; flex-shrink: 0; }
+		.tide-delta.up { background: rgba(176,122,74,0.22); color: #d8a878; }
+		.tide-delta.down { background: rgba(140,136,127,0.18); color: #a7a39b; }
+		.tide-delta.flat { background: rgba(140,136,127,0.12); color: #8c887f; }
+
 		/* Depth tab — scroll read-through funnel */
 		.depth-page { padding: 0.7em 0; border-bottom: 1px solid rgba(255,255,255,0.06); }
 		.depth-page:last-child { border-bottom: none; }
@@ -966,6 +985,7 @@
 				<button class="admin-tab" data-tab="relay">Relay</button>
 				<button class="admin-tab" data-tab="friction">Friction</button>
 				<button class="admin-tab" data-tab="mosaic">Mosaic</button>
+				<button class="admin-tab" data-tab="tide">Tide</button>
 			</div>
 
 			<!-- ============ GALLERY TAB ============ -->
@@ -1907,6 +1927,59 @@
 							<p class="hint">Pick any artwork to see what visitors most often view alongside it &mdash; its closest companions, ranked by shared visits. Use it to decide what to hang next to a given piece.</p>
 							<select id="mosaic-companion-select" class="journey-select" style="margin-bottom:0.9em"></select>
 							<div id="mosaic-companions"></div>
+						</div>
+
+					</div>
+
+					<div id="tab-tide" class="tab-content">
+
+						<div class="admin-card">
+							<h3>Tide — Traffic Momentum &amp; Trends</h3>
+							<p class="hint">Every other tool photographs a single moment &mdash; who came, where they went, what they looked at. Tide is the only one that asks whether the portfolio is <em>growing</em>: it lays a recent window against the one right before it and reports what moved. Are visits, unique viewers, and inquiries up or down? Which platforms are gaining you traffic and which are fading? Which artworks and pages are climbing? A momentum read for deciding where to double down. Derived live from analytics pageviews, goals, clicks, and artwork viewport events &mdash; no new storage key.</p>
+							<div class="tide-window-row">
+								<label for="tide-window" style="font-size:0.85em;color:#8c887f">Compare window:</label>
+								<select id="tide-window" class="journey-select" style="min-width:12em">
+									<option value="7">Last 7 days vs prior 7</option>
+									<option value="14">Last 14 days vs prior 14</option>
+									<option value="30">Last 30 days vs prior 30</option>
+								</select>
+							</div>
+							<div id="tide-verdict" class="tide-verdict"></div>
+							<div id="tide-stats" class="analytics-stats" style="margin-bottom:1em"></div>
+							<div style="display:flex;gap:0.5em;flex-wrap:wrap">
+								<button class="button small" id="tide-refresh-btn">Refresh</button>
+								<button class="button small" id="tide-export-btn">Export JSON</button>
+							</div>
+						</div>
+
+						<div class="admin-card">
+							<h3>Daily Visits — Current vs Prior Window</h3>
+							<p class="hint">Visits per day across both windows. Lighter sand bars are the earlier window; deeper amber bars are the recent one, split by the dashed line. The shape tells you whether traffic is trending up, flat, or cooling off &mdash; independent of any single day's spike.</p>
+							<canvas id="tide-spark" width="620" height="140" style="max-width:100%"></canvas>
+						</div>
+
+						<div class="admin-card">
+							<h3>Metric Movers</h3>
+							<p class="hint">The headline numbers, current window versus prior, each with its change. Up-arrows in amber are gains; muted arrows are declines. &ldquo;new&rdquo; means the metric had no activity in the earlier window.</p>
+							<div id="tide-movers"></div>
+						</div>
+
+						<div class="admin-card">
+							<h3>Rising &amp; Fading Sources</h3>
+							<p class="hint">Acquisition channels ranked by how much their traffic changed between the two windows. A rising channel is one worth posting to more; a fading one may need attention. Bars show current-window volume; the badge shows the movement.</p>
+							<div id="tide-sources"></div>
+						</div>
+
+						<div class="admin-card">
+							<h3>Rising &amp; Fading Artworks</h3>
+							<p class="hint">Which pieces are gaining or losing viewport attention between the two windows, from the same events Spotlight records. A climbing artwork is resonating right now &mdash; a candidate to feature, post, or build on.</p>
+							<div id="tide-arts"></div>
+						</div>
+
+						<div class="admin-card">
+							<h3>Rising &amp; Fading Pages</h3>
+							<p class="hint">Pages ranked by change in pageviews across the two windows &mdash; where attention on the site is shifting to and away from.</p>
+							<div id="tide-pages"></div>
 						</div>
 
 					</div>
@@ -2928,6 +3001,9 @@ document.addEventListener('click', function(e){
   }
   if (e.target.dataset && e.target.dataset.tab === 'mosaic') {
     renderMosaicTab();
+  }
+  if (e.target.dataset && e.target.dataset.tab === 'tide') {
+    renderTideTab();
   }
 });
 
@@ -5947,6 +6023,295 @@ document.getElementById('mosaic-export-btn').addEventListener('click', function(
   var url  = URL.createObjectURL(blob);
   var a    = document.createElement('a');
   a.href = url; a.download = 'mosaic-' + Date.now() + '.json'; a.click();
+  URL.revokeObjectURL(url);
+});
+
+/* ================================================================
+   TIDE TAB — traffic momentum & period-over-period trends
+   Compares a recent window against the equal window right before it.
+   Read-only; derives from _gam_analytics_v1 + _gam_spotlight_v1.
+================================================================ */
+
+var TIDE_DAY = 86400000;
+
+/* Change between a prior and current count → direction + display badge. */
+function tideDeltaInfo(cur, prev) {
+  cur = cur || 0; prev = prev || 0;
+  if (prev === 0 && cur === 0) return { dir: 'flat', pct: 0, badge: '±0%', text: 'no change' };
+  if (prev === 0)              return { dir: 'up',   pct: null, badge: '▲ new', text: 'new activity' };
+  if (cur === 0)              return { dir: 'down', pct: -100, badge: '▼ 100%', text: 'down 100%' };
+  var pct = Math.round(((cur - prev) / prev) * 100);
+  if (pct === 0)  return { dir: 'flat', pct: 0, badge: '±0%', text: 'flat' };
+  if (pct > 0)    return { dir: 'up',   pct: pct, badge: '▲ ' + pct + '%',      text: 'up ' + pct + '%' };
+  return            { dir: 'down', pct: pct, badge: '▼ ' + Math.abs(pct) + '%', text: 'down ' + Math.abs(pct) + '%' };
+}
+
+function buildTide(windowDays) {
+  var W = windowDays || 7;
+  var now = Date.now();
+  var msWin    = W * TIDE_DAY;
+  var curStart = now - msWin;
+  var prevStart = now - msWin * 2;
+
+  var events = CommissionData.getAnalytics() || [];
+  var spots  = CommissionData.getSpotlight() || [];
+
+  /* which window a ts falls in: 1 = current, 2 = prior, 0 = outside */
+  function win(ts) {
+    if (ts == null) return 0;
+    if (ts >= curStart) return 1;
+    if (ts >= prevStart) return 2;
+    return 0;
+  }
+
+  var cur  = { visits: 0, sessions: {}, visitors: {}, inquiries: 0, outbound: 0, bounceHits: 0 };
+  var prev = { visits: 0, sessions: {}, visitors: {}, inquiries: 0, outbound: 0, bounceHits: 0 };
+  var sourceMap = {};   /* channel -> [curCount, prevCount] */
+  var pageMap   = {};   /* page    -> [curCount, prevCount] */
+  var days  = 2 * W;
+  var daily = [];
+  for (var d = 0; d < days; d++) daily.push(0);
+
+  /* first pass — per-session pageview counts to derive bounces */
+  var sessPv = {};  /* sid -> { w, count } for sessions active in a window */
+
+  events.forEach(function(e) {
+    var w = win(e.ts);
+    if (!w) return;
+    var bucket = w === 1 ? cur : prev;
+
+    if (e.type === 'pv') {
+      bucket.visits++;
+      if (e.sid) bucket.sessions[e.sid] = 1;
+      var vk = e.vid || ('sid:' + (e.sid || '?'));
+      bucket.visitors[vk] = 1;
+
+      var ch = compassClassify(e.refHost || 'direct');
+      if (ch === 'internal') ch = 'direct';   /* same-site nav folded into direct, matching Compass */
+      var srec = sourceMap[ch] || (sourceMap[ch] = [0, 0]);
+      srec[w === 1 ? 0 : 1]++;
+
+      var pg = e.page || '/';
+      var prec = pageMap[pg] || (pageMap[pg] = [0, 0]);
+      prec[w === 1 ? 0 : 1]++;
+
+      var di = Math.floor((e.ts - prevStart) / TIDE_DAY);
+      if (di >= 0 && di < days) daily[di]++;
+
+      if (e.sid) {
+        var sp = sessPv[e.sid] || (sessPv[e.sid] = { w: w, count: 0 });
+        sp.w = w; sp.count++;
+      }
+    } else if (e.type === 'goal' && e.goal === 'form_submit') {
+      bucket.inquiries++;
+    } else if (e.type === 'click') {
+      if (relayChannel(e.href)) bucket.outbound++;
+    }
+  });
+
+  /* bounce = single-pageview session, counted per window */
+  Object.keys(sessPv).forEach(function(sid) {
+    var sp = sessPv[sid];
+    if (sp.count <= 1) (sp.w === 1 ? cur : prev).bounceHits++;
+  });
+
+  /* rising/fading artworks from spotlight viewport events (view counts) */
+  var artMap = {};   /* artId -> { label, c, p } */
+  spots.forEach(function(s) {
+    var w = win(s.ts);
+    if (!w || !s.artId) return;
+    var rec = artMap[s.artId] || (artMap[s.artId] = {
+      label: (s.label || s.alt || s.artId.split('::').pop() || s.artId), c: 0, p: 0
+    });
+    if (w === 1) rec.c++; else rec.p++;
+    var lbl = s.label || s.alt;
+    if (lbl && lbl.length > rec.label.length) rec.label = lbl;
+  });
+
+  function movers(map, labelFn) {
+    return Object.keys(map).map(function(k) {
+      var v = map[k];
+      var c = v[0] !== undefined ? v[0] : v.c;
+      var p = v[1] !== undefined ? v[1] : v.p;
+      return { label: labelFn(k, v), cur: c, prev: p, count: c, delta: c - p };
+    }).filter(function(r) { return r.cur > 0 || r.prev > 0; })
+      .sort(function(a, b) { return Math.abs(b.delta) - Math.abs(a.delta) || b.cur - a.cur; });
+  }
+
+  return {
+    W: W,
+    curVisits: cur.visits, prevVisits: prev.visits,
+    curVisitors: Object.keys(cur.visitors).length, prevVisitors: Object.keys(prev.visitors).length,
+    curSessions: Object.keys(cur.sessions).length, prevSessions: Object.keys(prev.sessions).length,
+    curInq: cur.inquiries, prevInq: prev.inquiries,
+    curOut: cur.outbound, prevOut: prev.outbound,
+    curBounce: cur.bounceHits, prevBounce: prev.bounceHits,
+    daily: daily,
+    sources: movers(sourceMap, function(k) { return COMPASS_CH_LABELS[k] || (k.charAt(0).toUpperCase() + k.slice(1)); }),
+    pages:   movers(pageMap,   function(k) { return jPageLabel(k); }),
+    arts:    movers(artMap,    function(k, v) { return v.label; })
+  };
+}
+
+function drawTideSpark(daily, W) {
+  var canvas = document.getElementById('tide-spark');
+  if (!canvas) return;
+  var ctx = canvas.getContext('2d');
+  var Wd = canvas.width, Hd = canvas.height;
+  ctx.clearRect(0, 0, Wd, Hd);
+
+  var padL = 6, padR = 6, padT = 10, padB = 18;
+  var plotW = Wd - padL - padR, plotH = Hd - padT - padB;
+  var n = daily.length || 1;
+  var max = daily.reduce(function(m, v) { return Math.max(m, v); }, 0) || 1;
+  var slot = plotW / n;
+  var barW = Math.max(2, slot * 0.7);
+
+  /* baseline */
+  ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+  ctx.beginPath();
+  ctx.moveTo(padL, padT + plotH + 0.5);
+  ctx.lineTo(padL + plotW, padT + plotH + 0.5);
+  ctx.stroke();
+
+  daily.forEach(function(v, i) {
+    var h = Math.round((v / max) * plotH);
+    var x = padL + i * slot + (slot - barW) / 2;
+    var y = padT + plotH - h;
+    /* first half = prior window (lighter sand), second half = current (amber) */
+    ctx.fillStyle = (i < n / 2) ? 'rgba(214,190,150,0.55)' : 'rgba(176,122,74,0.92)';
+    ctx.fillRect(x, y, barW, h);
+  });
+
+  /* dashed divider between the two windows */
+  var divX = padL + (n / 2) * slot;
+  ctx.save();
+  ctx.strokeStyle = 'rgba(201,168,124,0.55)';
+  ctx.setLineDash([4, 4]);
+  ctx.beginPath();
+  ctx.moveTo(divX, padT - 4);
+  ctx.lineTo(divX, padT + plotH + 4);
+  ctx.stroke();
+  ctx.restore();
+
+  /* labels */
+  ctx.fillStyle = '#8c887f';
+  ctx.font = '10px "Courier New", monospace';
+  ctx.textBaseline = 'top';
+  ctx.textAlign = 'left';
+  ctx.fillText('prior ' + W + 'd', padL + 2, padT + plotH + 5);
+  ctx.textAlign = 'right';
+  ctx.fillText('recent ' + W + 'd', padL + plotW - 2, padT + plotH + 5);
+}
+
+function tideMoverRow(label, cur, prev) {
+  var d = tideDeltaInfo(cur, prev);
+  return '<div class="tide-mover-row">' +
+    '<div class="tide-mover-main">' +
+      '<span class="tide-mover-label">' + escHtml(label) + '</span>' +
+      '<span class="tide-mover-nums">' + prev + '<span class="tide-arrowto">&rarr;</span><b>' + cur + '</b></span>' +
+    '</div>' +
+    '<span class="tide-delta ' + d.dir + '">' + d.badge + '</span>' +
+  '</div>';
+}
+
+/* Ranked bar list with a movement badge per row (rising/fading). */
+function tideMoverList(rows, emptyMsg) {
+  if (!rows.length) {
+    return '<p style="color:#444;font-size:0.85em;padding:0.5em 0">' + emptyMsg + '</p>';
+  }
+  var max = rows.reduce(function(m, r) { return Math.max(m, r.cur); }, 1);
+  return '<div class="spotlight-board">' + rows.slice(0, 12).map(function(r) {
+    var pct = Math.round((r.cur / max) * 100);
+    var d = tideDeltaInfo(r.cur, r.prev);
+    return '<div class="spotlight-row">' +
+      '<div class="sp-info">' +
+        '<div class="sp-label" title="' + escHtml(r.label) + '">' + escHtml(r.label) + '</div>' +
+        '<div class="sp-bar-wrap"><div class="sp-bar" style="width:' + pct + '%"></div></div>' +
+      '</div>' +
+      '<div class="sp-meta" style="align-items:flex-end">' +
+        '<span class="sp-time">' + r.cur + '</span>' +
+        '<span class="tide-delta ' + d.dir + '">' + d.badge + '</span>' +
+      '</div>' +
+    '</div>';
+  }).join('') + '</div>';
+}
+
+function renderTideTab() {
+  var sel = document.getElementById('tide-window');
+  var W = parseInt(sel && sel.value, 10) || 7;
+  var t = buildTide(W);
+
+  /* ── Verdict line ── */
+  var vd = tideDeltaInfo(t.curVisits, t.prevVisits);
+  var verdictEl = document.getElementById('tide-verdict');
+  if (t.curVisits === 0 && t.prevVisits === 0) {
+    verdictEl.innerHTML = 'No traffic recorded in the last ' + (2 * W) + ' days yet. Once visitors browse the public pages, Tide will show whether the audience is growing.';
+  } else {
+    var word = vd.dir === 'up' ? 'up' : (vd.dir === 'down' ? 'down' : 'flat');
+    var cls  = vd.dir === 'up' ? 'tide-v-up' : (vd.dir === 'down' ? 'tide-v-down' : '');
+    var amt  = vd.pct === null ? '' : (' <b class="' + cls + '">' + Math.abs(vd.pct) + '%</b>');
+    verdictEl.innerHTML = 'Traffic is <b class="' + cls + '">' + word + '</b>' + amt +
+      ' &mdash; <b>' + t.curVisits + '</b> visits in the last ' + W + ' days vs <b>' + t.prevVisits +
+      '</b> in the ' + W + ' before. Inquiries ' +
+      (function() { var i = tideDeltaInfo(t.curInq, t.prevInq); return t.curInq + ' (' + i.text + ')'; })() + '.';
+  }
+
+  /* ── Stat chips ── */
+  function chip(num, label) {
+    return '<div class="analytics-stat-chip"><span class="asc-num">' + num +
+      '</span><span class="asc-label">' + label + '</span></div>';
+  }
+  document.getElementById('tide-stats').innerHTML =
+    chip(t.curVisits,                'Visits · ' + W + 'd')  +
+    chip(vd.badge,                   'vs Prior')             +
+    chip(t.curVisitors,              'Unique Viewers')       +
+    chip(t.curInq,                   'Inquiries');
+
+  /* ── Daily chart ── */
+  drawTideSpark(t.daily, W);
+
+  /* ── Metric movers ── */
+  document.getElementById('tide-movers').innerHTML =
+    tideMoverRow('Visits',           t.curVisits,   t.prevVisits)   +
+    tideMoverRow('Unique Viewers',   t.curVisitors, t.prevVisitors) +
+    tideMoverRow('Sessions',         t.curSessions, t.prevSessions) +
+    tideMoverRow('Commission Inquiries', t.curInq,  t.prevInq)      +
+    tideMoverRow('Outbound Clicks',  t.curOut,      t.prevOut)      +
+    tideMoverRow('Bounces',          t.curBounce,   t.prevBounce);
+
+  /* ── Rising/fading lists ── */
+  document.getElementById('tide-sources').innerHTML =
+    tideMoverList(t.sources, 'No referrer data in this window yet.');
+  document.getElementById('tide-arts').innerHTML =
+    tideMoverList(t.arts, 'No artwork viewport activity in this window yet. Spotlight populates this as visitors view your work.');
+  document.getElementById('tide-pages').innerHTML =
+    tideMoverList(t.pages, 'No pageviews in this window yet.');
+}
+
+document.getElementById('tide-refresh-btn').addEventListener('click', renderTideTab);
+document.getElementById('tide-window').addEventListener('change', renderTideTab);
+
+document.getElementById('tide-export-btn').addEventListener('click', function() {
+  var W = parseInt(document.getElementById('tide-window').value, 10) || 7;
+  var t = buildTide(W);
+  var out = {
+    windowDays: W,
+    visits:   { current: t.curVisits,   prior: t.prevVisits },
+    viewers:  { current: t.curVisitors, prior: t.prevVisitors },
+    sessions: { current: t.curSessions, prior: t.prevSessions },
+    inquiries:{ current: t.curInq,      prior: t.prevInq },
+    outbound: { current: t.curOut,      prior: t.prevOut },
+    bounces:  { current: t.curBounce,   prior: t.prevBounce },
+    dailyVisits: t.daily,
+    sources: t.sources.map(function(r){ return { label: r.label, current: r.cur, prior: r.prev, delta: r.delta }; }),
+    arts:    t.arts.map(function(r){ return { label: r.label, current: r.cur, prior: r.prev, delta: r.delta }; }),
+    pages:   t.pages.map(function(r){ return { label: r.label, current: r.cur, prior: r.prev, delta: r.delta }; })
+  };
+  var blob = new Blob([JSON.stringify(out, null, 2)], { type: 'application/json' });
+  var url  = URL.createObjectURL(blob);
+  var a    = document.createElement('a');
+  a.href = url; a.download = 'tide-' + Date.now() + '.json'; a.click();
   URL.revokeObjectURL(url);
 });
 </script>

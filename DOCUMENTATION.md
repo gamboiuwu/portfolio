@@ -54,6 +54,7 @@ The tracking answers the questions the portfolio owner actually cares about:
 | Where do they click *out* to (socials/shops)? | `click` `href` (external targets) | **Relay → Destination Mix / Top Destinations** |
 | Where does the interface *frustrate* them? | `click` clustering (rage) + non-interactive targets (dead) | **Friction → Hotspots / Signal Mix** |
 | Which artworks get viewed *together*? | spotlight viewport events grouped per session | **Mosaic → Top Co-Viewed Pairs / Hub Artworks** |
+| Is traffic *growing* (this period vs last)? | `pv`/`goal`/`click`/spotlight bucketed into two adjacent windows | **Tide → Verdict / Metric Movers / Rising & Fading** |
 
 See `CLAUDE.md` → Analytics System for the exact event field schema.
 
@@ -143,7 +144,7 @@ Inquiries, Feedback.
   - **Signal Mix** donut, **Friction Hotspots** (the exact elements taking frustrated
     clicks), **Friction by Page**, and a tagged **Recent Friction** feed
   - Derived live from `_gam_analytics_v1` — no new storage key.
-- **Mosaic** *(newest)* — **artwork affinity & co-view analysis**. Spotlight ranks each
+- **Mosaic** — **artwork affinity & co-view analysis**. Spotlight ranks each
   artwork on its own; Mosaic is the only tool that *relates artworks to one another* —
   which pieces get looked at **together** in the same visit. From the viewport events
   Spotlight already records it builds:
@@ -153,6 +154,16 @@ Inquiries, Feedback.
   - **Companions Explorer** — pick any artwork, see what visitors most view alongside it
   - A curation signal for sequencing the portfolio and deciding what to hang next to what.
   - Derived live from `_gam_spotlight_v1` — no new storage key.
+- **Tide** *(newest)* — **traffic momentum & period-over-period trends**. Every other tool
+  photographs a single moment; Tide is the only one that asks whether the portfolio is
+  *growing* — it lays a recent window against the equal window right before it and reports
+  what moved. (Pulse finds the rhythm *within* a period; Tide compares one period to the next.)
+  - Window selector: last 7 / 14 / 30 days vs the prior equal span
+  - **Verdict** line + stats (visits, Δ vs prior, unique viewers, inquiries)
+  - **Daily Visits chart** — sand bars (prior) vs amber bars (current), split by a dashed divider
+  - **Metric Movers** — visits, viewers, sessions, inquiries, outbound clicks, bounces, each `prior → current` with a movement badge
+  - **Rising & Fading** — sources, artworks, and pages ranked by change
+  - Derived live from `_gam_analytics_v1` + `_gam_spotlight_v1` — no new storage key.
 - **Revenue** — financial dashboard derived from the commission Queue: total earned,
   pipeline value, monthly earnings chart, revenue by type, top clients.
 - **Palette** — extract dominant colors from an uploaded artwork (k-means), save
