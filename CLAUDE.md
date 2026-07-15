@@ -196,6 +196,7 @@ Password-protected (SHA-256 hash in localStorage, 5-attempt lockout). Session tr
 | Relay       | Outbound reach & link clicks — destination mix (social/shop/external/email), top destinations, exit pages, recent link-outs |
 | Friction    | UX friction & frustration signals — rage clicks (repeated clicks in one spot), unresponsive/dead clicks (non-interactive targets), friction hotspots, friction by page |
 | Mosaic      | Artwork affinity & co-view — which pieces get viewed together per visit, top co-viewed pairs, hub/connective artworks, per-artwork companions explorer |
+| Tide        | Traffic trend & momentum — daily visits over calendar time, 7-day moving average, week-over-week growth, active-day streak, weekly rollup, busiest days |
 
 ---
 
@@ -673,6 +674,41 @@ Answers a curation question no other tool can: **which artworks get looked at *t
 
 ---
 
+## Tide — Traffic Trend & Momentum (Admin → Tide tab) — NEW TOOL
+
+Answers a question the rest of the analytics family structurally cannot: **is the audience growing?** Compass = where traffic comes from, Journey = where it goes, **Pulse = *when in a week* it shows up (a cyclic rhythm)**, Spotlight = which artwork holds attention, Depth = read-through, Orbit = loyalty, Beacon = conversion, Relay = outbound reach, Friction = obstruction, Mosaic = artwork affinity, Revenue = money — none of them plots traffic **along calendar time** to reveal a growth trajectory. **Tide = momentum**: daily visits over the whole tracked span, smoothed, with week-over-week direction of travel.
+
+**Why it's genuinely new (and not the Analytics mini-chart):** the Analytics tab already has a fixed 30-day *pageview* glance line. Tide is a distinct **growth-analysis** layer: it counts **distinct sessions** (visits, not raw pageviews), spans the full tracked history (not a fixed 30 days), overlays a **7-day moving average** to cut daily noise, and reports **week-over-week growth %**, a **momentum badge** (rising/falling/flat), an **active-day streak**, and a **weekly rollup**. Different metric, different granularity, different question — trajectory rather than a single-window snapshot. Pulse is *cyclic* (day-of-week/hour); Tide is *linear* (calendar time).
+
+**No new storage key** — derived live from `_gam_analytics_v1` `pv` events, the same read-only pattern as Pulse/Compass/Journey.
+
+**How it works:**
+1. `buildTide()` buckets every `pv` event by local calendar day (`tideDayKey`), tracking the set of distinct `sid`s (visits) and the `pv` count per day.
+2. It builds a **contiguous** day array from the first tracked day to the last (gaps filled with 0), so the trend line is continuous.
+3. Per day it computes a **7-day trailing moving average** of visits.
+4. Derives: `totalVisits`, `activeDays`, `spanDays`, `bestDay`, `recent7` vs `prior7` (last 7 days vs the 7 before) → `growth` %, an active-day `streak` ending on the latest day, and a rolling 7-day `weekly` rollup (newest first, up to 12 blocks).
+
+**Admin tab sections:**
+- **Stats**: Total Visits, Active Days, Best Day (peak visits), Week / Week (momentum badge — ▲ up / ▼ down / ≈ flat / ▲ new)
+- **Daily Visits & 7-Day Trend**: canvas chart — amber bars for each day's visits (most recent 90 shown), darker amber line for the 7-day moving average, y-gridlines + date ticks
+- **Week-over-Week Rollup**: visits grouped into rolling 7-day blocks ending today, newest first (chronological, not re-sorted), each annotated with its date range
+- **Busiest Days**: individual calendar days ranked by visits (weekday + date labelled)
+
+**Derived schema (for export):**
+```js
+{ totalVisits, activeDays, spanDays, recent7, prior7, growthPct, streak,
+  bestDay:{day, visits}, weekly:[{label, range, visits}], daily:[{day, visits, views}] }
+```
+
+**Technical notes:**
+- Chart + bars use the warm amber palette (`rgba(201,168,124,0.55)` daily bars, `rgba(176,122,74,0.95)` moving-average line) — no blue/pink. New `.tide-*` CSS classes (canvas, legend, momentum badge); reuses `jBarList()` and `analytics-stat-chip`.
+- A "visit" is a distinct session per day; a session spanning midnight counts in each day it touched (consistent with per-day bucketing).
+- Tab renders lazily on click, same pattern as Mosaic/Friction/Relay/Beacon/Orbit/Depth/Compass/Journey/Pulse/Spotlight/Revenue.
+
+**API:** none new on `CommissionData` — uses `CommissionData.getAnalytics()`. Logic lives in `renderTideTab()` / `buildTide()` / `drawTideChart()` inside `admin/index.html`.
+
+---
+
 ## Commission System
 
 ### Pages
@@ -750,4 +786,4 @@ Stored in `_gam_prices_v1`. Three sections: `digital`, `stickers`, `animation`. 
 
 ---
 
-*Last updated: 2026-07-09*
+*Last updated: 2026-07-15*

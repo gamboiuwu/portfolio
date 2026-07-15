@@ -54,6 +54,7 @@ The tracking answers the questions the portfolio owner actually cares about:
 | Where do they click *out* to (socials/shops)? | `click` `href` (external targets) | **Relay → Destination Mix / Top Destinations** |
 | Where does the interface *frustrate* them? | `click` clustering (rage) + non-interactive targets (dead) | **Friction → Hotspots / Signal Mix** |
 | Which artworks get viewed *together*? | spotlight viewport events grouped per session | **Mosaic → Top Co-Viewed Pairs / Hub Artworks** |
+| Is the audience *growing* over time? | `pv` bucketed by calendar day (distinct sessions) | **Tide → Daily Visits & 7-Day Trend / Week-over-Week** |
 
 See `CLAUDE.md` → Analytics System for the exact event field schema.
 
@@ -130,7 +131,7 @@ Inquiries, Feedback.
   - **Where They Leave From** — which pages generate the most outbound clicks
   - **Recent Outbound Clicks** — latest link-outs with destination, origin page, time
   - Derived live from `_gam_analytics_v1` — no new storage key.
-- **Friction** *(newest)* — **UX friction & frustration signals**. Every other
+- **Friction** — **UX friction & frustration signals**. Every other
   tool measures where visitors go or what holds their attention; Friction measures
   where the interface *fights back*. From the `click` stream alone it reconstructs
   two industry-standard frustration signals:
@@ -143,7 +144,7 @@ Inquiries, Feedback.
   - **Signal Mix** donut, **Friction Hotspots** (the exact elements taking frustrated
     clicks), **Friction by Page**, and a tagged **Recent Friction** feed
   - Derived live from `_gam_analytics_v1` — no new storage key.
-- **Mosaic** *(newest)* — **artwork affinity & co-view analysis**. Spotlight ranks each
+- **Mosaic** — **artwork affinity & co-view analysis**. Spotlight ranks each
   artwork on its own; Mosaic is the only tool that *relates artworks to one another* —
   which pieces get looked at **together** in the same visit. From the viewport events
   Spotlight already records it builds:
@@ -153,6 +154,17 @@ Inquiries, Feedback.
   - **Companions Explorer** — pick any artwork, see what visitors most view alongside it
   - A curation signal for sequencing the portfolio and deciding what to hang next to what.
   - Derived live from `_gam_spotlight_v1` — no new storage key.
+- **Tide** *(newest)* — **traffic trend & momentum**. Pulse answers *when in a week*
+  visitors show up (a cyclic rhythm); Tide answers whether the audience is **growing**
+  over calendar time — the one question the rest of the family structurally can't. It's
+  distinct from the Analytics tab's fixed 30-day pageview glance line: Tide counts
+  **distinct sessions** over the **full** tracked span, overlays a **7-day moving average**,
+  and reports **week-over-week growth**. It builds:
+  - Stats: total visits, active days, best day, week-over-week momentum badge (▲/▼/≈)
+  - **Daily Visits & 7-Day Trend** — canvas bars (last 90 days) + moving-average line
+  - **Week-over-Week Rollup** — visits in rolling 7-day blocks, newest first
+  - **Busiest Days** — individual calendar days ranked by visits
+  - Derived live from `_gam_analytics_v1` — no new storage key.
 - **Revenue** — financial dashboard derived from the commission Queue: total earned,
   pipeline value, monthly earnings chart, revenue by type, top clients.
 - **Palette** — extract dominant colors from an uploaded artwork (k-means), save

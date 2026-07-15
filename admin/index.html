@@ -874,6 +874,19 @@
 		.mosaic-x { font-family: 'Courier New', monospace; font-size: 0.72em; color: #c9a87c;
 			border: 1px solid rgba(201,168,124,0.35); border-radius: 3px; padding: 0 0.35em; flex-shrink: 0; }
 
+		/* Tide tab — traffic trend & momentum over calendar time */
+		#tide-canvas { display: block; width: 100%; max-width: 100%; height: auto;
+			background: rgba(255,255,255,0.015); border-radius: 4px; }
+		.tide-legend { display: flex; gap: 1.2em; flex-wrap: wrap; margin-top: 0.7em; }
+		.tide-legend-item { display: flex; align-items: center; gap: 0.45em;
+			font-size: 0.78em; color: #8c887f; font-family: 'Courier New', monospace; }
+		.tide-legend-swatch { width: 1.5em; height: 0.55em; border-radius: 2px; flex-shrink: 0; }
+		.tide-momentum { display: inline-flex; align-items: center; gap: 0.35em;
+			font-family: 'Courier New', monospace; font-weight: 600; }
+		.tide-up   { color: #b08a5a; }
+		.tide-down { color: #9c8f80; }
+		.tide-flat { color: #8c887f; }
+
 		/* Beacon tab — conversion funnel */
 		.beacon-stage { padding: 0.55em 0; border-bottom: 1px solid rgba(255,255,255,0.06); }
 		.beacon-stage:last-child { border-bottom: none; }
@@ -966,6 +979,7 @@
 				<button class="admin-tab" data-tab="relay">Relay</button>
 				<button class="admin-tab" data-tab="friction">Friction</button>
 				<button class="admin-tab" data-tab="mosaic">Mosaic</button>
+				<button class="admin-tab" data-tab="tide">Tide</button>
 			</div>
 
 			<!-- ============ GALLERY TAB ============ -->
@@ -1907,6 +1921,42 @@
 							<p class="hint">Pick any artwork to see what visitors most often view alongside it &mdash; its closest companions, ranked by shared visits. Use it to decide what to hang next to a given piece.</p>
 							<select id="mosaic-companion-select" class="journey-select" style="margin-bottom:0.9em"></select>
 							<div id="mosaic-companions"></div>
+						</div>
+
+					</div>
+
+					<div id="tab-tide" class="tab-content">
+
+						<div class="admin-card">
+							<h3>Tide — Traffic Trend &amp; Momentum</h3>
+							<p class="hint">Pulse asks <em>when in a week</em> visitors show up (a cyclic rhythm); Tide asks whether the audience is <em>growing</em> over calendar time. It charts daily visits along the whole tracked span, smooths them with a 7&#8209;day moving average, and reports week&#8209;over&#8209;week momentum &mdash; the single clearest read on whether the portfolio is gaining ground. A visit is a distinct session; derived live from the pageview events in <code>_gam_analytics_v1</code> &mdash; no new storage key.</p>
+							<div id="tide-stats" class="analytics-stats" style="margin-bottom:1em"></div>
+							<div style="display:flex;gap:0.5em;flex-wrap:wrap">
+								<button class="button small" id="tide-refresh-btn">Refresh</button>
+								<button class="button small" id="tide-export-btn">Export JSON</button>
+							</div>
+						</div>
+
+						<div class="admin-card">
+							<h3>Daily Visits &amp; 7-Day Trend</h3>
+							<p class="hint">Each bar is one day's visits across the tracked span (most recent 90 days shown); the line is the 7&#8209;day moving average, which cuts through day&#8209;to&#8209;day noise so the real direction of travel is visible.</p>
+							<canvas id="tide-canvas" width="720" height="240"></canvas>
+							<div class="tide-legend">
+								<span class="tide-legend-item"><span class="tide-legend-swatch" style="background:rgba(201,168,124,0.55)"></span>Daily visits</span>
+								<span class="tide-legend-item"><span class="tide-legend-swatch" style="background:rgba(176,122,74,0.95)"></span>7-day moving average</span>
+							</div>
+						</div>
+
+						<div class="admin-card">
+							<h3>Week-over-Week Rollup</h3>
+							<p class="hint">Visits grouped into rolling 7&#8209;day blocks ending today, most recent first. Watch the bars climb or fall week to week to see whether momentum is building.</p>
+							<div id="tide-weekly"></div>
+						</div>
+
+						<div class="admin-card">
+							<h3>Busiest Days</h3>
+							<p class="hint">The individual calendar days that drew the most visits &mdash; useful for spotting which art drop, post, or event actually moved the needle.</p>
+							<div id="tide-busiest"></div>
 						</div>
 
 					</div>
@@ -2928,6 +2978,9 @@ document.addEventListener('click', function(e){
   }
   if (e.target.dataset && e.target.dataset.tab === 'mosaic') {
     renderMosaicTab();
+  }
+  if (e.target.dataset && e.target.dataset.tab === 'tide') {
+    renderTideTab();
   }
 });
 
@@ -5947,6 +6000,241 @@ document.getElementById('mosaic-export-btn').addEventListener('click', function(
   var url  = URL.createObjectURL(blob);
   var a    = document.createElement('a');
   a.href = url; a.download = 'mosaic-' + Date.now() + '.json'; a.click();
+  URL.revokeObjectURL(url);
+});
+
+/* ================================================================
+   TIDE TAB — traffic trend & momentum over calendar time
+   Pulse answers WHEN in a week visitors show up (a cyclic rhythm);
+   Tide answers whether the audience is GROWING over calendar time.
+   It buckets every pageview by local day, counts distinct sessions
+   per day, smooths the series with a 7-day moving average, and reports
+   week-over-week momentum, an active-day streak, and a weekly rollup.
+   No new storage key — derived live from _gam_analytics_v1, the same
+   read-only pattern as Pulse/Compass/Journey.
+================================================================ */
+
+var TIDE_MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+function tideDayKey(dt) { return dt.getFullYear() + '-' + (dt.getMonth() + 1) + '-' + dt.getDate(); }
+function tideFmtDay(dt) { return TIDE_MONTHS[dt.getMonth()] + ' ' + dt.getDate(); }
+
+function buildTide() {
+  var events = CommissionData.getAnalytics();
+
+  /* dayKey -> { set of sessions, pv count } */
+  var byDay = {};
+  var minTs = null, maxTs = null;
+  events.forEach(function(e) {
+    if (e.type !== 'pv' || !e.ts) return;
+    var dt = new Date(e.ts);
+    var k  = tideDayKey(dt);
+    var b  = byDay[k] || (byDay[k] = { sessions: {}, views: 0 });
+    if (e.sid) b.sessions[e.sid] = true;
+    b.views++;
+    if (minTs === null || e.ts < minTs) minTs = e.ts;
+    if (maxTs === null || e.ts > maxTs) maxTs = e.ts;
+  });
+
+  if (minTs === null) {
+    return { days: [], visible: [], totalVisits: 0, activeDays: 0, spanDays: 0,
+             bestDay: null, recent7: 0, prior7: 0, growth: null, streak: 0, weekly: [] };
+  }
+
+  /* Contiguous day array from first tracked day to last (gaps filled with 0) */
+  var start = new Date(minTs); start = new Date(start.getFullYear(), start.getMonth(), start.getDate());
+  var end   = new Date(maxTs); end   = new Date(end.getFullYear(),   end.getMonth(),   end.getDate());
+  var days  = [];
+  var cur   = new Date(start);
+  while (cur <= end) {
+    var k = tideDayKey(cur);
+    var b = byDay[k];
+    days.push({
+      date:   new Date(cur),
+      label:  tideFmtDay(cur),
+      visits: b ? Object.keys(b.sessions).length : 0,
+      views:  b ? b.views : 0
+    });
+    cur.setDate(cur.getDate() + 1);
+  }
+
+  /* 7-day trailing moving average of daily visits */
+  days.forEach(function(d, i) {
+    var sum = 0, n = 0;
+    for (var j = Math.max(0, i - 6); j <= i; j++) { sum += days[j].visits; n++; }
+    d.ma = n ? sum / n : 0;
+  });
+
+  var totalVisits = days.reduce(function(s, d){ return s + d.visits; }, 0);
+  var activeDays  = days.filter(function(d){ return d.visits > 0; }).length;
+
+  var bestDay = days.reduce(function(best, d){
+    return (!best || d.visits > best.visits) ? d : best;
+  }, null);
+
+  /* Week-over-week: last 7 days vs the 7 before */
+  var n = days.length;
+  function sumRange(a, b) { var s = 0; for (var i = Math.max(0, a); i < Math.min(n, b); i++) s += days[i].visits; return s; }
+  var recent7 = sumRange(n - 7, n);
+  var prior7  = sumRange(n - 14, n - 7);
+  var growth  = prior7 > 0 ? ((recent7 - prior7) / prior7) * 100 : (recent7 > 0 ? null : 0);
+
+  /* Active-day streak ending on the most recent tracked day */
+  var streak = 0;
+  for (var i = n - 1; i >= 0; i--) { if (days[i].visits > 0) streak++; else break; }
+
+  /* Weekly rollup — rolling 7-day blocks ending on the last day, newest first */
+  var weekly = [];
+  for (var w = 0; w < 12; w++) {
+    var hi = n - w * 7, lo = hi - 7;
+    if (hi <= 0) break;
+    var visits = sumRange(lo, hi);
+    var first  = days[Math.max(0, lo)].date, last = days[hi - 1].date;
+    weekly.push({
+      idx: w,
+      label: w === 0 ? 'This week' : (w + ' wk ago'),
+      range: tideFmtDay(first) + ' – ' + tideFmtDay(last),
+      count: visits
+    });
+    if (lo <= 0) break;
+  }
+
+  /* Chart shows the most recent 90 days for readability */
+  var visible = days.slice(Math.max(0, n - 90));
+
+  return {
+    days: days, visible: visible, totalVisits: totalVisits,
+    activeDays: activeDays, spanDays: n, bestDay: bestDay,
+    recent7: recent7, prior7: prior7, growth: growth, streak: streak, weekly: weekly
+  };
+}
+
+function drawTideChart(t) {
+  var canvas = document.getElementById('tide-canvas');
+  if (!canvas) return;
+  var ctx = canvas.getContext('2d');
+  var W = canvas.width, H = canvas.height;
+  ctx.clearRect(0, 0, W, H);
+
+  if (!t.visible.length || !t.totalVisits) {
+    ctx.fillStyle = '#444';
+    ctx.font = '12px -apple-system, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('No visits recorded yet.', W / 2, H / 2);
+    return;
+  }
+
+  var pad = { t: 14, r: 12, b: 26, l: 34 };
+  var cW = W - pad.l - pad.r, cH = H - pad.t - pad.b;
+  var v  = t.visible;
+  var maxY = 1;
+  v.forEach(function(d){ maxY = Math.max(maxY, d.visits, d.ma); });
+
+  /* Horizontal gridlines + y labels */
+  [0, 0.5, 1].forEach(function(f) {
+    var y = pad.t + cH * (1 - f);
+    ctx.strokeStyle = 'rgba(201,201,201,0.06)'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(pad.l, y); ctx.lineTo(pad.l + cW, y); ctx.stroke();
+    ctx.fillStyle = '#3a3a3a'; ctx.font = '9px monospace'; ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+    ctx.fillText(Math.round(maxY * f), pad.l - 5, y);
+  });
+
+  /* Daily-visit bars */
+  var slot = cW / v.length;
+  var bw   = Math.max(1, Math.min(slot - 1, 14));
+  v.forEach(function(d, i) {
+    if (d.visits <= 0) return;
+    var x = pad.l + i * slot + (slot - bw) / 2;
+    var h = (d.visits / maxY) * cH;
+    ctx.fillStyle = 'rgba(201,168,124,0.55)';
+    ctx.fillRect(x, pad.t + cH - h, bw, h);
+  });
+
+  /* 7-day moving-average line */
+  ctx.beginPath();
+  v.forEach(function(d, i) {
+    var x = pad.l + i * slot + slot / 2;
+    var y = pad.t + cH * (1 - d.ma / maxY);
+    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+  });
+  ctx.strokeStyle = 'rgba(176,122,74,0.95)'; ctx.lineWidth = 1.8; ctx.stroke();
+
+  /* X labels — a handful of evenly spaced dates */
+  ctx.fillStyle = '#3a3a3a'; ctx.font = '8px monospace'; ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+  var step = Math.max(1, Math.round(v.length / 6));
+  v.forEach(function(d, i) {
+    if (i % step === 0 || i === v.length - 1) {
+      var x = pad.l + i * slot + slot / 2;
+      ctx.fillText(d.label, x, H - 16);
+    }
+  });
+}
+
+function renderTideTab() {
+  var t = buildTide();
+
+  function chip(num, label) {
+    return '<div class="analytics-stat-chip"><span class="asc-num">' + num +
+      '</span><span class="asc-label">' + label + '</span></div>';
+  }
+
+  /* Momentum badge from week-over-week growth */
+  var momentum;
+  if (t.growth === null && t.recent7 > 0)      momentum = '<span class="tide-momentum tide-up">&#9650; new</span>';
+  else if (t.growth === null || !t.spanDays)    momentum = '<span class="tide-momentum tide-flat">&mdash;</span>';
+  else if (t.growth > 2)                         momentum = '<span class="tide-momentum tide-up">&#9650; ' + Math.round(t.growth) + '%</span>';
+  else if (t.growth < -2)                        momentum = '<span class="tide-momentum tide-down">&#9660; ' + Math.round(Math.abs(t.growth)) + '%</span>';
+  else                                           momentum = '<span class="tide-momentum tide-flat">&#8776; flat</span>';
+
+  document.getElementById('tide-stats').innerHTML =
+    chip(t.totalVisits,                                    'Total Visits') +
+    chip(t.activeDays,                                     'Active Days')  +
+    chip(t.bestDay && t.bestDay.visits ? t.bestDay.visits : '—', 'Best Day') +
+    chip(momentum,                                         'Week / Week');
+
+  drawTideChart(t);
+
+  /* Weekly rollup (chronological, newest first — do NOT re-sort) */
+  var weekEl = document.getElementById('tide-weekly');
+  if (!t.weekly.length) {
+    weekEl.innerHTML = '<p style="color:#444;font-size:0.85em;padding:0.5em 0">No visits recorded yet. Once the public pages get traffic, the weekly trend fills in here.</p>';
+  } else {
+    weekEl.innerHTML = jBarList(t.weekly, 0, {
+      suffix: function(r){ return r.range + ' · ' + r.count + (r.count === 1 ? ' visit' : ' visits'); }
+    });
+  }
+
+  /* Busiest individual days */
+  var busiest = t.days.filter(function(d){ return d.visits > 0; })
+    .map(function(d){ return { label: tideFullDay(d.date), count: d.visits }; })
+    .sort(function(a, b){ return b.count - a.count; })
+    .slice(0, 12);
+  document.getElementById('tide-busiest').innerHTML = busiest.length
+    ? jBarList(busiest, t.totalVisits, { suffix: function(r, share){ return r.count + (r.count === 1 ? ' visit' : ' visits') + ' · ' + share + '% of all'; } })
+    : '<p style="color:#444;font-size:0.85em;padding:0.5em 0">No visits recorded yet.</p>';
+}
+
+function tideFullDay(dt) {
+  var days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  return days[dt.getDay()] + ' ' + tideFmtDay(dt);
+}
+
+document.getElementById('tide-refresh-btn').addEventListener('click', renderTideTab);
+
+document.getElementById('tide-export-btn').addEventListener('click', function() {
+  var t = buildTide();
+  var out = {
+    totalVisits: t.totalVisits, activeDays: t.activeDays, spanDays: t.spanDays,
+    recent7: t.recent7, prior7: t.prior7,
+    growthPct: t.growth === null ? null : Math.round(t.growth * 10) / 10,
+    streak: t.streak,
+    bestDay: t.bestDay ? { day: tideFullDay(t.bestDay.date), visits: t.bestDay.visits } : null,
+    weekly: t.weekly.map(function(w){ return { label: w.label, range: w.range, visits: w.count }; }),
+    daily: t.days.map(function(d){ return { day: tideDayKey(d.date), visits: d.visits, views: d.views }; })
+  };
+  var blob = new Blob([JSON.stringify(out, null, 2)], { type: 'application/json' });
+  var url  = URL.createObjectURL(blob);
+  var a    = document.createElement('a');
+  a.href = url; a.download = 'tide-' + Date.now() + '.json'; a.click();
   URL.revokeObjectURL(url);
 });
 </script>
