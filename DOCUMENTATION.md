@@ -54,6 +54,7 @@ The tracking answers the questions the portfolio owner actually cares about:
 | Where do they click *out* to (socials/shops)? | `click` `href` (external targets) | **Relay → Destination Mix / Top Destinations** |
 | Where does the interface *frustrate* them? | `click` clustering (rage) + non-interactive targets (dead) | **Friction → Hotspots / Signal Mix** |
 | Which artworks get viewed *together*? | spotlight viewport events grouped per session | **Mosaic → Top Co-Viewed Pairs / Hub Artworks** |
+| How *good* is the traffic (not just how much)? | per-session composite of `pv` + `scroll` + `click`/`goal` + `exit` + artwork viewport ms | **Caliber → Quality Tiers / Quality by Source & Entry Page** |
 
 See `CLAUDE.md` → Analytics System for the exact event field schema.
 
@@ -153,6 +154,19 @@ Inquiries, Feedback.
   - **Companions Explorer** — pick any artwork, see what visitors most view alongside it
   - A curation signal for sequencing the portfolio and deciding what to hang next to what.
   - Derived live from `_gam_spotlight_v1` — no new storage key.
+- **Caliber** *(newest)* — **visitor engagement quality & session scoring**. Every other
+  tool counts *how much* traffic arrives; Caliber is the only one that grades *how good*
+  it is. It scores each session 0–100 from five signals — pages viewed, scroll depth,
+  time on site, artwork attention, interactions — and sorts visitors into tiers
+  (Bounced → Skimmed → Engaged → Invested). It builds:
+  - Stats: scored sessions, avg score, engaged rate, high-caliber (Invested) %
+  - **Quality Tiers** donut + legend, centred on the average score
+  - **What Drives Engagement** — average points per signal, so weak links stand out
+  - **Quality by Source** — acquisition channels ranked by *average score*, not volume
+  - **Quality by Entry Page** — which landing pages hook people into deeper visits
+  - **Recent High-Caliber Sessions** — top-scored visits, tagged by tier + carrying signal
+  - The clearest read on whether to chase the *biggest* audience or the *best* one.
+  - A cross-stream composite of `_gam_analytics_v1` + `_gam_spotlight_v1` — no new storage key.
 - **Revenue** — financial dashboard derived from the commission Queue: total earned,
   pipeline value, monthly earnings chart, revenue by type, top clients.
 - **Palette** — extract dominant colors from an uploaded artwork (k-means), save

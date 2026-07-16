@@ -196,6 +196,7 @@ Password-protected (SHA-256 hash in localStorage, 5-attempt lockout). Session tr
 | Relay       | Outbound reach & link clicks — destination mix (social/shop/external/email), top destinations, exit pages, recent link-outs |
 | Friction    | UX friction & frustration signals — rage clicks (repeated clicks in one spot), unresponsive/dead clicks (non-interactive targets), friction hotspots, friction by page |
 | Mosaic      | Artwork affinity & co-view — which pieces get viewed together per visit, top co-viewed pairs, hub/connective artworks, per-artwork companions explorer |
+| Caliber     | Visitor engagement quality — per-session 0–100 score from five signals, quality tiers (Bounced→Skimmed→Engaged→Invested), score drivers, quality by source & entry page |
 
 ---
 
@@ -673,6 +674,55 @@ Answers a curation question no other tool can: **which artworks get looked at *t
 
 ---
 
+## Caliber — Visitor Engagement Quality & Session Scoring (Admin → Caliber tab) — NEW TOOL
+
+Answers the one question the entire analytics family sidesteps: not *how much* traffic arrives, but **how good it is.** Compass = where traffic comes from, Journey = where it goes, Pulse = when it shows up, Spotlight = which artwork holds attention, Depth = read-through, Orbit = loyalty, Beacon = conversion, Relay = outbound reach, Friction = obstruction, Mosaic = artwork affinity, Revenue = money — every one of those measures a *quantity* or a single dimension of behaviour. **Caliber = quality**: it scores each individual session, sorts visitors into engagement tiers, and — the actionable payoff — reveals which acquisition **sources** and landing **pages** actually bring engaged visitors versus one-glance bounces. The clearest read on whether to chase the *biggest* audience or the *best* one.
+
+**Why it's genuinely new:** it is the first tool to produce a per-session composite score and the first to segment traffic by *quality* rather than count. Beacon shows whether a session converted (a single binary outcome); Journey shows raw page flow; Compass counts visits per channel. None of them grade a visit's overall engagement or rank channels/entry-pages by the *calibre* of the visitors they deliver.
+
+**No new storage key** — a **cross-stream composite** derived live from `_gam_analytics_v1` (`pv`, `scroll`, `click`, `goal`, `exit`) **plus** `_gam_spotlight_v1` (artwork viewport ms, joined by `sid`). Same read-only pattern as Journey/Depth; the first tool to read both streams together.
+
+**Scoring model (transparent, per session, capped at 100):**
+| Signal | Points | Formula | Full score at |
+|--------|--------|---------|---------------|
+| Breadth (pages viewed) | 0–25 | `min(25, (pv−1)*8)` | 4+ pages |
+| Depth (max scroll %) | 0–20 | `(maxDepth/100)*20` | scrolled to 100% |
+| Duration (time on site) | 0–20 | `min(20, sec/6)` | ~120s |
+| Artwork (spotlight ms on art) | 0–20 | `min(20, ms/1500)` | ~30s of art attention |
+| Interaction (clicks + goals) | 0–15 | `min(15, clicks*2 + goals*5)` | — |
+
+**Tier cutoffs:** `<15` Bounced · `15–39` Skimmed · `40–69` Engaged · `70+` Invested.
+
+**How it works:**
+1. `buildCaliber()` sums each session's artwork viewport time from `_gam_spotlight_v1`, then groups `_gam_analytics_v1` events by `sid`.
+2. Per session it derives the five signal contributions above, sums them into a 0–100 `score`, assigns a `tier`, records the session's first-pageview `refHost` and `entry` page, and flags the single largest signal (`topSignal`).
+3. Aggregates: tier counts, average score, average contribution per signal (drivers), average score per acquisition channel (via the shared `compassClassify()`, `internal` folded into `direct`), average score per entry page, and a top-scored recent-session feed.
+
+**Admin tab sections:**
+- **Stats**: Scored Sessions, Avg Score (/100), Engaged Rate (% Engaged+Invested), High-Caliber (% Invested)
+- **Quality Tiers**: canvas donut + legend (Bounced/Skimmed/Engaged/Invested); centre shows the average score
+- **What Drives Engagement**: average points each signal contributes, bar-scaled to its own cap — surfaces weak links (e.g. low scroll = losing people above the fold)
+- **Quality by Source**: acquisition channels ranked by *average engagement score* (not volume), annotated with session count and engaged %
+- **Quality by Entry Page**: landing pages ranked by the average score of sessions that started there
+- **Recent High-Caliber Sessions**: top-scored recent visits, each tagged with its tier and the signal that carried it
+
+**Derived schema (for export):**
+```js
+{ total, avgScore, engagedRate, investedRate,
+  tierCounts:{invested,engaged,skimmed,bounced},
+  drivers:[{label,avg,cap}], sources:[{channel,sessions,avg,engagedRate}],
+  entries:[{page,sessions,avg}] }
+```
+
+**Technical notes:**
+- Donut + tier swatches and tags use the warm amber/sand palette (`rgba(176,122,74…)` invested → `rgba(140,136,127…)` bounced) — no blue/pink. New `.caliber-donut-row` + `.cal-tag-*` classes; reuses `jBarList()`, `analytics-stat-chip`, `compass-legend`/`compass-donut-row`, `spotlight-board`/`sp-*` bars, `escHtml()`, `jFmtDur()`, `jPageLabel()`, `compassClassify()`.
+- The score weighting is a documented heuristic, not an absolute measure; a session with no `scroll`/`exit`/artwork events simply scores those signals at 0 (noted in the tab hint via the tier definitions).
+- Tab renders lazily on click, same pattern as Mosaic/Friction/Relay/Beacon/Orbit/Depth/Compass/Journey/Pulse/Spotlight/Revenue.
+
+**API:** none new on `CommissionData` — uses `CommissionData.getAnalytics()` + `CommissionData.getSpotlight()`. Logic lives in `renderCaliberTab()` / `buildCaliber()` / `caliberTier()` inside `admin/index.html`.
+
+---
+
 ## Commission System
 
 ### Pages
@@ -750,4 +800,4 @@ Stored in `_gam_prices_v1`. Three sections: `digital`, `stickers`, `animation`. 
 
 ---
 
-*Last updated: 2026-07-09*
+*Last updated: 2026-07-16*

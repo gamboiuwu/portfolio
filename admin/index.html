@@ -884,6 +884,17 @@
 		.beacon-bar-wrap { height: 1.1em; background: rgba(255,255,255,0.05); border-radius: 3px; overflow: hidden; }
 		.beacon-bar { height: 100%; border-radius: 3px; transition: width 0.4s ease; }
 		.beacon-drop { font-size: 0.72em; color: #b07a4a; margin-top: 0.25em; font-family: 'Courier New', monospace; }
+
+		/* Caliber tab — visitor engagement quality (reuses compass donut + spotlight bars) */
+		.caliber-donut-row { display: flex; gap: 1.4em; align-items: center; flex-wrap: wrap; }
+		#caliber-donut { display: block; flex-shrink: 0; }
+		.cal-tag { display: inline-block; font-family: 'Courier New', monospace; font-size: 0.66em;
+			letter-spacing: 0.06em; padding: 0.12em 0.5em; border-radius: 3px; vertical-align: middle;
+			margin-right: 0.5em; }
+		.cal-tag-invested { background: rgba(176,122,74,0.24); color: #d6a878; border: 1px solid rgba(176,122,74,0.45); }
+		.cal-tag-engaged  { background: rgba(201,168,124,0.18); color: #c9a87c; border: 1px solid rgba(201,168,124,0.38); }
+		.cal-tag-skimmed  { background: rgba(214,190,150,0.12); color: #cdb98f; border: 1px solid rgba(214,190,150,0.28); }
+		.cal-tag-bounced  { background: rgba(140,136,127,0.16); color: #b7b3aa; border: 1px solid rgba(140,136,127,0.32); }
 	</style>
 </head>
 <body class="is-preload">
@@ -966,6 +977,7 @@
 				<button class="admin-tab" data-tab="relay">Relay</button>
 				<button class="admin-tab" data-tab="friction">Friction</button>
 				<button class="admin-tab" data-tab="mosaic">Mosaic</button>
+				<button class="admin-tab" data-tab="caliber">Caliber</button>
 			</div>
 
 			<!-- ============ GALLERY TAB ============ -->
@@ -1907,6 +1919,53 @@
 							<p class="hint">Pick any artwork to see what visitors most often view alongside it &mdash; its closest companions, ranked by shared visits. Use it to decide what to hang next to a given piece.</p>
 							<select id="mosaic-companion-select" class="journey-select" style="margin-bottom:0.9em"></select>
 							<div id="mosaic-companions"></div>
+						</div>
+
+					</div>
+
+					<div id="tab-caliber" class="tab-content">
+
+						<div class="admin-card">
+							<h3>Caliber — Visitor Engagement Quality</h3>
+							<p class="hint">Every other tool counts <em>how much</em> traffic arrives; Caliber measures <em>how good</em> it is. It scores each session 0&ndash;100 from five signals it already records &mdash; pages viewed, scroll depth, time on site, artwork attention time, and interactions &mdash; then sorts visitors into quality tiers (Bounced &rarr; Skimmed &rarr; Engaged &rarr; Invested). The payoff is the two breakdowns below: which acquisition <em>sources</em> and which landing <em>pages</em> actually bring engaged visitors versus one-glance bounces &mdash; so you can post where the quality audience is, not just the biggest. A cross-stream composite of <code>_gam_analytics_v1</code> + <code>_gam_spotlight_v1</code> &mdash; no new storage key.</p>
+							<div id="caliber-stats" class="analytics-stats" style="margin-bottom:1em"></div>
+							<div style="display:flex;gap:0.5em;flex-wrap:wrap">
+								<button class="button small" id="caliber-refresh-btn">Refresh</button>
+								<button class="button small" id="caliber-export-btn">Export JSON</button>
+							</div>
+						</div>
+
+						<div class="admin-card">
+							<h3>Quality Tiers</h3>
+							<p class="hint">How the audience splits by engagement depth. <strong>Invested</strong> = deep, multi-signal visits; <strong>Engaged</strong> = solid attention; <strong>Skimmed</strong> = a look and a scroll; <strong>Bounced</strong> = a single glance. The centre shows the average session score across everyone.</p>
+							<div class="caliber-donut-row">
+								<canvas id="caliber-donut" width="180" height="180"></canvas>
+								<div id="caliber-legend" class="compass-legend"></div>
+							</div>
+						</div>
+
+						<div class="admin-card">
+							<h3>What Drives Engagement</h3>
+							<p class="hint">Average points each signal contributes to the score, across all scored sessions. The tall bars are what's already pulling visitors in; the short ones are the weak links &mdash; e.g. low scroll points means pages lose people above the fold, low artwork points means the work isn't being lingered on.</p>
+							<div id="caliber-drivers"></div>
+						</div>
+
+						<div class="admin-card">
+							<h3>Quality by Source</h3>
+							<p class="hint">Acquisition channels ranked by the <em>average engagement score</em> of the sessions they send &mdash; not raw volume. A channel high here delivers visitors who actually explore; a big channel that ranks low is loud but shallow. The clearest signal for where to invest posting effort.</p>
+							<div id="caliber-sources"></div>
+						</div>
+
+						<div class="admin-card">
+							<h3>Quality by Entry Page</h3>
+							<p class="hint">Landing pages ranked by the average score of sessions that <em>started</em> there. A strong entry page hooks visitors into deeper visits; a weak one leaks first-glance bounces. Shows which front doors are doing the work.</p>
+							<div id="caliber-entries"></div>
+						</div>
+
+						<div class="admin-card">
+							<h3>Recent High-Caliber Sessions</h3>
+							<p class="hint">The most engaged recent visits, each tagged with its tier and the signal that carried it. A qualitative feel for what a genuinely interested visitor does on the site.</p>
+							<div id="caliber-recent"></div>
 						</div>
 
 					</div>
@@ -2928,6 +2987,9 @@ document.addEventListener('click', function(e){
   }
   if (e.target.dataset && e.target.dataset.tab === 'mosaic') {
     renderMosaicTab();
+  }
+  if (e.target.dataset && e.target.dataset.tab === 'caliber') {
+    renderCaliberTab();
   }
 });
 
@@ -5947,6 +6009,351 @@ document.getElementById('mosaic-export-btn').addEventListener('click', function(
   var url  = URL.createObjectURL(blob);
   var a    = document.createElement('a');
   a.href = url; a.download = 'mosaic-' + Date.now() + '.json'; a.click();
+  URL.revokeObjectURL(url);
+});
+
+/* ================================================================
+   CALIBER TAB — visitor engagement quality & session scoring
+   Every other analytics tool measures the QUANTITY of traffic
+   (how much, from where, when). Caliber measures its QUALITY: it
+   scores each session 0-100 from five signals already recorded —
+   pages viewed, scroll depth, time on site, artwork attention time
+   (from Spotlight's _gam_spotlight_v1), and interactions — and
+   sorts visitors into tiers (Bounced/Skimmed/Engaged/Invested).
+   The actionable payoff: average score by acquisition source and
+   by entry page, so the artist can see which channels and landing
+   pages bring engaged visitors versus one-glance bounces.
+   A cross-stream composite of _gam_analytics_v1 + _gam_spotlight_v1
+   — no new storage key, same read-only pattern as Journey/Depth.
+
+   Scoring model (transparent, capped at 100):
+     • Breadth   (0-25): pages viewed        min(25, (pv-1)*8)
+     • Depth     (0-20): max scroll %         (maxDepth/100)*20
+     • Duration  (0-20): time on site         min(20, sec/6)   (~120s = full)
+     • Artwork   (0-20): spotlight ms on art  min(20, ms/1500) (~30s = full)
+     • Interact  (0-15): clicks + goals       min(15, clicks*2 + goals*5)
+   Tier cutoffs: <15 Bounced · 15-39 Skimmed · 40-69 Engaged · 70+ Invested
+================================================================ */
+
+var CALIBER_TIERS = [
+  { key: 'invested', label: 'Invested', min: 70, color: 'rgba(176,122,74,0.95)' },
+  { key: 'engaged',  label: 'Engaged',  min: 40, color: 'rgba(201,168,124,0.9)' },
+  { key: 'skimmed',  label: 'Skimmed',  min: 15, color: 'rgba(214,190,150,0.85)' },
+  { key: 'bounced',  label: 'Bounced',  min: 0,  color: 'rgba(140,136,127,0.7)' }
+];
+
+function caliberTier(score) {
+  for (var i = 0; i < CALIBER_TIERS.length; i++) {
+    if (score >= CALIBER_TIERS[i].min) return CALIBER_TIERS[i];
+  }
+  return CALIBER_TIERS[CALIBER_TIERS.length - 1];
+}
+
+function buildCaliber() {
+  var events = CommissionData.getAnalytics() || [];
+  var spots  = (CommissionData.getSpotlight && CommissionData.getSpotlight()) || [];
+
+  /* Artwork attention ms per session (cross-stream from Spotlight). */
+  var artMs = {};
+  spots.forEach(function(s) {
+    if (!s.sid) return;
+    artMs[s.sid] = (artMs[s.sid] || 0) + (s.ms || 0);
+  });
+
+  /* Group analytics events by session. */
+  var bySid = {};
+  events.forEach(function(e) {
+    if (!e.sid) return;
+    (bySid[e.sid] = bySid[e.sid] || []).push(e);
+  });
+
+  var sessions = [];
+  Object.keys(bySid).forEach(function(sid) {
+    var evts = bySid[sid].slice().sort(function(a, b){ return (a.ts || 0) - (b.ts || 0); });
+
+    var pvCount = 0, maxDepth = 0, clicks = 0, goals = 0;
+    var firstTs = null, lastTs = null, exitMs = 0, entry = null, refHost = null;
+    evts.forEach(function(e) {
+      if (firstTs === null) firstTs = e.ts;
+      lastTs = e.ts;
+      if (e.type === 'pv') {
+        pvCount++;
+        if (entry === null) { entry = e.page || '/'; refHost = e.refHost || 'direct'; }
+      } else if (e.type === 'scroll') {
+        if ((e.depth || 0) > maxDepth) maxDepth = e.depth;
+      } else if (e.type === 'click') {
+        clicks++;
+      } else if (e.type === 'goal') {
+        goals++;
+      } else if (e.type === 'exit') {
+        if ((e.ms || 0) > exitMs) exitMs = e.ms;
+      }
+    });
+
+    if (!pvCount) return; /* no pageview = not a real session */
+
+    var durMs  = Math.max((lastTs || 0) - (firstTs || 0), exitMs);
+    var durSec = durMs / 1000;
+
+    /* Five weighted signal contributions. */
+    var sBreadth  = Math.min(25, Math.max(0, (pvCount - 1)) * 8);
+    var sDepth    = Math.round((maxDepth / 100) * 20);
+    var sDuration = Math.min(20, Math.round(durSec / 6));
+    var sArtwork  = Math.min(20, Math.round((artMs[sid] || 0) / 1500));
+    var sInteract = Math.min(15, clicks * 2 + goals * 5);
+    var score     = Math.min(100, sBreadth + sDepth + sDuration + sArtwork + sInteract);
+
+    /* Which signal carried this session (largest contribution). */
+    var parts = [
+      { k: 'breadth',  label: 'pages',       v: sBreadth  },
+      { k: 'depth',    label: 'scroll',      v: sDepth    },
+      { k: 'duration', label: 'time',        v: sDuration },
+      { k: 'artwork',  label: 'art dwell',   v: sArtwork  },
+      { k: 'interact', label: 'interaction', v: sInteract }
+    ];
+    var top = parts.reduce(function(a, b){ return b.v > a.v ? b : a; }, parts[0]);
+
+    sessions.push({
+      sid: sid, score: score, tier: caliberTier(score).key,
+      pvCount: pvCount, maxDepth: maxDepth, durMs: durMs,
+      clicks: clicks, goals: goals, artMs: artMs[sid] || 0,
+      entry: entry || '/', refHost: refHost || 'direct',
+      parts: parts, topSignal: top.v > 0 ? top.label : '—',
+      ts: lastTs || firstTs || 0
+    });
+  });
+
+  var total = sessions.length;
+  var scoreSum = sessions.reduce(function(s, x){ return s + x.score; }, 0);
+  var avgScore = total ? Math.round(scoreSum / total) : 0;
+
+  /* Tier counts. */
+  var tierCounts = {};
+  CALIBER_TIERS.forEach(function(t){ tierCounts[t.key] = 0; });
+  sessions.forEach(function(x){ tierCounts[x.tier]++; });
+  var engagedPlus = tierCounts.engaged + tierCounts.invested;
+
+  /* Average driver contribution across all sessions. */
+  var driverKeys = ['breadth', 'depth', 'duration', 'artwork', 'interact'];
+  var driverLabels = {
+    breadth: 'Pages viewed', depth: 'Scroll depth', duration: 'Time on site',
+    artwork: 'Artwork attention', interact: 'Interactions'
+  };
+  var driverMax = { breadth: 25, depth: 20, duration: 20, artwork: 20, interact: 15 };
+  var driverSum = {}; driverKeys.forEach(function(k){ driverSum[k] = 0; });
+  sessions.forEach(function(x) {
+    x.parts.forEach(function(p){ driverSum[p.k] += p.v; });
+  });
+  var drivers = driverKeys.map(function(k) {
+    return {
+      key: k, label: driverLabels[k],
+      avg: total ? (driverSum[k] / total) : 0, cap: driverMax[k]
+    };
+  }).sort(function(a, b){ return b.avg - a.avg; });
+
+  /* Quality by acquisition source (channel via compassClassify). */
+  var srcAgg = {};
+  sessions.forEach(function(x) {
+    var ch = compassClassify(x.refHost);
+    if (ch === 'internal') ch = 'direct';
+    var a = srcAgg[ch] = srcAgg[ch] || { channel: ch, n: 0, sum: 0, engaged: 0 };
+    a.n++; a.sum += x.score;
+    if (x.tier === 'engaged' || x.tier === 'invested') a.engaged++;
+  });
+  var sources = Object.keys(srcAgg).map(function(ch) {
+    var a = srcAgg[ch];
+    return { channel: ch, sessions: a.n, avg: Math.round(a.sum / a.n),
+             engagedRate: Math.round((a.engaged / a.n) * 100) };
+  }).sort(function(a, b){ return b.avg - a.avg || b.sessions - a.sessions; });
+
+  /* Quality by entry page. */
+  var entAgg = {};
+  sessions.forEach(function(x) {
+    var a = entAgg[x.entry] = entAgg[x.entry] || { page: x.entry, n: 0, sum: 0 };
+    a.n++; a.sum += x.score;
+  });
+  var entries = Object.keys(entAgg).map(function(pg) {
+    var a = entAgg[pg];
+    return { page: pg, sessions: a.n, avg: Math.round(a.sum / a.n) };
+  }).sort(function(a, b){ return b.avg - a.avg || b.sessions - a.sessions; });
+
+  var recent = sessions.slice()
+    .sort(function(a, b){ return b.score - a.score || b.ts - a.ts; })
+    .slice(0, 15);
+
+  return {
+    sessions: sessions, total: total, avgScore: avgScore,
+    tierCounts: tierCounts, engagedPlus: engagedPlus,
+    engagedRate: total ? Math.round((engagedPlus / total) * 100) : 0,
+    investedRate: total ? Math.round((tierCounts.invested / total) * 100) : 0,
+    drivers: drivers, sources: sources, entries: entries, recent: recent
+  };
+}
+
+var CALIBER_CH_LABEL = { direct: 'Direct', social: 'Social', search: 'Search', referral: 'Referral' };
+
+function drawCaliberDonut(c) {
+  var canvas = document.getElementById('caliber-donut');
+  if (!canvas) return;
+  var ctx = canvas.getContext('2d');
+  var W = canvas.width, H = canvas.height;
+  ctx.clearRect(0, 0, W, H);
+  var cx = W / 2, cy = H / 2, rOut = 78, rIn = 46;
+
+  if (!c.total) {
+    ctx.fillStyle = '#444';
+    ctx.font = '12px -apple-system, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('No sessions yet.', cx, cy);
+    return;
+  }
+
+  var start = -Math.PI / 2;
+  CALIBER_TIERS.forEach(function(t) {
+    var v = c.tierCounts[t.key];
+    if (!v) return;
+    var ang = (v / c.total) * Math.PI * 2;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.arc(cx, cy, rOut, start, start + ang);
+    ctx.closePath();
+    ctx.fillStyle = t.color;
+    ctx.fill();
+    start += ang;
+  });
+
+  ctx.globalCompositeOperation = 'destination-out';
+  ctx.beginPath();
+  ctx.arc(cx, cy, rIn, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.globalCompositeOperation = 'source-over';
+
+  ctx.fillStyle = '#c9a87c';
+  ctx.font = 'bold 24px -apple-system, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(c.avgScore, cx, cy - 6);
+  ctx.fillStyle = '#8c887f';
+  ctx.font = '10px "Courier New", monospace';
+  ctx.fillText('AVG SCORE', cx, cy + 13);
+}
+
+function renderCaliberTab() {
+  var c = buildCaliber();
+
+  function chip(num, label) {
+    return '<div class="analytics-stat-chip"><span class="asc-num">' + num +
+      '</span><span class="asc-label">' + label + '</span></div>';
+  }
+  document.getElementById('caliber-stats').innerHTML =
+    chip(c.total,                 'Scored Sessions') +
+    chip(c.avgScore + '/100',     'Avg Score')       +
+    chip(c.engagedRate + '%',     'Engaged Rate')    +
+    chip(c.investedRate + '%',    'High-Caliber');
+
+  /* ── Tier donut + legend ── */
+  drawCaliberDonut(c);
+  document.getElementById('caliber-legend').innerHTML = CALIBER_TIERS.map(function(t) {
+    var v = c.tierCounts[t.key];
+    var share = c.total ? Math.round((v / c.total) * 100) : 0;
+    return '<div class="compass-legend-item">' +
+      '<span class="compass-legend-swatch" style="background:' + t.color + '"></span>' +
+      '<span>' + t.label + '</span>' +
+      '<span class="compass-legend-val">' + v + ' · ' + share + '%</span>' +
+    '</div>';
+  }).join('');
+
+  /* ── Score drivers (avg points per signal, shown against its cap) ── */
+  var drvEl = document.getElementById('caliber-drivers');
+  if (!c.total) {
+    drvEl.innerHTML = '<p style="color:#444;font-size:0.85em;padding:0.5em 0">No scored sessions yet. Once visitors browse the public pages, the engagement breakdown fills in.</p>';
+  } else {
+    var drvRows = c.drivers.map(function(d) {
+      return { label: d.label, count: Math.round(d.avg * 10) / 10, cap: d.cap };
+    });
+    var drvMax = c.drivers.length ? c.drivers[0].cap : 1;
+    /* Bars scaled to each signal's own cap so a full contribution reads as 100%. */
+    drvEl.innerHTML = '<div class="spotlight-board">' + c.drivers.map(function(d) {
+      var pct = d.cap ? Math.round((d.avg / d.cap) * 100) : 0;
+      return '<div class="spotlight-row">' +
+        '<div class="sp-info">' +
+          '<div class="sp-label" title="' + escHtml(d.label) + '">' + escHtml(d.label) + '</div>' +
+          '<div class="sp-bar-wrap"><div class="sp-bar" style="width:' + pct + '%"></div></div>' +
+        '</div>' +
+        '<div class="sp-meta">' +
+          '<span class="sp-time">' + (Math.round(d.avg * 10) / 10) + '</span>' +
+          '<span class="sp-views">of ' + d.cap + ' pts avg</span>' +
+        '</div>' +
+      '</div>';
+    }).join('') + '</div>';
+  }
+
+  /* ── Quality by source ── */
+  var srcRows = c.sources.map(function(s) {
+    return { label: CALIBER_CH_LABEL[s.channel] || s.channel, count: s.avg,
+             sessions: s.sessions, engagedRate: s.engagedRate };
+  });
+  var srcEl = document.getElementById('caliber-sources');
+  srcEl.innerHTML = srcRows.length
+    ? jBarList(srcRows, 0, {
+        suffix: function(r) {
+          return r.count + '/100 avg · ' + r.sessions + (r.sessions === 1 ? ' session' : ' sessions') +
+                 ' · ' + r.engagedRate + '% engaged';
+        }
+      })
+    : '<p style="color:#444;font-size:0.85em;padding:0.5em 0">No source data yet.</p>';
+
+  /* ── Quality by entry page ── */
+  var entRows = c.entries.map(function(e) {
+    return { label: jPageLabel(e.page), count: e.avg, sessions: e.sessions };
+  });
+  var entEl = document.getElementById('caliber-entries');
+  entEl.innerHTML = entRows.length
+    ? jBarList(entRows, 0, {
+        suffix: function(r) {
+          return r.count + '/100 avg · ' + r.sessions + (r.sessions === 1 ? ' session' : ' sessions');
+        }
+      })
+    : '<p style="color:#444;font-size:0.85em;padding:0.5em 0">No entry data yet.</p>';
+
+  /* ── Recent high-caliber sessions ── */
+  var recEl = document.getElementById('caliber-recent');
+  if (!c.recent.length) {
+    recEl.innerHTML = '<p style="color:#444;font-size:0.85em;padding:0.5em 0">No sessions scored yet.</p>';
+  } else {
+    recEl.innerHTML = '<div class="spotlight-board">' + c.recent.map(function(s) {
+      var t = caliberTier(s.score);
+      return '<div class="spotlight-row">' +
+        '<div class="sp-info">' +
+          '<div class="sp-label">' +
+            '<span class="cal-tag cal-tag-' + t.key + '">' + t.label.toUpperCase() + '</span>' +
+            escHtml(jPageLabel(s.entry)) +
+          '</div>' +
+          '<div class="sp-bar-wrap"><div class="sp-bar" style="width:' + s.score + '%"></div></div>' +
+        '</div>' +
+        '<div class="sp-meta">' +
+          '<span class="sp-time">' + s.score + '</span>' +
+          '<span class="sp-views">' + s.pvCount + 'pg · ' + jFmtDur(s.durMs) + ' · ' + escHtml(s.topSignal) + '</span>' +
+        '</div>' +
+      '</div>';
+    }).join('') + '</div>';
+  }
+}
+
+document.getElementById('caliber-refresh-btn').addEventListener('click', renderCaliberTab);
+
+document.getElementById('caliber-export-btn').addEventListener('click', function() {
+  var c = buildCaliber();
+  var out = {
+    total: c.total, avgScore: c.avgScore, engagedRate: c.engagedRate,
+    investedRate: c.investedRate, tierCounts: c.tierCounts,
+    drivers: c.drivers.map(function(d){ return { label: d.label, avg: Math.round(d.avg * 100) / 100, cap: d.cap }; }),
+    sources: c.sources, entries: c.entries.map(function(e){ return { page: e.page, sessions: e.sessions, avg: e.avg }; })
+  };
+  var blob = new Blob([JSON.stringify(out, null, 2)], { type: 'application/json' });
+  var url  = URL.createObjectURL(blob);
+  var a    = document.createElement('a');
+  a.href = url; a.download = 'caliber-' + Date.now() + '.json'; a.click();
   URL.revokeObjectURL(url);
 });
 </script>
