@@ -196,6 +196,7 @@ Password-protected (SHA-256 hash in localStorage, 5-attempt lockout). Session tr
 | Relay       | Outbound reach & link clicks — destination mix (social/shop/external/email), top destinations, exit pages, recent link-outs |
 | Friction    | UX friction & frustration signals — rage clicks (repeated clicks in one spot), unresponsive/dead clicks (non-interactive targets), friction hotspots, friction by page |
 | Mosaic      | Artwork affinity & co-view — which pieces get viewed together per visit, top co-viewed pairs, hub/connective artworks, per-artwork companions explorer |
+| Momentum    | Traffic trend & growth over time — weekly-visits chart, week-over-week growth, 7d-vs-prior-7d snapshot, recent daily activity, standout weeks |
 
 ---
 
@@ -673,6 +674,41 @@ Answers a curation question no other tool can: **which artworks get looked at *t
 
 ---
 
+## Momentum — Traffic Trend & Growth Over Time (Admin → Momentum tab) — NEW TOOL
+
+Answers the plainest question an artist has about a portfolio and the one no other tool in the family covers: **is traffic growing?** Compass = where visitors come from, Journey = where they go, Pulse = *when in the week* they show up (day-of-week/hour rhythm), Spotlight = which artwork holds attention, Depth = read-through, Orbit = per-visitor loyalty, Beacon = conversion, Relay = outbound reach, Friction = obstruction, Mosaic = artwork affinity, Revenue = money — **Momentum = chronological growth**: visits plotted along the real calendar, week over week, so the artist can see whether the audience is compounding or fading.
+
+**Why it's genuinely new:** Pulse *looks* time-based but buckets every visit by its day-of-week and hour, collapsing all weeks together — it deliberately discards *which* week a visit happened in. Orbit measures return behaviour per visitor, not aggregate volume over time. Nothing else renders a chronological time-series or a week-over-week growth number. Momentum is the only tool that reads the calendar dimension of the `pv` timestamps.
+
+**No new storage key** — derived live from `_gam_analytics_v1` `pv` events, whose `ts` timestamp `analytics.js` already records. Same read-only pattern as Journey/Pulse/Compass. Times use the visitor's local clock (`getFullYear/getMonth/getDate/getDay`). A "visit" = a distinct session (`sid`) active on a given day, consistent with Journey/Orbit's notion of a visit; weeks start **Monday**.
+
+**How it works:**
+1. `buildMomentum()` walks every `pv` event and buckets it into a per-day record (`dayKey → { pv, sids, vids }`), tracking distinct sessions and visitors per calendar day.
+2. `agg(dates)` unions any set of days into `{ pv, sessions, visitors }` (distinct across the range).
+3. It derives: a **16-week series** (chart), a **rolling 7d-vs-prior-7d snapshot**, **this-week-vs-last-week** full-calendar-week growth (`wow` %), **every week on record** (for standout ranking), a **14-day daily series** (zero-days filled), and the **busiest single day**.
+
+**Admin tab sections:**
+- **Stats**: Active Days, Total Visits, This Week, WoW Growth %
+- **Weekly Visits**: canvas bar chart of the last 16 weeks (amber bars, α scaled by volume) with a dashed running-average line and month/day x-ticks
+- **This Week vs. Last 7 Days**: three metric cards (Visits / Pageviews / Visitors) each showing the last-7-days figure, a ▲/▼ delta vs. the prior 7 days, and the prior-period value
+- **Recent Daily Activity**: per-day visits across the last 14 days (zero-days included, so gaps are visible)
+- **Standout Weeks**: the strongest weeks on record, ranked by visits
+
+**Derived schema (for export):**
+```js
+{ activeDays, totalVisits, wowGrowthPct, thisWeek:{pv,sessions,visitors}, lastWeek:{…},
+  last7d:{…}, prev7d:{…}, weekly:[{weekStart, visits, pageviews}], daily:[{date, visits, pageviews}] }
+```
+
+**Technical notes:**
+- Bar chart + average line use the warm amber palette (`rgba(201,168,124,α)` bars, `rgba(176,122,74,…)` average) — no blue/pink. New `.mom-*` metric-card and `.mom-delta-*` classes; reuses `jBarList()`, `analytics-stat-chip`, and the Pulse `overflow-x` scroll wrapper for the canvas.
+- Reuses the same canvas-2D approach as the Pulse punchcard / Revenue charts.
+- Tab renders lazily on click, same pattern as Mosaic/Friction/Relay/Beacon/Orbit/Depth/Compass/Journey/Pulse/Spotlight/Revenue.
+
+**API:** none new on `CommissionData` — uses `CommissionData.getAnalytics()`. Logic lives in `renderMomentumTab()` / `buildMomentum()` / `drawMomentumChart()` inside `admin/index.html`.
+
+---
+
 ## Commission System
 
 ### Pages
@@ -750,4 +786,4 @@ Stored in `_gam_prices_v1`. Three sections: `digital`, `stickers`, `animation`. 
 
 ---
 
-*Last updated: 2026-07-09*
+*Last updated: 2026-07-17*
