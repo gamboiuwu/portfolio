@@ -874,6 +874,22 @@
 		.mosaic-x { font-family: 'Courier New', monospace; font-size: 0.72em; color: #c9a87c;
 			border: 1px solid rgba(201,168,124,0.35); border-radius: 3px; padding: 0 0.35em; flex-shrink: 0; }
 
+		/* Momentum tab — traffic trend & growth over calendar time */
+		.momentum-scroll { overflow-x: auto; padding-bottom: 0.25em; }
+		#momentum-canvas { display: block; }
+		.mom-snapshot { display: flex; gap: 0.9em; flex-wrap: wrap; }
+		.mom-metric { flex: 1 1 8em; min-width: 8em; background: rgba(255,255,255,0.03);
+			border: 1px solid rgba(255,255,255,0.06); border-radius: 6px; padding: 0.7em 0.85em; }
+		.mom-metric-label { font-family: 'Courier New', monospace; font-size: 0.68em; letter-spacing: 0.06em;
+			text-transform: uppercase; color: #8c887f; margin-bottom: 0.35em; }
+		.mom-metric-val { font-size: 1.35em; color: #e7e4de; line-height: 1.1; }
+		.mom-metric-prev { font-size: 0.72em; color: #6f6b64; margin-top: 0.2em; }
+		.mom-delta { display: inline-block; font-family: 'Courier New', monospace; font-size: 0.7em;
+			letter-spacing: 0.04em; padding: 0.1em 0.45em; border-radius: 3px; margin-left: 0.45em; vertical-align: middle; }
+		.mom-delta-up { background: rgba(201,168,124,0.22); color: #d6b482; border: 1px solid rgba(201,168,124,0.4); }
+		.mom-delta-down { background: rgba(140,136,127,0.16); color: #b0aca4; border: 1px solid rgba(140,136,127,0.32); }
+		.mom-delta-flat { background: rgba(140,136,127,0.1); color: #8c887f; border: 1px solid rgba(140,136,127,0.25); }
+
 		/* Beacon tab — conversion funnel */
 		.beacon-stage { padding: 0.55em 0; border-bottom: 1px solid rgba(255,255,255,0.06); }
 		.beacon-stage:last-child { border-bottom: none; }
@@ -966,6 +982,7 @@
 				<button class="admin-tab" data-tab="relay">Relay</button>
 				<button class="admin-tab" data-tab="friction">Friction</button>
 				<button class="admin-tab" data-tab="mosaic">Mosaic</button>
+				<button class="admin-tab" data-tab="momentum">Momentum</button>
 			</div>
 
 			<!-- ============ GALLERY TAB ============ -->
@@ -1907,6 +1924,45 @@
 							<p class="hint">Pick any artwork to see what visitors most often view alongside it &mdash; its closest companions, ranked by shared visits. Use it to decide what to hang next to a given piece.</p>
 							<select id="mosaic-companion-select" class="journey-select" style="margin-bottom:0.9em"></select>
 							<div id="mosaic-companions"></div>
+						</div>
+
+					</div>
+
+					<!-- ============ MOMENTUM TAB ============ -->
+					<div id="tab-momentum" class="tab-content">
+
+						<div class="admin-card">
+							<h3>Momentum — Traffic Trend &amp; Growth</h3>
+							<p class="hint">Pulse shows the weekly <em>rhythm</em> (which day &amp; hour visitors land); Orbit shows who comes <em>back</em>. Neither answers the plainest question an artist has about a portfolio &mdash; <em>is it growing?</em> Momentum plots visits along the calendar, week over week, and reports whether traffic is climbing or fading, how this week compares to last, and which weeks broke out. The single clearest read on whether the work &amp; the posting are landing. Derived live from the pageview timestamps <code>analytics.js</code> already records (<code>_gam_analytics_v1</code>) &mdash; no new storage key.</p>
+							<div id="momentum-stats" class="analytics-stats" style="margin-bottom:1em"></div>
+							<div style="display:flex;gap:0.5em;flex-wrap:wrap">
+								<button class="button small" id="momentum-refresh-btn">Refresh</button>
+								<button class="button small" id="momentum-export-btn">Export JSON</button>
+							</div>
+						</div>
+
+						<div class="admin-card">
+							<h3>Weekly Visits</h3>
+							<p class="hint">Visits per calendar week (weeks start Monday), most recent 16 weeks. A rising skyline means the audience is compounding; a fading one is the cue to change what &mdash; or how often &mdash; you post. The dashed line is the running average across the shown weeks.</p>
+							<div class="momentum-scroll"><canvas id="momentum-canvas" width="620" height="200"></canvas></div>
+						</div>
+
+						<div class="admin-card">
+							<h3>This Week vs. Last 7 Days</h3>
+							<p class="hint">The last 7 days measured against the 7 before them &mdash; the freshest signal of direction, before a full calendar week has closed.</p>
+							<div id="momentum-snapshot" class="mom-snapshot"></div>
+						</div>
+
+						<div class="admin-card">
+							<h3>Recent Daily Activity</h3>
+							<p class="hint">Visits per day across the last 14 days (zero-days included, so gaps are visible). Useful for spotting the bump a specific post or art drop produced.</p>
+							<div id="momentum-daily"></div>
+						</div>
+
+						<div class="admin-card">
+							<h3>Standout Weeks</h3>
+							<p class="hint">The strongest weeks on record, ranked by visits &mdash; worth a look back at what you posted or shared in those windows.</p>
+							<div id="momentum-topweeks"></div>
 						</div>
 
 					</div>
@@ -2928,6 +2984,9 @@ document.addEventListener('click', function(e){
   }
   if (e.target.dataset && e.target.dataset.tab === 'mosaic') {
     renderMosaicTab();
+  }
+  if (e.target.dataset && e.target.dataset.tab === 'momentum') {
+    renderMomentumTab();
   }
 });
 
@@ -5947,6 +6006,263 @@ document.getElementById('mosaic-export-btn').addEventListener('click', function(
   var url  = URL.createObjectURL(blob);
   var a    = document.createElement('a');
   a.href = url; a.download = 'mosaic-' + Date.now() + '.json'; a.click();
+  URL.revokeObjectURL(url);
+});
+
+/* ================================================================
+   MOMENTUM TAB — traffic trend & growth over calendar time
+   Pulse buckets visits by day-of-week / hour (rhythm, not chronology);
+   Orbit tracks per-visitor retention. Neither shows whether overall
+   traffic is GROWING along the calendar. Momentum plots visits per
+   day and per week against real dates and reports week-over-week
+   direction, a 7-day-vs-prior-7-day snapshot, and standout weeks.
+   Derived live from _gam_analytics_v1 pv timestamps — no new storage
+   key, same read-only pattern as Journey / Pulse / Compass.
+================================================================ */
+
+var MOM_MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+function momDayKey(d) {
+  var y = d.getFullYear(), m = d.getMonth() + 1, day = d.getDate();
+  return y + '-' + (m < 10 ? '0' : '') + m + '-' + (day < 10 ? '0' : '') + day;
+}
+function momMonday(d) {
+  var x = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  var wd = (x.getDay() + 6) % 7;   /* 0 = Monday */
+  x.setDate(x.getDate() - wd);
+  return x;
+}
+function momAddDays(d, n) { return new Date(d.getFullYear(), d.getMonth(), d.getDate() + n); }
+
+function buildMomentum() {
+  var events = CommissionData.getAnalytics() || [];
+  var dayMap = {};        /* dayKey -> { pv, sids:{}, vids:{} } */
+  var allSids = {};
+  var minTs = null, maxTs = null;
+
+  events.forEach(function(e) {
+    if (e.type !== 'pv' || !e.ts) return;
+    var d = new Date(e.ts);
+    if (isNaN(d.getTime())) return;
+    var key = momDayKey(d);
+    var rec = dayMap[key] || (dayMap[key] = { pv: 0, sids: {}, vids: {} });
+    rec.pv++;
+    if (e.sid) { rec.sids[e.sid] = 1; allSids[e.sid] = 1; }
+    var vid = e.vid || (e.sid ? 's:' + e.sid : null);
+    if (vid) rec.vids[vid] = 1;
+    if (minTs === null || e.ts < minTs) minTs = e.ts;
+    if (maxTs === null || e.ts > maxTs) maxTs = e.ts;
+  });
+
+  /* Union a list of Date objects into {pv, sessions, visitors} */
+  function agg(dates) {
+    var pv = 0, s = {}, v = {}, k;
+    dates.forEach(function(dt) {
+      var rec = dayMap[momDayKey(dt)];
+      if (!rec) return;
+      pv += rec.pv;
+      for (k in rec.sids) s[k] = 1;
+      for (k in rec.vids) v[k] = 1;
+    });
+    return { pv: pv, sessions: Object.keys(s).length, visitors: Object.keys(v).length };
+  }
+  function weekDates(start) { var a = []; for (var q = 0; q < 7; q++) a.push(momAddDays(start, q)); return a; }
+
+  var now   = new Date();
+  var today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  var curMon = momMonday(today);
+
+  /* Weekly series — last 16 weeks incl. current, oldest first (for chart) */
+  var weeks = [];
+  for (var i = 15; i >= 0; i--) {
+    var ws = momAddDays(curMon, -7 * i);
+    var a  = agg(weekDates(ws));
+    weeks.push({ start: ws, key: momDayKey(ws), sessions: a.sessions, pv: a.pv, visitors: a.visitors });
+  }
+
+  /* Rolling snapshot: last 7 days vs the 7 before */
+  function offsetRange(from, to) { var a = []; for (var k = from; k <= to; k++) a.push(momAddDays(today, -k)); return a; }
+  var cur7  = agg(offsetRange(0, 6));
+  var prev7 = agg(offsetRange(7, 13));
+
+  /* Full calendar weeks: current vs previous */
+  var thisWeek = agg(weekDates(curMon));
+  var lastWeek = agg(weekDates(momAddDays(curMon, -7)));
+  var wow = lastWeek.sessions > 0
+    ? Math.round(((thisWeek.sessions - lastWeek.sessions) / lastWeek.sessions) * 100)
+    : null;
+
+  /* Every week on record (for standout ranking) */
+  var allWeeks = [];
+  if (minTs !== null) {
+    var wk = momMonday(new Date(minTs)), guard = 0;
+    while (wk.getTime() <= curMon.getTime() && guard < 520) {
+      var aw = agg(weekDates(wk));
+      if (aw.sessions > 0 || aw.pv > 0) allWeeks.push({ start: wk, key: momDayKey(wk), sessions: aw.sessions, pv: aw.pv });
+      wk = momAddDays(wk, 7); guard++;
+    }
+  }
+
+  /* Daily series — last 14 days, oldest first (zero-days included) */
+  var daily = [];
+  for (var dd = 13; dd >= 0; dd--) {
+    var date = momAddDays(today, -dd);
+    var drec = dayMap[momDayKey(date)];
+    daily.push({ date: date, key: momDayKey(date), sessions: drec ? Object.keys(drec.sids).length : 0, pv: drec ? drec.pv : 0 });
+  }
+
+  /* Busiest single calendar day */
+  var busiest = null;
+  Object.keys(dayMap).forEach(function(k) {
+    var s = Object.keys(dayMap[k].sids).length;
+    if (!busiest || s > busiest.sessions) busiest = { key: k, sessions: s };
+  });
+
+  return {
+    weeks: weeks, allWeeks: allWeeks, daily: daily,
+    cur7: cur7, prev7: prev7, thisWeek: thisWeek, lastWeek: lastWeek, wow: wow,
+    daysTracked: Object.keys(dayMap).length,
+    totalSessions: Object.keys(allSids).length,
+    busiest: busiest, minTs: minTs, maxTs: maxTs
+  };
+}
+
+function drawMomentumChart(m) {
+  var canvas = document.getElementById('momentum-canvas');
+  if (!canvas) return;
+  var ctx = canvas.getContext('2d');
+  var W = canvas.width, H = canvas.height;
+  ctx.clearRect(0, 0, W, H);
+
+  var weeks = m.weeks;
+  if (!weeks.some(function(w){ return w.sessions > 0; })) {
+    ctx.fillStyle = '#444';
+    ctx.font = '12px -apple-system, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('No visits recorded yet.', W / 2, H / 2);
+    return;
+  }
+
+  var padL = 34, padR = 12, padT = 14, padB = 26;
+  var plotW = W - padL - padR, plotH = H - padT - padB;
+  var max = weeks.reduce(function(mx, w){ return Math.max(mx, w.sessions); }, 1);
+
+  /* y gridlines + labels (0, mid, max) */
+  ctx.font = '9px "Courier New", monospace';
+  ctx.textBaseline = 'middle';
+  [0, 0.5, 1].forEach(function(f) {
+    var y = padT + plotH - f * plotH;
+    ctx.strokeStyle = 'rgba(255,255,255,0.06)';
+    ctx.beginPath(); ctx.moveTo(padL, y); ctx.lineTo(W - padR, y); ctx.stroke();
+    ctx.fillStyle = '#666';
+    ctx.textAlign = 'right';
+    ctx.fillText(String(Math.round(f * max)), padL - 5, y);
+  });
+
+  var n = weeks.length, slot = plotW / n, bw = Math.min(slot * 0.62, 26);
+
+  weeks.forEach(function(w, i) {
+    var x = padL + slot * i + (slot - bw) / 2;
+    var h = (w.sessions / max) * plotH;
+    ctx.fillStyle = 'rgba(201,168,124,' + (0.32 + 0.55 * (w.sessions / max)).toFixed(3) + ')';
+    ctx.fillRect(x, padT + plotH - h, bw, h);
+  });
+
+  /* running-average dashed line across the shown window */
+  var avg = weeks.reduce(function(s, w){ return s + w.sessions; }, 0) / n;
+  var ay = padT + plotH - (avg / max) * plotH;
+  ctx.strokeStyle = 'rgba(176,122,74,0.7)';
+  ctx.setLineDash([4, 3]);
+  ctx.beginPath(); ctx.moveTo(padL, ay); ctx.lineTo(W - padR, ay); ctx.stroke();
+  ctx.setLineDash([]);
+
+  /* x labels every 4th week + the last */
+  ctx.fillStyle = '#777';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'top';
+  weeks.forEach(function(w, i) {
+    if (i % 4 === 0 || i === n - 1) {
+      ctx.fillText((w.start.getMonth() + 1) + '/' + w.start.getDate(), padL + slot * i + slot / 2, padT + plotH + 6);
+    }
+  });
+}
+
+function momFmtRange(start) {
+  var end = momAddDays(start, 6);
+  return MOM_MONTHS[start.getMonth()] + ' ' + start.getDate() + '–' +
+    (start.getMonth() === end.getMonth() ? end.getDate() : MOM_MONTHS[end.getMonth()] + ' ' + end.getDate());
+}
+function momDelta(cur, prev) {
+  if (prev <= 0) return cur > 0 ? { txt: 'new', cls: 'mom-delta-up' } : { txt: '—', cls: 'mom-delta-flat' };
+  var pct = Math.round(((cur - prev) / prev) * 100);
+  if (pct > 0) return { txt: '▲ ' + pct + '%', cls: 'mom-delta-up' };
+  if (pct < 0) return { txt: '▼ ' + Math.abs(pct) + '%', cls: 'mom-delta-down' };
+  return { txt: '± 0%', cls: 'mom-delta-flat' };
+}
+
+function renderMomentumTab() {
+  var m = buildMomentum();
+
+  function chip(num, label) {
+    return '<div class="analytics-stat-chip"><span class="asc-num">' + num +
+      '</span><span class="asc-label">' + label + '</span></div>';
+  }
+  var wowTxt = m.wow === null ? '—' : (m.wow > 0 ? '+' + m.wow + '%' : m.wow + '%');
+  document.getElementById('momentum-stats').innerHTML =
+    chip(m.daysTracked,       'Active Days')  +
+    chip(m.totalSessions,     'Total Visits') +
+    chip(m.thisWeek.sessions, 'This Week')    +
+    chip(wowTxt,              'WoW Growth');
+
+  drawMomentumChart(m);
+
+  /* ── 7d-vs-prior-7d snapshot ── */
+  function metric(label, cur, prev) {
+    var d = momDelta(cur, prev);
+    return '<div class="mom-metric">' +
+      '<div class="mom-metric-label">' + label + '</div>' +
+      '<div class="mom-metric-val">' + cur +
+        '<span class="mom-delta ' + d.cls + '">' + d.txt + '</span></div>' +
+      '<div class="mom-metric-prev">prev 7d: ' + prev + '</div>' +
+    '</div>';
+  }
+  document.getElementById('momentum-snapshot').innerHTML =
+    metric('Visits',    m.cur7.sessions,  m.prev7.sessions) +
+    metric('Pageviews', m.cur7.pv,        m.prev7.pv)       +
+    metric('Visitors',  m.cur7.visitors,  m.prev7.visitors);
+
+  /* ── Daily activity (last 14 days) ── */
+  var dailyRows = m.daily.map(function(d) {
+    return { label: MOM_MONTHS[d.date.getMonth()] + ' ' + d.date.getDate(), count: d.sessions };
+  });
+  document.getElementById('momentum-daily').innerHTML = jBarList(dailyRows, 0, {
+    suffix: function(r){ return r.count + (r.count === 1 ? ' visit' : ' visits'); }
+  });
+
+  /* ── Standout weeks ── */
+  var topRows = m.allWeeks.slice()
+    .sort(function(a, b){ return b.sessions - a.sessions; })
+    .slice(0, 8)
+    .map(function(w){ return { label: momFmtRange(w.start), count: w.sessions }; });
+  document.getElementById('momentum-topweeks').innerHTML = topRows.length
+    ? jBarList(topRows, 0, { suffix: function(r){ return r.count + (r.count === 1 ? ' visit' : ' visits'); } })
+    : '<p style="color:#444;font-size:0.85em;padding:0.5em 0">No weeks on record yet. Once the site logs a few days of visits, weekly trends appear here.</p>';
+}
+
+document.getElementById('momentum-refresh-btn').addEventListener('click', renderMomentumTab);
+
+document.getElementById('momentum-export-btn').addEventListener('click', function() {
+  var m = buildMomentum();
+  var out = {
+    activeDays: m.daysTracked, totalVisits: m.totalSessions, wowGrowthPct: m.wow,
+    thisWeek: m.thisWeek, lastWeek: m.lastWeek, last7d: m.cur7, prev7d: m.prev7,
+    weekly: m.allWeeks.map(function(w){ return { weekStart: w.key, visits: w.sessions, pageviews: w.pv }; }),
+    daily:  m.daily.map(function(d){ return { date: d.key, visits: d.sessions, pageviews: d.pv }; })
+  };
+  var blob = new Blob([JSON.stringify(out, null, 2)], { type: 'application/json' });
+  var url  = URL.createObjectURL(blob);
+  var a    = document.createElement('a');
+  a.href = url; a.download = 'momentum-' + Date.now() + '.json'; a.click();
   URL.revokeObjectURL(url);
 });
 </script>
