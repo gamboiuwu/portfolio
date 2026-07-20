@@ -196,6 +196,7 @@ Password-protected (SHA-256 hash in localStorage, 5-attempt lockout). Session tr
 | Relay       | Outbound reach & link clicks — destination mix (social/shop/external/email), top destinations, exit pages, recent link-outs |
 | Friction    | UX friction & frustration signals — rage clicks (repeated clicks in one spot), unresponsive/dead clicks (non-interactive targets), friction hotspots, friction by page |
 | Mosaic      | Artwork affinity & co-view — which pieces get viewed together per visit, top co-viewed pairs, hub/connective artworks, per-artwork companions explorer |
+| Dwell       | Time-on-page & reading duration — engagement segments (bounce/skim/read/deep), median time per page, longest holders, fastest bounces, duration distribution |
 
 ---
 
@@ -673,6 +674,50 @@ Answers a curation question no other tool can: **which artworks get looked at *t
 
 ---
 
+## Dwell — Time-on-Page & Reading Duration (Admin → Dwell tab) — NEW TOOL
+
+Answers the *horizontal* engagement question that pairs with Depth's *vertical* one: **how long do visitors actually stay on each page?** Depth = how far down they scroll, Compass = where they come from, Journey = where they go between pages, Pulse = when they show up, Spotlight = which artwork holds attention, Orbit = loyalty, Beacon = conversion, Relay = outbound reach, Friction = obstruction, Mosaic = artwork affinity, Revenue = money — **Dwell = duration**: the single most standard web-analytics metric (average time on page), finally surfaced per page.
+
+**Why it's genuinely new:** no existing tool aggregates *time-on-page*. The `exit` event (`{ sid, type:'exit', page, ms, ts }`) that `analytics.js` records — milliseconds between page load and leaving — was only ever shown as a single per-session value in the Analytics session list, never rolled up into a real dwell-time distribution. Journey exposes a loose session-span `durMs` for flow, but nothing measures per-page hold time or segments visits by how long they lasted. Dwell does exactly that with zero new instrumentation.
+
+**No new storage key** — derived live from `_gam_analytics_v1` `exit` events, the same read-only pattern as Depth/Journey/Compass.
+
+**How it works:**
+1. `buildDwell()` walks every `exit` event, reads its `ms`, and drops invalid values. Durations over 1 hour are capped at 3,600,000 ms so a background tab left open all day doesn't skew the aggregates.
+2. Each visit is placed in exactly one **engagement segment**: `bounce` (<5s), `skim` (5–30s), `read` (30s–2m), `deep` (≥2m).
+3. Per page it derives `visits`, `avg`, `median` (median, not mean, so one idle tab doesn't distort it), `bounceRate` (% <5s), `deepRate` (% ≥2m).
+4. All durations are also bucketed into a 7-bin distribution histogram (0–5s … 5m+).
+
+**Admin tab sections:**
+- **Stats**: Page Visits Timed, Median Time / Page, Bounce Rate (<5s), Deep-Read Rate (2m+)
+- **Engagement Segments**: canvas donut + legend (bounce / skim / read / deep); centre shows the median time
+- **Time on Page — Longest Holders**: pages ranked by median dwell (the pages that hold attention)
+- **Fastest Bounces — Weakest Hooks**: pages ranked by bounce rate (needs ≥2 timed visits to rank; weakest above-the-fold hooks)
+- **Duration Distribution**: histogram of all page visits across time buckets
+
+**Segment thresholds (ms):**
+```js
+DWELL_BOUNCE_MS = 5000    // < 5s  → bounce
+DWELL_SKIM_MS   = 30000   // < 30s → skim
+DWELL_READ_MS   = 120000  // < 2m  → read; ≥ 2m → deep
+```
+
+**Derived schema (for export):**
+```js
+{ total, medianMs, avgMs, bounceRate, deepRate,
+  segments:{bounce,skim,read,deep}, distribution:[{label,count}],
+  pages:[{page, visits, medianMs, avgMs, bounceRate, deepRate}] }
+```
+
+**Technical notes:**
+- Donut + swatches use the warm amber/sand palette (`rgba(214,190,150…)` bounce → `rgba(120,84,50…)` deep, lightest→deepest by engagement) — no blue/pink.
+- Reuses the shared `jBarList()` renderer, `jFmtDur()` duration formatter, `analytics-stat-chip`, `compass-legend`/`compass-donut-row` styles, `jPageLabel()`. No new CSS classes.
+- Tab renders lazily on click, same pattern as Mosaic/Friction/Relay/Beacon/Orbit/Depth/Compass/Journey/Pulse/Spotlight/Revenue.
+
+**API:** none new on `CommissionData` — uses `CommissionData.getAnalytics()`. Logic lives in `renderDwellTab()` / `buildDwell()` inside `admin/index.html`.
+
+---
+
 ## Commission System
 
 ### Pages
@@ -750,4 +795,4 @@ Stored in `_gam_prices_v1`. Three sections: `digital`, `stickers`, `animation`. 
 
 ---
 
-*Last updated: 2026-07-09*
+*Last updated: 2026-07-20*
