@@ -54,6 +54,7 @@ The tracking answers the questions the portfolio owner actually cares about:
 | Where do they click *out* to (socials/shops)? | `click` `href` (external targets) | **Relay → Destination Mix / Top Destinations** |
 | Where does the interface *frustrate* them? | `click` clustering (rage) + non-interactive targets (dead) | **Friction → Hotspots / Signal Mix** |
 | Which artworks get viewed *together*? | spotlight viewport events grouped per session | **Mosaic → Top Co-Viewed Pairs / Hub Artworks** |
+| How *long* do they stay on each page? | `exit` (ms on page) | **Dwell → Engagement Segments / Time on Page** |
 
 See `CLAUDE.md` → Analytics System for the exact event field schema.
 
@@ -143,7 +144,7 @@ Inquiries, Feedback.
   - **Signal Mix** donut, **Friction Hotspots** (the exact elements taking frustrated
     clicks), **Friction by Page**, and a tagged **Recent Friction** feed
   - Derived live from `_gam_analytics_v1` — no new storage key.
-- **Mosaic** *(newest)* — **artwork affinity & co-view analysis**. Spotlight ranks each
+- **Mosaic** — **artwork affinity & co-view analysis**. Spotlight ranks each
   artwork on its own; Mosaic is the only tool that *relates artworks to one another* —
   which pieces get looked at **together** in the same visit. From the viewport events
   Spotlight already records it builds:
@@ -153,6 +154,17 @@ Inquiries, Feedback.
   - **Companions Explorer** — pick any artwork, see what visitors most view alongside it
   - A curation signal for sequencing the portfolio and deciding what to hang next to what.
   - Derived live from `_gam_spotlight_v1` — no new storage key.
+- **Dwell** *(newest)* — **time-on-page & reading duration**. Depth measures how *far*
+  down a page visitors scroll; Dwell measures how *long* they stay on it — the canonical
+  "average time on page" metric, finally surfaced per page. From the `exit` events
+  analytics already records (ms between page load and leaving) it builds:
+  - Stats: page visits timed, median time / page, bounce rate (<5s), deep-read rate (2m+)
+  - **Engagement Segments** donut — every visit bucketed bounce / skim / read / deep
+  - **Time on Page — Longest Holders** (pages ranked by median dwell)
+  - **Fastest Bounces — Weakest Hooks** (pages ranked by <5s bounce rate)
+  - **Duration Distribution** histogram across time buckets
+  - Idle tabs are capped at 1h so a page left open all day can't skew the aggregates.
+  - Derived live from `_gam_analytics_v1` — no new storage key.
 - **Revenue** — financial dashboard derived from the commission Queue: total earned,
   pipeline value, monthly earnings chart, revenue by type, top clients.
 - **Palette** — extract dominant colors from an uploaded artwork (k-means), save

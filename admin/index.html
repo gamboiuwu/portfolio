@@ -966,6 +966,7 @@
 				<button class="admin-tab" data-tab="relay">Relay</button>
 				<button class="admin-tab" data-tab="friction">Friction</button>
 				<button class="admin-tab" data-tab="mosaic">Mosaic</button>
+				<button class="admin-tab" data-tab="dwell">Dwell</button>
 			</div>
 
 			<!-- ============ GALLERY TAB ============ -->
@@ -1907,6 +1908,47 @@
 							<p class="hint">Pick any artwork to see what visitors most often view alongside it &mdash; its closest companions, ranked by shared visits. Use it to decide what to hang next to a given piece.</p>
 							<select id="mosaic-companion-select" class="journey-select" style="margin-bottom:0.9em"></select>
 							<div id="mosaic-companions"></div>
+						</div>
+
+					</div>
+
+					<div id="tab-dwell" class="tab-content">
+
+						<div class="admin-card">
+							<h3>Dwell — Time-on-Page &amp; Reading Duration</h3>
+							<p class="hint">Depth measures how <em>far</em> down a page visitors scroll; Dwell measures how <em>long</em> they actually stay on it &mdash; the horizontal vs. vertical halves of engagement. It reconstructs time-on-page from the <code>exit</code> events analytics already records (milliseconds between page load and leaving), then segments every visit into bounce / skim / read / deep so you can see which pages hold attention and which lose people in the first few seconds. The single most standard web-analytics metric &mdash; average time on page &mdash; finally surfaced per page. Derived live from <code>_gam_analytics_v1</code> &mdash; no new storage key.</p>
+							<div id="dwell-stats" class="analytics-stats" style="margin-bottom:1em"></div>
+							<div style="display:flex;gap:0.5em;flex-wrap:wrap">
+								<button class="button small" id="dwell-refresh-btn">Refresh</button>
+								<button class="button small" id="dwell-export-btn">Export JSON</button>
+							</div>
+						</div>
+
+						<div class="admin-card">
+							<h3>Engagement Segments</h3>
+							<p class="hint">Every page visit bucketed by how long it lasted: <em>Bounce</em> &lt;5s (glanced and left), <em>Skim</em> 5&ndash;30s, <em>Read</em> 30s&ndash;2m, <em>Deep</em> 2m+. A healthy portfolio leans toward read/deep &mdash; a bounce-heavy mix means the page isn't holding the eye.</p>
+							<div class="compass-donut-row">
+								<canvas id="dwell-donut" width="180" height="180"></canvas>
+								<div id="dwell-legend" class="compass-legend"></div>
+							</div>
+						</div>
+
+						<div class="admin-card">
+							<h3>Time on Page — Longest Holders</h3>
+							<p class="hint">Pages ranked by median time on page (median, not mean, so one long-idle tab doesn't skew it). These are the pages that hold attention &mdash; worth studying for what's working.</p>
+							<div id="dwell-longest"></div>
+						</div>
+
+						<div class="admin-card">
+							<h3>Fastest Bounces — Weakest Hooks</h3>
+							<p class="hint">Pages ranked by their bounce rate (share of visits under 5 seconds). A high bounce rate means visitors leave before the content lands &mdash; the pages whose opening most needs a stronger hook.</p>
+							<div id="dwell-bounce"></div>
+						</div>
+
+						<div class="admin-card">
+							<h3>Duration Distribution</h3>
+							<p class="hint">How all page visits spread across time buckets. The shape tells you whether the site earns quick glances or sustained reads overall.</p>
+							<div id="dwell-dist"></div>
 						</div>
 
 					</div>
@@ -2928,6 +2970,9 @@ document.addEventListener('click', function(e){
   }
   if (e.target.dataset && e.target.dataset.tab === 'mosaic') {
     renderMosaicTab();
+  }
+  if (e.target.dataset && e.target.dataset.tab === 'dwell') {
+    renderDwellTab();
   }
 });
 
@@ -5947,6 +5992,243 @@ document.getElementById('mosaic-export-btn').addEventListener('click', function(
   var url  = URL.createObjectURL(blob);
   var a    = document.createElement('a');
   a.href = url; a.download = 'mosaic-' + Date.now() + '.json'; a.click();
+  URL.revokeObjectURL(url);
+});
+
+/* ================================================================
+   DWELL TAB — time-on-page & reading duration
+   Depth answers how FAR down a page visitors scroll; Dwell answers
+   how LONG they stay on it. It reconstructs time-on-page from the
+   `exit` events analytics already records (ms between page load and
+   leaving) and segments every visit into bounce / skim / read / deep.
+   Surfaces the canonical "average time on page" metric per page,
+   plus which pages hold attention and which lose people fast.
+   Derived live from _gam_analytics_v1 — no new storage key, same
+   read-only pattern as Depth/Journey/Compass.
+================================================================ */
+
+/* Segment thresholds (ms). A visit lands in exactly one bucket. */
+var DWELL_BOUNCE_MS = 5000;      /* < 5s  → bounce  */
+var DWELL_SKIM_MS   = 30000;     /* < 30s → skim    */
+var DWELL_READ_MS   = 120000;    /* < 2m  → read; ≥ 2m → deep */
+
+function dwellSegment(ms) {
+  if (ms < DWELL_BOUNCE_MS) return 'bounce';
+  if (ms < DWELL_SKIM_MS)   return 'skim';
+  if (ms < DWELL_READ_MS)   return 'read';
+  return 'deep';
+}
+
+function dwellMedian(arr) {
+  if (!arr.length) return 0;
+  var s = arr.slice().sort(function(a, b){ return a - b; });
+  var mid = Math.floor(s.length / 2);
+  return s.length % 2 ? s[mid] : Math.round((s[mid - 1] + s[mid]) / 2);
+}
+
+function buildDwell() {
+  var events = CommissionData.getAnalytics() || [];
+
+  var byPage   = {};   /* page -> [ms, …] */
+  var all      = [];   /* every dwell ms */
+  var segments = { bounce: 0, skim: 0, read: 0, deep: 0 };
+
+  events.forEach(function(e) {
+    if (e.type !== 'exit') return;
+    /* Guard against absurd values (background tabs left open for hours). */
+    var ms = e.ms;
+    if (typeof ms !== 'number' || ms < 0 || !isFinite(ms)) return;
+    if (ms > 3600000) ms = 3600000;   /* cap at 1h so idle tabs don't skew */
+    var page = e.page || '/';
+    (byPage[page] = byPage[page] || []).push(ms);
+    all.push(ms);
+    segments[dwellSegment(ms)]++;
+  });
+
+  /* Distribution buckets. */
+  var distDefs = [
+    { key: '0-5s',   label: '0–5s',   lo: 0,      hi: 5000 },
+    { key: '5-15s',  label: '5–15s',  lo: 5000,   hi: 15000 },
+    { key: '15-30s', label: '15–30s', lo: 15000,  hi: 30000 },
+    { key: '30-60s', label: '30–60s', lo: 30000,  hi: 60000 },
+    { key: '1-2m',   label: '1–2m',   lo: 60000,  hi: 120000 },
+    { key: '2-5m',   label: '2–5m',   lo: 120000, hi: 300000 },
+    { key: '5m+',    label: '5m+',    lo: 300000, hi: Infinity }
+  ];
+  var dist = distDefs.map(function(d){ return { label: d.label, count: 0 }; });
+  all.forEach(function(ms) {
+    for (var i = 0; i < distDefs.length; i++) {
+      if (ms >= distDefs[i].lo && ms < distDefs[i].hi) { dist[i].count++; break; }
+    }
+  });
+
+  /* Per-page rollup. */
+  var pages = Object.keys(byPage).map(function(pg) {
+    var arr = byPage[pg];
+    var sum = arr.reduce(function(s, v){ return s + v; }, 0);
+    var bounces = arr.filter(function(v){ return v < DWELL_BOUNCE_MS; }).length;
+    var deep    = arr.filter(function(v){ return v >= DWELL_READ_MS; }).length;
+    return {
+      page: pg,
+      visits: arr.length,
+      avg: sum / arr.length,
+      median: dwellMedian(arr),
+      bounceRate: Math.round((bounces / arr.length) * 100),
+      deepRate: Math.round((deep / arr.length) * 100)
+    };
+  });
+
+  var total  = all.length;
+  var sumAll = all.reduce(function(s, v){ return s + v; }, 0);
+
+  return {
+    pages: pages,
+    segments: segments,
+    dist: dist,
+    total: total,
+    avgMs: total ? (sumAll / total) : 0,
+    medianMs: dwellMedian(all),
+    bounceRate: total ? Math.round((segments.bounce / total) * 100) : 0,
+    deepRate:   total ? Math.round((segments.deep / total) * 100) : 0
+  };
+}
+
+/* Warm amber/sand palette — consistent with the other admin donuts. */
+var DWELL_COLORS = {
+  bounce: 'rgba(214,190,150,0.92)',
+  skim:   'rgba(201,168,124,0.92)',
+  read:   'rgba(176,122,74,0.92)',
+  deep:   'rgba(120,84,50,0.92)'
+};
+var DWELL_SEG_LABELS = { bounce: 'Bounce (<5s)', skim: 'Skim (5–30s)', read: 'Read (30s–2m)', deep: 'Deep (2m+)' };
+var DWELL_SEG_ORDER  = ['bounce', 'skim', 'read', 'deep'];
+
+function drawDwellDonut(d) {
+  var canvas = document.getElementById('dwell-donut');
+  if (!canvas) return;
+  var ctx = canvas.getContext('2d');
+  var W = canvas.width, H = canvas.height;
+  ctx.clearRect(0, 0, W, H);
+  var cx = W / 2, cy = H / 2, rOut = 78, rIn = 46;
+
+  var total = d.total;
+  if (!total) {
+    ctx.fillStyle = '#444';
+    ctx.font = '12px -apple-system, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('No page-timing data yet.', cx, cy);
+    return;
+  }
+
+  var start = -Math.PI / 2;
+  DWELL_SEG_ORDER.forEach(function(k) {
+    var v = d.segments[k];
+    if (!v) return;
+    var ang = (v / total) * Math.PI * 2;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.arc(cx, cy, rOut, start, start + ang);
+    ctx.closePath();
+    ctx.fillStyle = DWELL_COLORS[k];
+    ctx.fill();
+    start += ang;
+  });
+
+  ctx.globalCompositeOperation = 'destination-out';
+  ctx.beginPath();
+  ctx.arc(cx, cy, rIn, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.globalCompositeOperation = 'source-over';
+
+  ctx.fillStyle = '#c9a87c';
+  ctx.font = 'bold 20px -apple-system, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(jFmtDur(d.medianMs), cx, cy - 6);
+  ctx.fillStyle = '#8c887f';
+  ctx.font = '10px "Courier New", monospace';
+  ctx.fillText('MEDIAN', cx, cy + 12);
+}
+
+function renderDwellTab() {
+  var d = buildDwell();
+
+  function chip(num, label) {
+    return '<div class="analytics-stat-chip"><span class="asc-num">' + num +
+      '</span><span class="asc-label">' + label + '</span></div>';
+  }
+  document.getElementById('dwell-stats').innerHTML =
+    chip(d.total,                'Page Visits Timed') +
+    chip(jFmtDur(d.medianMs),    'Median Time / Page') +
+    chip(d.bounceRate + '%',     'Bounce Rate (<5s)') +
+    chip(d.deepRate + '%',       'Deep-Read Rate (2m+)');
+
+  /* ── Engagement segment donut + legend ── */
+  drawDwellDonut(d);
+  document.getElementById('dwell-legend').innerHTML = DWELL_SEG_ORDER.map(function(k) {
+    var v = d.segments[k];
+    var share = d.total ? Math.round((v / d.total) * 100) : 0;
+    return '<div class="compass-legend-item">' +
+      '<span class="compass-legend-swatch" style="background:' + DWELL_COLORS[k] + '"></span>' +
+      '<span>' + DWELL_SEG_LABELS[k] + '</span>' +
+      '<span class="compass-legend-val">' + v + ' · ' + share + '%</span>' +
+    '</div>';
+  }).join('');
+
+  /* ── Longest holders (by median dwell) ── */
+  var longEl = document.getElementById('dwell-longest');
+  var longRows = d.pages.slice().sort(function(a, b){ return b.median - a.median; }).slice(0, 15)
+    .map(function(p){ return { label: jPageLabel(p.page), count: p.median, p: p }; });
+  longEl.innerHTML = longRows.length
+    ? jBarList(longRows, 0, {
+        suffix: function(row) {
+          return jFmtDur(row.count) + ' median · ' + row.p.visits +
+                 (row.p.visits === 1 ? ' visit' : ' visits');
+        }
+      })
+    : '<p style="color:#444;font-size:0.85em;padding:0.5em 0">No page-timing data yet. Once visitors browse the public pages, time-on-page fills in automatically.</p>';
+
+  /* ── Fastest bounces (weakest hooks) — needs a couple visits to be meaningful ── */
+  var bounceEl = document.getElementById('dwell-bounce');
+  var bounceRows = d.pages.filter(function(p){ return p.visits >= 2; })
+    .sort(function(a, b){ return b.bounceRate - a.bounceRate; }).slice(0, 15)
+    .map(function(p){ return { label: jPageLabel(p.page), count: p.bounceRate, p: p }; });
+  bounceEl.innerHTML = bounceRows.length
+    ? jBarList(bounceRows, 100, {
+        suffix: function(row) {
+          return row.count + '% bounce · ' + row.p.visits + ' visits';
+        }
+      })
+    : '<p style="color:#444;font-size:0.85em;padding:0.5em 0">Not enough repeat visits yet to rank bounce rates (pages need ≥2 timed visits).</p>';
+
+  /* ── Duration distribution ── */
+  document.getElementById('dwell-dist').innerHTML =
+    jBarList(d.dist, d.total, {
+      suffix: function(row, share){ return row.count + ' visits · ' + share + '%'; }
+    });
+}
+
+document.getElementById('dwell-refresh-btn').addEventListener('click', renderDwellTab);
+
+document.getElementById('dwell-export-btn').addEventListener('click', function() {
+  var d = buildDwell();
+  var out = {
+    total: d.total,
+    medianMs: d.medianMs,
+    avgMs: Math.round(d.avgMs),
+    bounceRate: d.bounceRate,
+    deepRate: d.deepRate,
+    segments: d.segments,
+    distribution: d.dist,
+    pages: d.pages.map(function(p){
+      return { page: p.page, visits: p.visits, medianMs: p.median,
+               avgMs: Math.round(p.avg), bounceRate: p.bounceRate, deepRate: p.deepRate };
+    })
+  };
+  var blob = new Blob([JSON.stringify(out, null, 2)], { type: 'application/json' });
+  var url  = URL.createObjectURL(blob);
+  var a    = document.createElement('a');
+  a.href = url; a.download = 'dwell-' + Date.now() + '.json'; a.click();
   URL.revokeObjectURL(url);
 });
 </script>
