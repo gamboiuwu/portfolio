@@ -54,6 +54,7 @@ The tracking answers the questions the portfolio owner actually cares about:
 | Where do they click *out* to (socials/shops)? | `click` `href` (external targets) | **Relay → Destination Mix / Top Destinations** |
 | Where does the interface *frustrate* them? | `click` clustering (rage) + non-interactive targets (dead) | **Friction → Hotspots / Signal Mix** |
 | Which artworks get viewed *together*? | spotlight viewport events grouped per session | **Mosaic → Top Co-Viewed Pairs / Hub Artworks** |
+| Is the site *gaining or losing* momentum? | recent window vs. prior window deltas | **Tide → Daily Momentum / Rising & Cooling** |
 
 See `CLAUDE.md` → Analytics System for the exact event field schema.
 
@@ -143,7 +144,7 @@ Inquiries, Feedback.
   - **Signal Mix** donut, **Friction Hotspots** (the exact elements taking frustrated
     clicks), **Friction by Page**, and a tagged **Recent Friction** feed
   - Derived live from `_gam_analytics_v1` — no new storage key.
-- **Mosaic** *(newest)* — **artwork affinity & co-view analysis**. Spotlight ranks each
+- **Mosaic** — **artwork affinity & co-view analysis**. Spotlight ranks each
   artwork on its own; Mosaic is the only tool that *relates artworks to one another* —
   which pieces get looked at **together** in the same visit. From the viewport events
   Spotlight already records it builds:
@@ -153,6 +154,19 @@ Inquiries, Feedback.
   - **Companions Explorer** — pick any artwork, see what visitors most view alongside it
   - A curation signal for sequencing the portfolio and deciding what to hang next to what.
   - Derived live from `_gam_spotlight_v1` — no new storage key.
+- **Tide** *(newest)* — **trends & momentum**. Every other analytics tool aggregates
+  all-time totals; Tide is the only one with a sense of **direction**. It splits the data
+  into a recent window and the equal-length window immediately before it and reports the
+  deltas — what's rising, what's fading, and whether the site overall is gaining ground.
+  Window is selectable (7 / 14 / 30 days vs. the prior equal window). It surfaces:
+  - Stats: visits this window, visits Δ% vs prior, sessions Δ%, net visit change
+  - **Daily Traffic — Momentum** — a canvas line of daily visits across both windows, the
+    recent half drawn in brighter amber with a dashed split marker at the boundary
+  - **Artworks on the Rise / Cooling Off** — pieces gaining or losing the most viewport
+    attention this window (from Spotlight's events)
+  - **Pages Trending** and **Sources Trending** — pages and acquisition channels moving
+    up or down versus the prior window
+  - Derived live from `_gam_analytics_v1` + `_gam_spotlight_v1` — no new storage key.
 - **Revenue** — financial dashboard derived from the commission Queue: total earned,
   pipeline value, monthly earnings chart, revenue by type, top clients.
 - **Palette** — extract dominant colors from an uploaded artwork (k-means), save

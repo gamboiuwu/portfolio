@@ -196,6 +196,7 @@ Password-protected (SHA-256 hash in localStorage, 5-attempt lockout). Session tr
 | Relay       | Outbound reach & link clicks — destination mix (social/shop/external/email), top destinations, exit pages, recent link-outs |
 | Friction    | UX friction & frustration signals — rage clicks (repeated clicks in one spot), unresponsive/dead clicks (non-interactive targets), friction hotspots, friction by page |
 | Mosaic      | Artwork affinity & co-view — which pieces get viewed together per visit, top co-viewed pairs, hub/connective artworks, per-artwork companions explorer |
+| Tide        | Trends & momentum — recent-window vs prior-window deltas: daily traffic momentum chart, rising/cooling artworks, trending pages & sources |
 
 ---
 
@@ -673,6 +674,45 @@ Answers a curation question no other tool can: **which artworks get looked at *t
 
 ---
 
+## Tide — Trends & Momentum (Admin → Tide tab) — NEW TOOL
+
+Answers the one question the entire analytics family structurally cannot: **which direction is everything moving?** Every other tool aggregates *all-time* totals — Spotlight ranks artworks, Compass ranks sources, Journey maps flow, Mosaic pairs pieces — none of them compares *now* to *before*. Tide is the only view with a sense of **direction**: it splits the data into a recent window and the equal-length window immediately preceding it and reports the **deltas** — what's rising, what's fading, and whether the portfolio overall is gaining or losing momentum. The single most useful signal for an artist deciding whether a push is working and which pieces are catching on *right now*.
+
+**Why it's genuinely new:** it's a *temporal-derivative* view, not another all-time aggregate. The Analytics tab's existing 30-day chart plots raw daily volume; Tide instead computes period-over-period change across traffic, artworks, pages, and sources, and ranks movers by how much they grew or shrank.
+
+**No new storage key** — derived live from `_gam_analytics_v1` (`pv` events for traffic/pages/sources) and `_gam_spotlight_v1` (viewport events for artwork attention), the same read-only pattern as Journey/Mosaic. No changes to `analytics.js`.
+
+**Window model:** a selectable compare window (**7 / 14 / 30 days**). "Recent" = the last N days; "Prior" = the N days immediately before that. Every metric is `recent − prior`, with `%` = `(recent − prior) / prior` (or `+100%` when prior is zero and recent is non-zero).
+
+**How it works:**
+1. `buildTide(windowDays)` timestamps two windows (`recStart = now − N·day`, `priStart = now − 2N·day`) and buckets each `pv`/spotlight event into recent (`r`), prior (`p`), or neither.
+2. It tallies per-window visits, distinct sessions, per-page counts, per-channel counts (`compassClassify(refHost)`), and per-artwork viewport counts, plus a daily `views` series spanning both windows.
+3. `movers()` unions the recent+prior keys and computes `{recent, prior, delta, pct}` per page / artwork / channel.
+
+**Admin tab sections:**
+- **Stats**: Visits (window), Visits vs Prior %, Sessions vs Prior %, Net Visit Δ (each with ▲/▼)
+- **Daily Traffic — Momentum**: canvas line of daily visits across both windows; the prior half is drawn muted, the recent half in brighter amber, with a dashed vertical split marker at the boundary
+- **Artworks on the Rise** / **Artworks Cooling Off**: pieces gaining / losing the most viewport attention this window (arrows + delta bars sized by absolute change)
+- **Pages Trending**: pages moving up then down versus prior
+- **Sources Trending**: acquisition channels moving up then down versus prior
+
+**Derived schema (for export):**
+```js
+{ windowDays, recentVisits, priorVisits, visitsDelta, visitsPct,
+  recentSessions, priorSessions, sessionsPct,
+  dailyViews:[{day,views,recent}],
+  pageMovers:[{key,label,recent,prior,delta,pct}], artMovers:[…], sourceMovers:[…] }
+```
+
+**Technical notes:**
+- Rising = warm amber (`#c9a87c`), cooling = deep clay (`#96683e`) — differentiated by ▲/▼ arrows and bar tone, no blue/pink. New `.tide-*` CSS classes; reuses the `spotlight-board`/`sp-*` bar styles, `analytics-stat-chip`, `journey-select`, `escHtml()`, `jPageLabel()`, `compassClassify()`, and the canvas-line pattern from the Analytics trend chart.
+- Movers is per session/event within each window, consistent with the rest of the family.
+- Tab renders lazily on click (and re-renders on window-select change), same pattern as Mosaic/Friction/Relay/etc.
+
+**API:** none new on `CommissionData` — uses `CommissionData.getAnalytics()` + `.getSpotlight()`. Logic lives in `renderTideTab()` / `buildTide()` inside `admin/index.html`.
+
+---
+
 ## Commission System
 
 ### Pages
@@ -750,4 +790,4 @@ Stored in `_gam_prices_v1`. Three sections: `digital`, `stickers`, `animation`. 
 
 ---
 
-*Last updated: 2026-07-09*
+*Last updated: 2026-07-21*
