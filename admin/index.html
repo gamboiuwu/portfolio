@@ -901,6 +901,23 @@
 		.beacon-bar-wrap { height: 1.1em; background: rgba(255,255,255,0.05); border-radius: 3px; overflow: hidden; }
 		.beacon-bar { height: 100%; border-radius: 3px; transition: width 0.4s ease; }
 		.beacon-drop { font-size: 0.72em; color: #b07a4a; margin-top: 0.25em; font-family: 'Courier New', monospace; }
+
+		/* Strata tab — visitor engagement tiers & session quality scoring (reuses compass donut + legend, spotlight bars) */
+		.strata-donut-row { display: flex; gap: 1.4em; align-items: center; flex-wrap: wrap; }
+		#strata-donut { display: block; flex-shrink: 0; }
+		.st-tag { display: inline-block; font-family: 'Courier New', monospace; font-size: 0.62em;
+			letter-spacing: 0.06em; padding: 0.1em 0.5em; border-radius: 3px; vertical-align: middle; white-space: nowrap; }
+		.strata-comp { display: flex; align-items: center; gap: 0.6em; padding: 0.42em 0; }
+		.strata-comp-label { width: 8.5em; font-size: 0.82em; color: #cfccc6; flex-shrink: 0; }
+		.strata-comp-bar-wrap { flex: 1; height: 0.85em; background: rgba(255,255,255,0.05); border-radius: 3px; overflow: hidden; }
+		.strata-comp-bar { height: 100%; border-radius: 3px; background: linear-gradient(to right, rgba(201,168,124,0.4), #c9a87c); transition: width 0.4s ease; }
+		.strata-comp-val { width: 6.2em; text-align: right; font-family: 'Courier New', monospace; font-size: 0.76em; color: #c9a87c; flex-shrink: 0; }
+		.strata-sess { display: flex; justify-content: space-between; align-items: center; gap: 1em; padding: 0.55em 0; border-bottom: 1px solid rgba(255,255,255,0.06); }
+		.strata-sess:last-child { border-bottom: none; }
+		.strata-sess-main { display: flex; align-items: center; gap: 0.7em; min-width: 0; }
+		.strata-score { font-family: 'Courier New', monospace; font-weight: bold; font-size: 1em; color: #c9a87c; width: 2.1em; text-align: right; flex-shrink: 0; }
+		.strata-sess-meta { font-family: 'Courier New', monospace; font-size: 0.72em; color: #8c887f; white-space: nowrap; text-align: right; }
+		.strata-empty { color: #444; font-size: 0.85em; padding: 0.5em 0; }
 	</style>
 </head>
 <body class="is-preload">
@@ -984,6 +1001,7 @@
 				<button class="admin-tab" data-tab="friction">Friction</button>
 				<button class="admin-tab" data-tab="mosaic">Mosaic</button>
 				<button class="admin-tab" data-tab="tide">Tide</button>
+				<button class="admin-tab" data-tab="strata">Strata</button>
 			</div>
 
 			<!-- ============ GALLERY TAB ============ -->
@@ -1978,6 +1996,47 @@
 							<h3>Sources Trending</h3>
 							<p class="hint">Acquisition channels gaining or losing ground versus last window (classified the same way as Compass). Shows which platform is sending you more traffic lately &mdash; where the reach is compounding.</p>
 							<div id="tide-sources"></div>
+						</div>
+
+					</div>
+
+					<div id="tab-strata" class="tab-content">
+
+						<div class="admin-card">
+							<h3>Strata — Engagement Tiers &amp; Session Quality</h3>
+							<p class="hint">Every other tool measures one dimension &mdash; Depth is scroll, Spotlight is artwork time, Beacon is the commission funnel, Orbit is return frequency. None asks the blunt question: <em>how good was each visit, all signals combined?</em> Strata scores every session 0&ndash;100 from six weighted signals it already collects &mdash; pages viewed, dwell time, scroll reach, artwork viewport time, clicks, and commission-intent goals &mdash; then sorts visitors into quality tiers from <strong>Bounce</strong> to <strong>Invested</strong>. It's the one view that separates a genuinely engaged art lover from a two-second bounce, so you can see what share of traffic is actually worth converting and what pushes a visit up the ladder. Derived live from <code>_gam_analytics_v1</code> and <code>_gam_spotlight_v1</code> &mdash; no new storage key.</p>
+							<div id="strata-stats" class="analytics-stats" style="margin-bottom:1em"></div>
+							<div style="display:flex;gap:0.5em;flex-wrap:wrap">
+								<button class="button small" id="strata-refresh-btn">Refresh</button>
+								<button class="button small" id="strata-export-btn">Export JSON</button>
+							</div>
+						</div>
+
+						<div class="admin-card">
+							<h3>Engagement Tiers</h3>
+							<p class="hint">Every session sorted into one of five quality bands by its composite score. A healthy portfolio grows the amber end &mdash; Engaged and Invested visitors are the ones reading, lingering on artwork, and heading toward an inquiry. A pile-up in Bounce/Skimmer means traffic is arriving but not catching.</p>
+							<div class="strata-donut-row">
+								<canvas id="strata-donut" width="180" height="180"></canvas>
+								<div id="strata-legend" class="compass-legend"></div>
+							</div>
+						</div>
+
+						<div class="admin-card">
+							<h3>What Drives Engagement</h3>
+							<p class="hint">Average points each signal contributes to the site-wide score, against the maximum it can add. The signals sitting far below their cap are your biggest untapped levers &mdash; low artwork points means visitors aren't lingering on the work; low intent means few are reaching a commission CTA.</p>
+							<div id="strata-components"></div>
+						</div>
+
+						<div class="admin-card">
+							<h3>Where Quality Comes From</h3>
+							<p class="hint">Acquisition channels ranked by the average engagement score of the visits they deliver (classified the same way as Compass). High volume from a low-quality source is worth less than a trickle of highly engaged visits &mdash; this shows which platform sends people who actually care.</p>
+							<div id="strata-sources"></div>
+						</div>
+
+						<div class="admin-card">
+							<h3>Highest-Quality Sessions</h3>
+							<p class="hint">The strongest individual visits, ranked by score, with the signals behind each. A concrete look at what a great session on your portfolio actually looks like &mdash; how many pages, how long, how much time on the artwork.</p>
+							<div id="strata-sessions"></div>
 						</div>
 
 					</div>
@@ -3002,6 +3061,9 @@ document.addEventListener('click', function(e){
   }
   if (e.target.dataset && e.target.dataset.tab === 'tide') {
     renderTideTab();
+  }
+  if (e.target.dataset && e.target.dataset.tab === 'strata') {
+    renderStrataTab();
   }
 });
 
@@ -6289,6 +6351,315 @@ document.getElementById('tide-export-btn').addEventListener('click', function() 
   var url  = URL.createObjectURL(blob);
   var a    = document.createElement('a');
   a.href = url; a.download = 'tide-' + Date.now() + '.json'; a.click();
+  URL.revokeObjectURL(url);
+});
+
+/* ================================================================
+   STRATA TAB — Visitor engagement tiers & session quality scoring
+   Composite per-session score (0–100) synthesised across every
+   signal stream the site already records, then segmented into
+   quality tiers. Read-only: no new storage key, no analytics.js
+   change. Reads _gam_analytics_v1 (+ _gam_spotlight_v1 for artwork
+   attention). Mirrors the lazy-render pattern of every other tab.
+================================================================ */
+
+/* Score component weights — each component's maximum contribution.
+   The six sum to 100 so a raw score reads directly as a percentage. */
+var STRATA_WEIGHTS = { breadth: 20, dwell: 20, scroll: 15, artwork: 20, interact: 10, intent: 15 };
+var STRATA_COMP_LABEL = {
+  breadth:  'Pages viewed',
+  dwell:    'Dwell time',
+  scroll:   'Scroll reach',
+  artwork:  'Artwork time',
+  interact: 'Interactions',
+  intent:   'Commission intent'
+};
+/* Saturation caps — the value at which a component earns full points. */
+var STRATA_DWELL_CAP = 180000;  /* 3 min of on-page time = full dwell points */
+var STRATA_ART_CAP   = 60000;   /* 60 s of artwork viewport time = full artwork points */
+
+var STRATA_ORDER  = ['invested','engaged','browser','skimmer','bounce'];
+var STRATA_LABELS = { invested:'Invested', engaged:'Engaged', browser:'Browser', skimmer:'Skimmer', bounce:'Bounce' };
+var STRATA_COLORS = { invested:'#c9a87c', engaged:'#b07a4a', browser:'#96683e', skimmer:'#7d6f57', bounce:'#57534c' };
+
+function strataTier(score) {
+  if (score >= 80) return 'invested';
+  if (score >= 60) return 'engaged';
+  if (score >= 35) return 'browser';
+  if (score >= 15) return 'skimmer';
+  return 'bounce';
+}
+
+function buildStrata() {
+  var events = CommissionData.getAnalytics() || [];
+  var spot   = CommissionData.getSpotlight() || [];
+
+  var S = {};
+  function ses(sid) {
+    if (!S[sid]) S[sid] = {
+      sid: sid, pv: 0, pages: {}, clicks: 0, maxScroll: 0,
+      dwell: 0, artMs: 0, goals: {}, firstTs: Infinity, lastTs: 0,
+      firstPvTs: Infinity, refHost: 'direct'
+    };
+    return S[sid];
+  }
+
+  events.forEach(function(e) {
+    if (!e.sid) return;
+    var s = ses(e.sid);
+    if (e.ts < s.firstTs) s.firstTs = e.ts;
+    if (e.ts > s.lastTs)  s.lastTs  = e.ts;
+    if (e.type === 'pv') {
+      s.pv++;
+      if (e.page) s.pages[e.page] = 1;
+      if (e.ts < s.firstPvTs) { s.firstPvTs = e.ts; s.refHost = e.refHost || 'direct'; }
+    } else if (e.type === 'click') {
+      s.clicks++;
+    } else if (e.type === 'scroll') {
+      if ((e.depth || 0) > s.maxScroll) s.maxScroll = e.depth;
+    } else if (e.type === 'exit') {
+      s.dwell += (e.ms || 0);
+    } else if (e.type === 'goal') {
+      if (e.goal) s.goals[e.goal] = 1;
+    }
+  });
+
+  spot.forEach(function(e) {
+    if (!e.sid) return;
+    var s = ses(e.sid);
+    s.artMs += (e.ms || 0);
+    if (e.ts < s.firstTs) s.firstTs = e.ts;
+    if (e.ts > s.lastTs)  s.lastTs  = e.ts;
+  });
+
+  function clamp01(x) { return x < 0 ? 0 : (x > 1 ? 1 : x); }
+
+  var list = [];
+  Object.keys(S).forEach(function(sid) {
+    var s = S[sid];
+    /* Require a real pageview (or at least measured artwork time) to score. */
+    if (s.pv === 0 && s.artMs === 0) return;
+
+    var pages   = Object.keys(s.pages).length;
+    var dwellMs = s.dwell > 0 ? s.dwell : Math.max(0, s.lastTs - s.firstTs);
+
+    var intentRaw = 0;
+    if (s.goals['cta_commission']) intentRaw += 5;
+    if (s.goals['form_open'])       intentRaw += 3;
+    if (s.goals['form_step3'])      intentRaw += 3;
+    if (s.goals['form_submit'])     intentRaw += 4;
+
+    var comps = {
+      breadth:  clamp01(Math.min(pages, 5) / 5)        * STRATA_WEIGHTS.breadth,
+      dwell:    clamp01(dwellMs / STRATA_DWELL_CAP)    * STRATA_WEIGHTS.dwell,
+      scroll:   clamp01(s.maxScroll / 100)             * STRATA_WEIGHTS.scroll,
+      artwork:  clamp01(s.artMs / STRATA_ART_CAP)      * STRATA_WEIGHTS.artwork,
+      interact: clamp01(Math.min(s.clicks, 6) / 6)     * STRATA_WEIGHTS.interact,
+      intent:   Math.min(intentRaw, STRATA_WEIGHTS.intent)
+    };
+    var score = Math.round(comps.breadth + comps.dwell + comps.scroll +
+                           comps.artwork + comps.interact + comps.intent);
+    if (score > 100) score = 100;
+
+    list.push({
+      sid: sid, score: score, tier: strataTier(score), comps: comps,
+      pages: pages, dwellMs: dwellMs, artMs: s.artMs, clicks: s.clicks,
+      maxScroll: s.maxScroll, submitted: !!s.goals['form_submit'], refHost: s.refHost
+    });
+  });
+
+  var n = list.length;
+
+  /* Tier distribution */
+  var tiers = { invested: 0, engaged: 0, browser: 0, skimmer: 0, bounce: 0 };
+  list.forEach(function(x) { tiers[x.tier]++; });
+
+  /* Component averages (avg points contributed per session) */
+  var compAvg = { breadth: 0, dwell: 0, scroll: 0, artwork: 0, interact: 0, intent: 0 };
+  list.forEach(function(x) {
+    Object.keys(compAvg).forEach(function(k) { compAvg[k] += x.comps[k]; });
+  });
+  Object.keys(compAvg).forEach(function(k) { compAvg[k] = n ? compAvg[k] / n : 0; });
+
+  /* Quality by acquisition channel */
+  var chan = {};
+  list.forEach(function(x) {
+    var c = compassClassify(x.refHost || 'direct');
+    if (!chan[c]) chan[c] = { sessions: 0, scoreSum: 0, engagedPlus: 0 };
+    chan[c].sessions++;
+    chan[c].scoreSum += x.score;
+    if (x.score >= 60) chan[c].engagedPlus++;
+  });
+
+  var scoreSum   = list.reduce(function(a, x) { return a + x.score; }, 0);
+  var engagedPlus = list.filter(function(x) { return x.score >= 60; }).length;
+  var dwellArr   = list.map(function(x) { return x.dwellMs; }).sort(function(a, b) { return a - b; });
+  var medianDwell = dwellArr.length ? dwellArr[Math.floor(dwellArr.length / 2)] : 0;
+
+  return {
+    list: list, n: n, tiers: tiers, compAvg: compAvg, chan: chan,
+    avgScore: n ? Math.round(scoreSum / n) : 0,
+    engagedPlus: engagedPlus,
+    engagedRate: n ? Math.round((engagedPlus / n) * 100) : 0,
+    medianDwell: medianDwell
+  };
+}
+
+function drawStrataDonut(st) {
+  var canvas = document.getElementById('strata-donut');
+  if (!canvas) return;
+  var ctx = canvas.getContext('2d');
+  var W = canvas.width, H = canvas.height;
+  ctx.clearRect(0, 0, W, H);
+  var cx = W / 2, cy = H / 2, rOut = 78, rIn = 46;
+  var tot = st.n;
+
+  if (!tot) {
+    ctx.fillStyle = '#444';
+    ctx.font = '12px -apple-system, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('No sessions to score yet.', cx, cy);
+    return;
+  }
+
+  var start = -Math.PI / 2;
+  STRATA_ORDER.forEach(function(k) {
+    var v = st.tiers[k];
+    if (!v) return;
+    var ang = (v / tot) * Math.PI * 2;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.arc(cx, cy, rOut, start, start + ang);
+    ctx.closePath();
+    ctx.fillStyle = STRATA_COLORS[k];
+    ctx.fill();
+    start += ang;
+  });
+
+  ctx.globalCompositeOperation = 'destination-out';
+  ctx.beginPath();
+  ctx.arc(cx, cy, rIn, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.globalCompositeOperation = 'source-over';
+
+  ctx.fillStyle = '#c9a87c';
+  ctx.font = 'bold 22px -apple-system, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(st.avgScore, cx, cy - 6);
+  ctx.fillStyle = '#8c887f';
+  ctx.font = '10px "Courier New", monospace';
+  ctx.fillText('AVG SCORE', cx, cy + 12);
+}
+
+function renderStrataTab() {
+  var st = buildStrata();
+
+  function chip(num, label) {
+    return '<div class="analytics-stat-chip"><span class="asc-num">' + num +
+      '</span><span class="asc-label">' + label + '</span></div>';
+  }
+  document.getElementById('strata-stats').innerHTML =
+    chip(st.n,                     'Sessions Scored')  +
+    chip(st.avgScore + '/100',     'Avg. Score')       +
+    chip(st.engagedRate + '%',     'Engaged+ Share')   +
+    chip(jFmtDur(st.medianDwell),  'Median Dwell');
+
+  /* ── Tier donut + legend ── */
+  drawStrataDonut(st);
+  document.getElementById('strata-legend').innerHTML = STRATA_ORDER.map(function(k) {
+    var v = st.tiers[k];
+    var share = st.n ? Math.round((v / st.n) * 100) : 0;
+    return '<div class="compass-legend-item">' +
+      '<span class="compass-legend-swatch" style="background:' + STRATA_COLORS[k] + '"></span>' +
+      '<span>' + STRATA_LABELS[k] + '</span>' +
+      '<span class="compass-legend-val">' + v + ' · ' + share + '%</span>' +
+    '</div>';
+  }).join('');
+
+  /* ── Component breakdown ── */
+  var compEl = document.getElementById('strata-components');
+  if (!st.n) {
+    compEl.innerHTML = '<p class="strata-empty">No sessions to score yet. Browse the public pages and Strata will populate automatically.</p>';
+  } else {
+    var order = ['breadth','dwell','scroll','artwork','interact','intent'];
+    compEl.innerHTML = order.map(function(k) {
+      var avg = st.compAvg[k], max = STRATA_WEIGHTS[k];
+      var w = Math.round((avg / max) * 100);
+      return '<div class="strata-comp">' +
+        '<div class="strata-comp-label">' + STRATA_COMP_LABEL[k] + '</div>' +
+        '<div class="strata-comp-bar-wrap"><div class="strata-comp-bar" style="width:' + w + '%"></div></div>' +
+        '<div class="strata-comp-val">' + avg.toFixed(1) + ' / ' + max + '</div>' +
+      '</div>';
+    }).join('');
+  }
+
+  /* ── Quality by channel ── */
+  var chanRows = Object.keys(st.chan).map(function(c) {
+    var d = st.chan[c];
+    return { label: c, count: Math.round(d.scoreSum / d.sessions),
+             sessions: d.sessions, engagedPlus: d.engagedPlus };
+  }).sort(function(a, b) { return b.count - a.count || b.sessions - a.sessions; });
+  document.getElementById('strata-sources').innerHTML = jBarList(chanRows, 100, {
+    suffix: function(r) {
+      return r.sessions + ' session' + (r.sessions === 1 ? '' : 's') +
+        ' · ' + r.engagedPlus + ' engaged+';
+    }
+  });
+
+  /* ── Highest-quality sessions ── */
+  var top = st.list.slice().sort(function(a, b) {
+    return b.score - a.score || b.dwellMs - a.dwellMs;
+  }).slice(0, 12);
+  var sessEl = document.getElementById('strata-sessions');
+  if (!top.length) {
+    sessEl.innerHTML = '<p class="strata-empty">No sessions to score yet.</p>';
+  } else {
+    sessEl.innerHTML = top.map(function(x) {
+      var col = STRATA_COLORS[x.tier];
+      var tag = '<span class="st-tag" style="background:' + strataAlpha(col, 0.20) +
+        ';color:' + col + ';border:1px solid ' + strataAlpha(col, 0.45) + '">' +
+        STRATA_LABELS[x.tier] + '</span>';
+      var meta = x.pages + 'p · ' + jFmtDur(x.dwellMs) +
+        (x.artMs ? ' · ' + jFmtDur(x.artMs) + ' art' : '') +
+        (x.submitted ? ' · ✎ inquiry' : '');
+      return '<div class="strata-sess">' +
+        '<div class="strata-sess-main">' +
+          '<span class="strata-score">' + x.score + '</span>' + tag +
+        '</div>' +
+        '<div class="strata-sess-meta">' + escHtml(meta) + '</div>' +
+      '</div>';
+    }).join('');
+  }
+}
+
+/* Convert a #rrggbb hex to an rgba() string at the given alpha. */
+function strataAlpha(hex, a) {
+  var m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+  if (!m) return hex;
+  return 'rgba(' + parseInt(m[1], 16) + ',' + parseInt(m[2], 16) + ',' + parseInt(m[3], 16) + ',' + a + ')';
+}
+
+document.getElementById('strata-refresh-btn').addEventListener('click', renderStrataTab);
+
+document.getElementById('strata-export-btn').addEventListener('click', function() {
+  var st = buildStrata();
+  var out = {
+    sessions: st.n, avgScore: st.avgScore,
+    engagedPlus: st.engagedPlus, engagedRate: st.engagedRate,
+    medianDwellMs: st.medianDwell,
+    tiers: st.tiers, componentAvg: st.compAvg,
+    channels: st.chan,
+    sessionList: st.list.map(function(x) {
+      return { sid: x.sid, score: x.score, tier: x.tier, pages: x.pages,
+               dwellMs: x.dwellMs, artMs: x.artMs, clicks: x.clicks,
+               maxScroll: x.maxScroll, submitted: x.submitted, refHost: x.refHost };
+    })
+  };
+  var blob = new Blob([JSON.stringify(out, null, 2)], { type: 'application/json' });
+  var url  = URL.createObjectURL(blob);
+  var a    = document.createElement('a');
+  a.href = url; a.download = 'strata-' + Date.now() + '.json'; a.click();
   URL.revokeObjectURL(url);
 });
 </script>
