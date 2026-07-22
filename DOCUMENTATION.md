@@ -55,6 +55,7 @@ The tracking answers the questions the portfolio owner actually cares about:
 | Where does the interface *frustrate* them? | `click` clustering (rage) + non-interactive targets (dead) | **Friction → Hotspots / Signal Mix** |
 | Which artworks get viewed *together*? | spotlight viewport events grouped per session | **Mosaic → Top Co-Viewed Pairs / Hub Artworks** |
 | Is the site *gaining or losing* momentum? | recent window vs. prior window deltas | **Tide → Daily Momentum / Rising & Cooling** |
+| *How good* was each visit, all signals combined? | composite per-session score from every stream | **Strata → Engagement Tiers / Quality by Source** |
 
 See `CLAUDE.md` → Analytics System for the exact event field schema.
 
@@ -154,7 +155,7 @@ Inquiries, Feedback.
   - **Companions Explorer** — pick any artwork, see what visitors most view alongside it
   - A curation signal for sequencing the portfolio and deciding what to hang next to what.
   - Derived live from `_gam_spotlight_v1` — no new storage key.
-- **Tide** *(newest)* — **trends & momentum**. Every other analytics tool aggregates
+- **Tide** — **trends & momentum**. Every other analytics tool aggregates
   all-time totals; Tide is the only one with a sense of **direction**. It splits the data
   into a recent window and the equal-length window immediately before it and reports the
   deltas — what's rising, what's fading, and whether the site overall is gaining ground.
@@ -166,6 +167,21 @@ Inquiries, Feedback.
     attention this window (from Spotlight's events)
   - **Pages Trending** and **Sources Trending** — pages and acquisition channels moving
     up or down versus the prior window
+  - Derived live from `_gam_analytics_v1` + `_gam_spotlight_v1` — no new storage key.
+- **Strata** *(newest)* — **engagement tiers & session quality scoring**. Every other tool
+  measures a *single* dimension (Depth = scroll, Spotlight = artwork time, Beacon = the
+  commission funnel, Orbit = return frequency). Strata is the only one that asks how *good*
+  each visit was overall: it scores every session **0–100** from six weighted signals it
+  already collects — pages viewed, dwell time, scroll reach, artwork viewport time, clicks,
+  and commission-intent goals — then sorts visitors into quality tiers
+  (Bounce → Skimmer → Browser → Engaged → Invested). It surfaces:
+  - Stats: sessions scored, average score, Engaged+ share %, median dwell
+  - **Engagement Tiers** — a canvas donut of the five quality bands (centre shows avg score)
+  - **What Drives Engagement** — average points each signal contributes vs. its cap, so the
+    biggest untapped levers are obvious
+  - **Where Quality Comes From** — acquisition channels ranked by the *average score* of the
+    visits they deliver (quality, not just volume), classified the same way as Compass
+  - **Highest-Quality Sessions** — the strongest individual visits with the signals behind each
   - Derived live from `_gam_analytics_v1` + `_gam_spotlight_v1` — no new storage key.
 - **Revenue** — financial dashboard derived from the commission Queue: total earned,
   pipeline value, monthly earnings chart, revenue by type, top clients.

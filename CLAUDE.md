@@ -197,6 +197,7 @@ Password-protected (SHA-256 hash in localStorage, 5-attempt lockout). Session tr
 | Friction    | UX friction & frustration signals — rage clicks (repeated clicks in one spot), unresponsive/dead clicks (non-interactive targets), friction hotspots, friction by page |
 | Mosaic      | Artwork affinity & co-view — which pieces get viewed together per visit, top co-viewed pairs, hub/connective artworks, per-artwork companions explorer |
 | Tide        | Trends & momentum — recent-window vs prior-window deltas: daily traffic momentum chart, rising/cooling artworks, trending pages & sources |
+| Strata      | Engagement tiers & session quality — composite 0–100 score per session from every signal stream, tier distribution (Bounce→Invested), score-driver breakdown, quality by source, top sessions |
 
 ---
 
@@ -713,6 +714,54 @@ Answers the one question the entire analytics family structurally cannot: **whic
 
 ---
 
+## Strata — Engagement Tiers & Session Quality Scoring (Admin → Strata tab) — NEW TOOL
+
+Answers the one question the rest of the analytics family structurally cannot: **how good was each visit, all signals combined?** Every existing tool measures a *single* dimension — Depth = scroll reach, Spotlight = artwork attention time, Beacon = the commission funnel, Orbit = return frequency, Journey = page flow, Friction = negative UX signals. None produces a *composite* per-visit quality measure or segments the audience by engagement quality. Strata synthesizes every stream into one score and tiers visitors from **Bounce** to **Invested**, so the artist can see what share of traffic is genuinely worth converting and which lever raises a visit up the ladder.
+
+**Why it's genuinely new:** it's a *cross-signal composite*, not another single-metric aggregate. Beacon reports funnel drop-off against the commission goal; Orbit reports how often a visitor returns; Depth reports scroll only. Strata is the only view that fuses pageviews, dwell, scroll, artwork viewport time, clicks, and intent goals into a single 0–100 quality score per session and buckets the audience by it.
+
+**No new storage key** — derived live from `_gam_analytics_v1` (`pv` / `click` / `scroll` / `exit` / `goal`) and `_gam_spotlight_v1` (artwork viewport `ms`), the same read-only pattern as Journey/Tide. No changes to `analytics.js`.
+
+**How it works:**
+1. `buildStrata()` groups all events by `sid` into a per-session aggregate: distinct pages, click count, max scroll depth, summed dwell (`exit.ms`, falling back to the session time-span), summed artwork viewport `ms` (from spotlight), and the set of `goal` names.
+2. Each session earns a **composite score (0–100)** from six weighted, saturating components (weights sum to 100 so the score reads as a percentage):
+
+   | Component | Weight | Full points at |
+   |-----------|--------|----------------|
+   | Pages viewed (breadth) | 20 | ≥ 5 distinct pages |
+   | Dwell time | 20 | ≥ 3 min on-page (`STRATA_DWELL_CAP`) |
+   | Scroll reach | 15 | 100% depth |
+   | Artwork viewport time | 20 | ≥ 60 s (`STRATA_ART_CAP`) |
+   | Interactions (clicks) | 10 | ≥ 6 clicks |
+   | Commission intent (goals) | 15 | cta 5 + form_open 3 + form_step3 3 + form_submit 4 |
+
+3. Score maps to a **tier**: Bounce (0–14), Skimmer (15–34), Browser (35–59), Engaged (60–79), Invested (80–100). A session needs a real `pv` (or measured artwork time) to be scored.
+
+**Admin tab sections:**
+- **Stats**: Sessions Scored, Avg. Score /100, Engaged+ Share % (score ≥ 60), Median Dwell
+- **Engagement Tiers**: canvas donut + legend of the five tiers; centre shows the average score
+- **What Drives Engagement**: average points each component contributes vs. its cap — the components far below cap are the biggest untapped levers
+- **Where Quality Comes From**: acquisition channels ranked by the *average score* of the visits they deliver (classified via the shared `compassClassify()`), annotated with session + Engaged+ counts — quality per source, not just volume
+- **Highest-Quality Sessions**: top sessions by score with their signals (pages, dwell, artwork time, inquiry flag) and a tier tag
+
+**Derived schema (for export):**
+```js
+{ sessions, avgScore, engagedPlus, engagedRate, medianDwellMs,
+  tiers:{invested,engaged,browser,skimmer,bounce},
+  componentAvg:{breadth,dwell,scroll,artwork,interact,intent},
+  channels:{channel:{sessions,scoreSum,engagedPlus}},
+  sessionList:[{sid,score,tier,pages,dwellMs,artMs,clicks,maxScroll,submitted,refHost}] }
+```
+
+**Technical notes:**
+- Donut + tier swatches use the warm amber/sand palette (`#c9a87c` Invested → `#57534c` Bounce, deepening as quality drops) — no blue/pink. New `.strata-*` and `.st-tag` CSS classes; reuses `jBarList()`, `analytics-stat-chip`, `compass-legend`/`compass-donut-row` styles, `jFmtDur()`, `escHtml()`, and `compassClassify()`. A small `strataAlpha()` helper tints tier tags.
+- Score is per session (`sid`), so one visitor across several tabs may be scored more than once — consistent with the rest of the analytics family.
+- Tab renders lazily on click, same pattern as Tide/Mosaic/Friction/Relay/Beacon/Orbit/Depth/Compass/Journey/Pulse/Spotlight/Revenue.
+
+**API:** none new on `CommissionData` — uses `CommissionData.getAnalytics()` + `.getSpotlight()`. Logic lives in `renderStrataTab()` / `buildStrata()` inside `admin/index.html`.
+
+---
+
 ## Commission System
 
 ### Pages
@@ -790,4 +839,4 @@ Stored in `_gam_prices_v1`. Three sections: `digital`, `stickers`, `animation`. 
 
 ---
 
-*Last updated: 2026-07-21*
+*Last updated: 2026-07-22*
