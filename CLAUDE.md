@@ -197,6 +197,7 @@ Password-protected (SHA-256 hash in localStorage, 5-attempt lockout). Session tr
 | Friction    | UX friction & frustration signals — rage clicks (repeated clicks in one spot), unresponsive/dead clicks (non-interactive targets), friction hotspots, friction by page |
 | Mosaic      | Artwork affinity & co-view — which pieces get viewed together per visit, top co-viewed pairs, hub/connective artworks, per-artwork companions explorer |
 | Tide        | Trends & momentum — recent-window vs prior-window deltas: daily traffic momentum chart, rising/cooling artworks, trending pages & sources |
+| Ember       | Engagement quality index — composite 0–100 per-session score from six weighted signals, quality-tier distribution, score drivers, best entry pages & sources, top sessions |
 
 ---
 
@@ -713,6 +714,59 @@ Answers the one question the entire analytics family structurally cannot: **whic
 
 ---
 
+## Ember — Engagement Quality Index & Session Scoring (Admin → Ember tab) — NEW TOOL
+
+Answers the whole-visit question no other tool asks: **how good was this visit, overall?** Every existing analytics tool measures a *single* signal in isolation — Depth = scroll, Spotlight = artwork time, Journey = page flow, Pulse = timing, Compass = source, Beacon = conversion, Orbit = retention, Friction = negative UX, Relay = outbound, Mosaic = co-view, Tide = momentum. None *synthesises* them. Ember is the synthesis layer: it scores every session 0–100 from a weighted blend of six already-tracked signals, then sorts visits into quality tiers — turning a scatter of raw events into one honest read on whether people are genuinely engaging or just glancing and leaving.
+
+**Why it's genuinely new:** it's a *composite* metric, not another single-signal aggregate. Journey reports bounce rate (one dimension); Depth reports scroll (another); Ember is the first view that combines depth + dwell + breadth + interaction + artwork attention + intent into a per-session index and a tiered distribution, and reports *which signals drive the score* and *which sources deliver the best-quality visits* (not just the most).
+
+**No new storage key** — derived live from `_gam_analytics_v1` (`pv` / `click` / `scroll` / `exit` / `goal`) and `_gam_spotlight_v1` (artwork viewport ms), the same read-only pattern as Journey/Tide. No changes to `analytics.js`.
+
+**Scoring model (per session, weights sum to 100):**
+
+| Signal | Source | Cap (maxes out at) | Max points |
+|--------|--------|--------------------|-----------|
+| Pages viewed | `pv` count | 5 pages | 20 |
+| Time on site | max `exit.ms` / session span | 3 min (180 000 ms) | 25 |
+| Scroll depth | max `scroll.depth` | 100% | 20 |
+| Interaction | `click` count | 6 clicks | 15 |
+| Artwork attention | Σ spotlight `ms` | 60 s (60 000 ms) | 15 |
+| Commission intent | any `goal` event | — (boolean) | 5 |
+
+Each signal is capped, normalized to its weight, summed, rounded, and clamped to 100. Constants live in `EMBER_W` / `EMBER_CAP` at the top of the Ember block.
+
+**Quality tiers** (`EMBER_TIERS`, warm amber ramp — no blue/pink): Bounced (0–9), Glancing (10–29), Browsing (30–54), Engaged (55–79), Invested (80–100). "Engaged+" = score ≥ 55.
+
+**How it works:**
+1. `buildEmber()` groups events by `sid`, totals spotlight ms per `sid`, and derives each session's six signals.
+2. It computes the composite score, assigns a tier via `emberTierOf()`, and accumulates per-signal contribution sums.
+3. It aggregates the tier distribution, average score, Engaged+ rate, per-signal average contribution, average score grouped by entry page and by acquisition channel (`compassClassify`), and the top-scoring sessions.
+
+**Admin tab sections:**
+- **Stats**: Sessions Scored, Avg Engagement Score, Engaged+ Rate %, Engaged+ Sessions
+- **Quality Tier Distribution**: canvas donut + legend across the five tiers; centre shows the average score
+- **What Drives the Score**: each signal's average contributed points vs. its max weight (the diagnostic behind the average)
+- **Highest-Quality Entry Pages**: landing pages ranked by the average score of visits that started there
+- **Engagement by Source**: channels ranked by average visit quality (the *best* source, complementing Compass's *most*)
+- **Top Sessions by Quality**: highest-scoring individual visits with the full signal breakdown behind each score
+
+**Derived schema (for export):**
+```js
+{ total, avgScore, engagedPlus, engagedRate, tierCounts:{…},
+  contrib:[{signal,avg,weight,pctOfMax}], byEntry:[{label,avg,count}], bySource:[…],
+  sessions:[{score,tier,pv,clicks,scroll,dwellMs,artMs,goal,entry,refHost,ts}] }
+```
+
+**Technical notes:**
+- Donut + tier swatches use the warm amber/clay ramp (`rgba(176,122,74…)` invested → `rgba(120,116,108…)` bounced) — no blue/pink. New `.ember-*` CSS classes; reuses `jBarList` bar styles (`spotlight-board`/`sp-*`), `analytics-stat-chip`, `compass-legend`/`compass-donut-row`, `jFmtDur()`, `jPageLabel()`, `compassClassify()`, `escHtml()`, `fmtDate()`.
+- Score bars use an *absolute* 0–100 scale (bar width = score), unlike the relative bars elsewhere, so tiers read consistently across sections.
+- Scoring is per session (`sid`), so one visitor across several tabs may count more than once (consistent with the rest of the family).
+- Tab renders lazily on click, same pattern as Tide/Mosaic/Friction/etc.
+
+**API:** none new on `CommissionData` — uses `CommissionData.getAnalytics()` + `.getSpotlight()`. Logic lives in `renderEmberTab()` / `buildEmber()` inside `admin/index.html`.
+
+---
+
 ## Commission System
 
 ### Pages
@@ -790,4 +844,4 @@ Stored in `_gam_prices_v1`. Three sections: `digital`, `stickers`, `animation`. 
 
 ---
 
-*Last updated: 2026-07-21*
+*Last updated: 2026-07-23*

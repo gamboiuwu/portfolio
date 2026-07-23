@@ -901,6 +901,16 @@
 		.beacon-bar-wrap { height: 1.1em; background: rgba(255,255,255,0.05); border-radius: 3px; overflow: hidden; }
 		.beacon-bar { height: 100%; border-radius: 3px; transition: width 0.4s ease; }
 		.beacon-drop { font-size: 0.72em; color: #b07a4a; margin-top: 0.25em; font-family: 'Courier New', monospace; }
+
+		/* Ember tab — engagement quality index */
+		.ember-tier-tag { display: inline-block; font-family: 'Courier New', monospace; font-size: 0.62em; letter-spacing: 0.05em; text-transform: uppercase; padding: 0.12em 0.5em; border-radius: 3px; vertical-align: 1px; }
+		.ember-sess-row { display: flex; justify-content: space-between; align-items: center; gap: 1em; padding: 0.5em 0; border-bottom: 1px solid rgba(255,255,255,0.06); }
+		.ember-sess-row:last-child { border-bottom: none; }
+		.ember-sess-main { min-width: 0; flex: 1; }
+		.ember-sess-sub { font-size: 0.72em; color: #8c887f; font-family: 'Courier New', monospace; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+		.ember-sess-meta { text-align: right; flex-shrink: 0; }
+		.ember-sess-score { font-family: 'Courier New', monospace; font-size: 1.05em; color: #c9a87c; font-weight: bold; }
+		.ember-weight { color: #57534c; font-size: 0.82em; }
 	</style>
 </head>
 <body class="is-preload">
@@ -984,6 +994,7 @@
 				<button class="admin-tab" data-tab="friction">Friction</button>
 				<button class="admin-tab" data-tab="mosaic">Mosaic</button>
 				<button class="admin-tab" data-tab="tide">Tide</button>
+				<button class="admin-tab" data-tab="ember">Ember</button>
 			</div>
 
 			<!-- ============ GALLERY TAB ============ -->
@@ -1978,6 +1989,53 @@
 							<h3>Sources Trending</h3>
 							<p class="hint">Acquisition channels gaining or losing ground versus last window (classified the same way as Compass). Shows which platform is sending you more traffic lately &mdash; where the reach is compounding.</p>
 							<div id="tide-sources"></div>
+						</div>
+
+					</div>
+
+					<div id="tab-ember" class="tab-content">
+
+						<div class="admin-card">
+							<h3>Ember — Engagement Quality Index</h3>
+							<p class="hint">Every other analytics tool measures <em>one</em> signal in isolation &mdash; Depth watches scroll, Spotlight watches artwork time, Journey watches page flow, Beacon watches conversion. None asks the whole-visit question: <em>how good was this visit, overall?</em> Ember is the synthesis layer. It scores each session 0&ndash;100 from a weighted blend of six signals already tracked &mdash; pages viewed, time on site, scroll depth, clicks, artwork attention, and commission intent &mdash; then sorts every visit into a quality tier. It answers &ldquo;are people genuinely engaging, or just glancing and leaving, and what separates a great visit from a bounce?&rdquo; Derived live from <code>_gam_analytics_v1</code> and <code>_gam_spotlight_v1</code> &mdash; no new storage key.</p>
+							<div id="ember-stats" class="analytics-stats" style="margin-bottom:1em"></div>
+							<div style="display:flex;gap:0.5em;flex-wrap:wrap">
+								<button class="button small" id="ember-refresh-btn">Refresh</button>
+								<button class="button small" id="ember-export-btn">Export JSON</button>
+							</div>
+						</div>
+
+						<div class="admin-card">
+							<h3>Quality Tier Distribution</h3>
+							<p class="hint">Every scored session sorted into a tier: <strong>Bounced</strong> (0&ndash;9), <strong>Glancing</strong> (10&ndash;29), <strong>Browsing</strong> (30&ndash;54), <strong>Engaged</strong> (55&ndash;79), <strong>Invested</strong> (80&ndash;100). The donut centre shows the average score across all visits. A portfolio that converts leans toward the deeper amber tiers; a top-heavy Bounced/Glancing split means visitors aren't finding a reason to stay.</p>
+							<div class="compass-donut-row">
+								<div class="heatmap-wrap"><canvas id="ember-donut" width="200" height="200"></canvas></div>
+								<div id="ember-legend" class="compass-legend"></div>
+							</div>
+						</div>
+
+						<div class="admin-card">
+							<h3>What Drives the Score</h3>
+							<p class="hint">The average points each signal contributes across all visits, next to its maximum weight. Signals sitting far below their cap are the untapped engagement levers &mdash; low scroll means people aren't reaching down the page, low artwork attention means the work isn't holding eyes. This is the diagnostic behind the average score.</p>
+							<div id="ember-contrib"></div>
+						</div>
+
+						<div class="admin-card">
+							<h3>Highest-Quality Entry Pages</h3>
+							<p class="hint">Landing pages ranked by the <em>average engagement score</em> of the visits that started there. A high-scoring entry page is a strong front door &mdash; the place worth pointing new traffic. A low one is a leak: people arrive and don't get pulled in.</p>
+							<div id="ember-entry"></div>
+						</div>
+
+						<div class="admin-card">
+							<h3>Engagement by Source</h3>
+							<p class="hint">Acquisition channels ranked by the average quality of the visits they deliver (classified the same way as Compass). Compass tells you which source sends the <em>most</em> visitors; Ember tells you which sends the <em>best</em> ones &mdash; the platform whose audience actually engages once they arrive.</p>
+							<div id="ember-source"></div>
+						</div>
+
+						<div class="admin-card">
+							<h3>Top Sessions by Quality</h3>
+							<p class="hint">The most engaged individual visits, with the signal breakdown behind each score. These are the visitors who did everything a would-be client does &mdash; useful for sanity-checking the model and spotting what a high-intent visit looks like.</p>
+							<div id="ember-top"></div>
 						</div>
 
 					</div>
@@ -3002,6 +3060,9 @@ document.addEventListener('click', function(e){
   }
   if (e.target.dataset && e.target.dataset.tab === 'tide') {
     renderTideTab();
+  }
+  if (e.target.dataset && e.target.dataset.tab === 'ember') {
+    renderEmberTab();
   }
 });
 
@@ -6289,6 +6350,298 @@ document.getElementById('tide-export-btn').addEventListener('click', function() 
   var url  = URL.createObjectURL(blob);
   var a    = document.createElement('a');
   a.href = url; a.download = 'tide-' + Date.now() + '.json'; a.click();
+  URL.revokeObjectURL(url);
+});
+
+/* ================================================================
+   EMBER TAB — Engagement Quality Index & Session Scoring
+   Synthesises the signals every other tool measures in isolation
+   into a single 0–100 per-session engagement score, then buckets
+   visits into quality tiers. Read-only over _gam_analytics_v1 +
+   _gam_spotlight_v1 — no new storage key, no analytics.js change.
+   ================================================================ */
+
+/* Score weights (sum to 100) and the caps at which each signal maxes out. */
+var EMBER_W   = { pages: 20, dwell: 25, scroll: 20, clicks: 15, art: 15, goal: 5 };
+var EMBER_CAP = { pages: 5, dwell: 180000, clicks: 6, art: 60000 }; /* 5 pages, 3 min, 6 clicks, 60s art */
+var EMBER_SIGNAL_LABELS = {
+  pages:  'Pages viewed',
+  dwell:  'Time on site',
+  scroll: 'Scroll depth',
+  clicks: 'Interaction (clicks)',
+  art:    'Artwork attention',
+  goal:   'Commission intent'
+};
+/* Tiers ordered high → low so the first satisfied `min` wins. Warm amber ramp. */
+var EMBER_TIERS = [
+  { key: 'invested', label: 'Invested', min: 80, color: 'rgba(176,122,74,0.95)' },
+  { key: 'engaged',  label: 'Engaged',  min: 55, color: 'rgba(201,168,124,0.9)' },
+  { key: 'browsing', label: 'Browsing', min: 30, color: 'rgba(214,190,150,0.85)' },
+  { key: 'glancing', label: 'Glancing', min: 10, color: 'rgba(150,104,62,0.6)' },
+  { key: 'bounced',  label: 'Bounced',  min: 0,  color: 'rgba(120,116,108,0.5)' }
+];
+var EMBER_TIER_MAP = {};
+EMBER_TIERS.forEach(function(t){ EMBER_TIER_MAP[t.key] = t; });
+
+function emberTierOf(score) {
+  for (var i = 0; i < EMBER_TIERS.length; i++) {
+    if (score >= EMBER_TIERS[i].min) return EMBER_TIERS[i].key;
+  }
+  return 'bounced';
+}
+
+function buildEmber() {
+  var events = CommissionData.getAnalytics() || [];
+  var spot   = CommissionData.getSpotlight() || [];
+
+  /* Group events by session and total artwork viewport ms per session. */
+  var bySid = {};
+  events.forEach(function(e){ if (e.sid) (bySid[e.sid] = bySid[e.sid] || []).push(e); });
+  var artMsBySid = {};
+  spot.forEach(function(e){ if (e.sid) artMsBySid[e.sid] = (artMsBySid[e.sid] || 0) + (e.ms || 0); });
+
+  var sessions = [];
+  var contribSum = { pages: 0, dwell: 0, scroll: 0, clicks: 0, art: 0, goal: 0 };
+
+  Object.keys(bySid).forEach(function(sid) {
+    var evts = bySid[sid];
+    var pv = 0, clicks = 0, maxScroll = 0, exitMs = 0;
+    var firstTs = null, lastTs = null, goal = false, entry = null, refHost = 'direct';
+
+    evts.forEach(function(e) {
+      if (firstTs === null || e.ts < firstTs) firstTs = e.ts;
+      if (lastTs  === null || e.ts > lastTs)  lastTs  = e.ts;
+      if (e.type === 'pv') {
+        pv++;
+        if (entry === null) { entry = e.page || '/'; refHost = e.refHost || 'direct'; }
+      } else if (e.type === 'click')  { clicks++; }
+      else if (e.type === 'scroll') { if ((e.depth || 0) > maxScroll) maxScroll = e.depth; }
+      else if (e.type === 'exit')   { if ((e.ms || 0) > exitMs) exitMs = e.ms; }
+      else if (e.type === 'goal')   { goal = true; }
+    });
+    if (pv === 0) return; /* no pageview → not a real visit */
+
+    var dwell = Math.max((lastTs || 0) - (firstTs || 0), exitMs);
+    var artMs = artMsBySid[sid] || 0;
+
+    var c = {
+      pages:  Math.min(pv, EMBER_CAP.pages)     / EMBER_CAP.pages  * EMBER_W.pages,
+      dwell:  Math.min(dwell, EMBER_CAP.dwell)  / EMBER_CAP.dwell  * EMBER_W.dwell,
+      scroll: Math.min(maxScroll, 100)          / 100              * EMBER_W.scroll,
+      clicks: Math.min(clicks, EMBER_CAP.clicks) / EMBER_CAP.clicks * EMBER_W.clicks,
+      art:    Math.min(artMs, EMBER_CAP.art)    / EMBER_CAP.art    * EMBER_W.art,
+      goal:   goal ? EMBER_W.goal : 0
+    };
+    var score = Math.round(c.pages + c.dwell + c.scroll + c.clicks + c.art + c.goal);
+    if (score > 100) score = 100;
+    Object.keys(contribSum).forEach(function(k){ contribSum[k] += c[k]; });
+
+    sessions.push({
+      sid: sid, score: score, tier: emberTierOf(score),
+      pv: pv, clicks: clicks, scroll: maxScroll, dwell: dwell,
+      artMs: artMs, goal: goal, entry: entry || '/', refHost: refHost, ts: lastTs || 0
+    });
+  });
+
+  var total = sessions.length;
+
+  /* Tier distribution */
+  var tierCounts = {};
+  EMBER_TIERS.forEach(function(t){ tierCounts[t.key] = 0; });
+  sessions.forEach(function(s){ tierCounts[s.tier]++; });
+
+  var scoreSum    = sessions.reduce(function(a, s){ return a + s.score; }, 0);
+  var avgScore    = total ? Math.round(scoreSum / total) : 0;
+  var engagedPlus = sessions.filter(function(s){ return s.score >= 55; }).length;
+  var engagedRate = total ? Math.round((engagedPlus / total) * 100) : 0;
+
+  /* Average points each signal contributes across all visits */
+  var contrib = Object.keys(contribSum).map(function(k) {
+    var avg = total ? contribSum[k] / total : 0;
+    return { key: k, label: EMBER_SIGNAL_LABELS[k], avg: avg,
+             weight: EMBER_W[k], pctOfMax: EMBER_W[k] ? Math.round((avg / EMBER_W[k]) * 100) : 0 };
+  }).sort(function(a, b){ return b.avg - a.avg; });
+
+  var byEntry  = emberGroupAvg(sessions, function(s){ return jPageLabel(s.entry); });
+  var bySource = emberGroupAvg(sessions, function(s){ return compassClassify(s.refHost || 'direct'); });
+  var top      = sessions.slice().sort(function(a, b){ return (b.score - a.score) || (b.ts - a.ts); }).slice(0, 12);
+
+  return {
+    sessions: sessions, total: total, avgScore: avgScore,
+    engagedPlus: engagedPlus, engagedRate: engagedRate,
+    tierCounts: tierCounts, contrib: contrib,
+    byEntry: byEntry, bySource: bySource, top: top
+  };
+}
+
+/* Group sessions by a key function → average score + session count, ranked. */
+function emberGroupAvg(sessions, keyFn) {
+  var g = {};
+  sessions.forEach(function(s) {
+    var k = keyFn(s);
+    (g[k] = g[k] || { key: k, sum: 0, n: 0 });
+    g[k].sum += s.score; g[k].n++;
+  });
+  return Object.keys(g).map(function(k) {
+    return { label: k, avg: Math.round(g[k].sum / g[k].n), count: g[k].n };
+  }).sort(function(a, b){ return (b.avg - a.avg) || (b.count - a.count); });
+}
+
+/* 0–100 absolute-scale bar list (bar width = score, not relative). */
+function emberScoreBars(rows) {
+  if (!rows.length) return '<p class="tide-empty">Not enough sessions yet.</p>';
+  return '<div class="spotlight-board">' + rows.map(function(r) {
+    var w = Math.max(2, Math.min(100, r.avg));
+    return '<div class="spotlight-row">' +
+      '<div class="sp-info">' +
+        '<div class="sp-label" title="' + escHtml(r.label) + '">' + escHtml(r.label) + '</div>' +
+        '<div class="sp-bar-wrap"><div class="sp-bar" style="width:' + w + '%"></div></div>' +
+      '</div>' +
+      '<div class="sp-meta">' +
+        '<span class="sp-time">' + r.avg + '</span>' +
+        '<span class="sp-views">' + r.count + (r.count === 1 ? ' session' : ' sessions') + '</span>' +
+      '</div>' +
+    '</div>';
+  }).join('') + '</div>';
+}
+
+function emberContribBars(contrib) {
+  if (!contrib.length) return '<p class="tide-empty">No sessions yet.</p>';
+  return '<div class="spotlight-board">' + contrib.map(function(c) {
+    var w = Math.max(2, Math.min(100, c.pctOfMax));
+    return '<div class="spotlight-row">' +
+      '<div class="sp-info">' +
+        '<div class="sp-label">' + escHtml(c.label) +
+          ' <span class="ember-weight">· up to ' + c.weight + ' pts</span></div>' +
+        '<div class="sp-bar-wrap"><div class="sp-bar" style="width:' + w + '%"></div></div>' +
+      '</div>' +
+      '<div class="sp-meta">' +
+        '<span class="sp-time">' + c.avg.toFixed(1) + '</span>' +
+        '<span class="sp-views">' + c.pctOfMax + '% of max</span>' +
+      '</div>' +
+    '</div>';
+  }).join('') + '</div>';
+}
+
+function emberTopSessions(rows) {
+  if (!rows.length) return '<p class="tide-empty">No sessions scored yet.</p>';
+  return rows.map(function(s) {
+    var t = EMBER_TIER_MAP[s.tier] || EMBER_TIER_MAP.bounced;
+    var bits = [ s.pv + 'p', jFmtDur(s.dwell), s.scroll + '% scroll', s.clicks + ' clk' ];
+    if (s.artMs >= 1000) bits.push(Math.round(s.artMs / 1000) + 's art');
+    if (s.goal) bits.push('intent');
+    return '<div class="ember-sess-row">' +
+      '<div class="ember-sess-main">' +
+        '<div><span class="ember-tier-tag" style="background:' + t.color + ';color:#1a1712">' +
+          t.label + '</span> ' +
+          '<span class="ember-sess-sub">' + escHtml(jPageLabel(s.entry)) + '</span></div>' +
+        '<div class="ember-sess-sub">' + bits.join(' · ') + '</div>' +
+      '</div>' +
+      '<div class="ember-sess-meta">' +
+        '<div class="ember-sess-score">' + s.score + '</div>' +
+        '<div class="ember-sess-sub">' + escHtml(fmtDate(s.ts)) + '</div>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+}
+
+function drawEmberDonut(em) {
+  var canvas = document.getElementById('ember-donut');
+  if (!canvas) return;
+  var ctx = canvas.getContext('2d');
+  var W = canvas.width, H = canvas.height;
+  ctx.clearRect(0, 0, W, H);
+  var cx = W / 2, cy = H / 2, rOut = 78, rIn = 46;
+
+  if (!em.total) {
+    ctx.fillStyle = '#444';
+    ctx.font = '12px -apple-system, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('No sessions yet.', cx, cy);
+    return;
+  }
+
+  var start = -Math.PI / 2;
+  EMBER_TIERS.forEach(function(t) {
+    var v = em.tierCounts[t.key] || 0;
+    if (!v) return;
+    var ang = (v / em.total) * Math.PI * 2;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.arc(cx, cy, rOut, start, start + ang);
+    ctx.closePath();
+    ctx.fillStyle = t.color;
+    ctx.fill();
+    start += ang;
+  });
+
+  ctx.globalCompositeOperation = 'destination-out';
+  ctx.beginPath();
+  ctx.arc(cx, cy, rIn, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.globalCompositeOperation = 'source-over';
+
+  ctx.fillStyle = '#c9a87c';
+  ctx.font = 'bold 22px -apple-system, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(em.avgScore, cx, cy - 6);
+  ctx.fillStyle = '#8c887f';
+  ctx.font = '10px "Courier New", monospace';
+  ctx.fillText('AVG SCORE', cx, cy + 12);
+}
+
+function renderEmberTab() {
+  var em = buildEmber();
+
+  function chip(num, label) {
+    return '<div class="analytics-stat-chip"><span class="asc-num">' + num +
+      '</span><span class="asc-label">' + label + '</span></div>';
+  }
+  document.getElementById('ember-stats').innerHTML =
+    chip(em.total,                 'Sessions Scored') +
+    chip(em.avgScore,              'Avg Engagement Score') +
+    chip(em.engagedRate + '%',     'Engaged+ Rate') +
+    chip(em.engagedPlus,           'Engaged+ Sessions');
+
+  drawEmberDonut(em);
+  var legendEl = document.getElementById('ember-legend');
+  legendEl.innerHTML = EMBER_TIERS.map(function(t) {
+    var v = em.tierCounts[t.key] || 0;
+    var share = em.total ? Math.round((v / em.total) * 100) : 0;
+    return '<div class="compass-legend-item">' +
+      '<span class="compass-legend-swatch" style="background:' + t.color + '"></span>' +
+      '<span>' + t.label + '</span>' +
+      '<span class="compass-legend-val">' + v + ' · ' + share + '%</span>' +
+    '</div>';
+  }).join('');
+
+  document.getElementById('ember-contrib').innerHTML = emberContribBars(em.contrib);
+  document.getElementById('ember-entry').innerHTML   = emberScoreBars(em.byEntry);
+  document.getElementById('ember-source').innerHTML  = emberScoreBars(em.bySource);
+  document.getElementById('ember-top').innerHTML     = emberTopSessions(em.top);
+}
+
+document.getElementById('ember-refresh-btn').addEventListener('click', renderEmberTab);
+
+document.getElementById('ember-export-btn').addEventListener('click', function() {
+  var em = buildEmber();
+  var out = {
+    total: em.total, avgScore: em.avgScore,
+    engagedPlus: em.engagedPlus, engagedRate: em.engagedRate,
+    tierCounts: em.tierCounts,
+    contrib: em.contrib.map(function(c){ return { signal: c.key, avg: +c.avg.toFixed(2), weight: c.weight, pctOfMax: c.pctOfMax }; }),
+    byEntry: em.byEntry, bySource: em.bySource,
+    sessions: em.sessions.map(function(s){
+      return { score: s.score, tier: s.tier, pv: s.pv, clicks: s.clicks,
+               scroll: s.scroll, dwellMs: s.dwell, artMs: s.artMs, goal: s.goal,
+               entry: s.entry, refHost: s.refHost, ts: s.ts };
+    })
+  };
+  var blob = new Blob([JSON.stringify(out, null, 2)], { type: 'application/json' });
+  var url  = URL.createObjectURL(blob);
+  var a    = document.createElement('a');
+  a.href = url; a.download = 'ember-' + Date.now() + '.json'; a.click();
   URL.revokeObjectURL(url);
 });
 </script>
