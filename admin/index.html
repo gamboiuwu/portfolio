@@ -911,6 +911,17 @@
 		.ember-sess-meta { text-align: right; flex-shrink: 0; }
 		.ember-sess-score { font-family: 'Courier New', monospace; font-size: 1.05em; color: #c9a87c; font-weight: bold; }
 		.ember-weight { color: #57534c; font-size: 0.82em; }
+		/* Reflex tab — engagement latency / time-to-first-interaction */
+		.reflex-recent-row { display: flex; justify-content: space-between; align-items: center; gap: 1em; padding: 0.5em 0; border-bottom: 1px solid rgba(255,255,255,0.06); }
+		.reflex-recent-row:last-child { border-bottom: none; }
+		.reflex-recent-main { min-width: 0; flex: 1; }
+		.reflex-recent-sub { font-size: 0.72em; color: #8c887f; font-family: 'Courier New', monospace; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+		.reflex-recent-meta { text-align: right; flex-shrink: 0; }
+		.reflex-lat { font-family: 'Courier New', monospace; font-size: 1.05em; color: #c9a87c; font-weight: bold; }
+		.reflex-act-tag { display: inline-block; font-family: 'Courier New', monospace; font-size: 0.62em; letter-spacing: 0.05em; text-transform: uppercase; padding: 0.12em 0.5em; border-radius: 3px; vertical-align: 1px; color: #1a1712; }
+		.reflex-act-scroll { background: rgba(201,168,124,0.9); }
+		.reflex-act-click  { background: rgba(176,122,74,0.95); }
+		.reflex-silent-note { color: #96683e; font-size: 0.82em; }
 	</style>
 </head>
 <body class="is-preload">
@@ -995,6 +1006,7 @@
 				<button class="admin-tab" data-tab="mosaic">Mosaic</button>
 				<button class="admin-tab" data-tab="tide">Tide</button>
 				<button class="admin-tab" data-tab="ember">Ember</button>
+				<button class="admin-tab" data-tab="reflex">Reflex</button>
 			</div>
 
 			<!-- ============ GALLERY TAB ============ -->
@@ -2040,6 +2052,54 @@
 
 					</div>
 
+					<!-- ============ REFLEX TAB ============ -->
+					<div id="tab-reflex" class="tab-content">
+
+						<div class="admin-card">
+							<h3>Reflex &mdash; Engagement Latency</h3>
+							<p class="hint">Every other tool measures <em>how much</em> a visit engaged &mdash; pages, scroll, artwork time, conversion. Reflex measures <em>how fast</em>. For each page a visitor lands on, it clocks the gap between arrival and their first real action (a click or a scroll), i.e. the <strong>time-to-first-interaction</strong> &mdash; the industry &ldquo;activation time&rdquo; signal. A page that hooks people in a second is doing its job above the fold; one where visitors sit motionless for ten seconds (or never move at all before leaving) is a slow front door, no matter how deep the eventual scroll. It answers &ldquo;how quickly does each page pull a visitor into <em>doing</em> something &mdash; and where do they hesitate?&rdquo; Derived live from <code>_gam_analytics_v1</code> (<code>pv</code>, <code>click</code>, <code>scroll</code> timestamps) &mdash; no new storage key, no <code>analytics.js</code> change.</p>
+							<div id="reflex-stats" class="analytics-stats" style="margin-bottom:1em"></div>
+							<div style="display:flex;gap:0.5em;flex-wrap:wrap">
+								<button class="button small" id="reflex-refresh-btn">Refresh</button>
+								<button class="button small" id="reflex-export-btn">Export JSON</button>
+							</div>
+						</div>
+
+						<div class="admin-card">
+							<h3>Response Speed Mix</h3>
+							<p class="hint">Every page-visit sorted by how quickly the visitor first acted: <strong>Instant</strong> (&lt;2s), <strong>Quick</strong> (2&ndash;5s), <strong>Considered</strong> (5&ndash;15s), <strong>Slow</strong> (15s+), and <strong>Silent</strong> &mdash; a page loaded but the visitor left without a single click or scroll. The donut centre is the median time-to-interact. A healthy portfolio leans toward the deeper amber (fast) tiers; a fat Silent slice means pages are loading and losing people before they engage at all.</p>
+							<div class="compass-donut-row">
+								<div class="heatmap-wrap"><canvas id="reflex-donut" width="200" height="200"></canvas></div>
+								<div id="reflex-legend" class="compass-legend"></div>
+							</div>
+						</div>
+
+						<div class="admin-card">
+							<h3>Fastest-Hooking Pages</h3>
+							<p class="hint">Pages ranked by the <em>lowest</em> median time-to-first-interaction &mdash; the front doors that pull visitors into action quickest. These layouts earn the arrival: whatever sits above the fold is working. Worth studying and copying onto the slower pages below. (Bar length is relative to the slowest page &mdash; shorter is faster.)</p>
+							<div id="reflex-fastest"></div>
+						</div>
+
+						<div class="admin-card">
+							<h3>Where Visitors Hesitate</h3>
+							<p class="hint">Pages ranked by the <em>highest</em> median time-to-interact together with their silent rate &mdash; the spots where people arrive and stall. A long delay before the first action (or a high share of no-action visits) points to a weak hook above the fold, a slow-to-read intro, or an unclear next step. These are the highest-leverage pages to redesign.</p>
+							<div id="reflex-slowest"></div>
+						</div>
+
+						<div class="admin-card">
+							<h3>First Action &mdash; Scroll vs Click</h3>
+							<p class="hint">Of the visits where someone <em>did</em> act, what did they reach for first? A <strong>scroll</strong> first means reading behaviour &mdash; they started consuming the page top-down. A <strong>click</strong> first means navigating or exploring &mdash; they went looking for something specific. The balance tells you whether pages are read or used.</p>
+							<div id="reflex-firstaction"></div>
+						</div>
+
+						<div class="admin-card">
+							<h3>Recent Activations</h3>
+							<p class="hint">The latest page-visits with their measured reaction time and first action &mdash; a live feel for how quickly the site is currently hooking people.</p>
+							<div id="reflex-recent"></div>
+						</div>
+
+					</div>
+
 		</div><!-- /#admin-dash -->
 		<input type="file" id="img-file-input" accept="image/*" style="display:none" />
 
@@ -3063,6 +3123,9 @@ document.addEventListener('click', function(e){
   }
   if (e.target.dataset && e.target.dataset.tab === 'ember') {
     renderEmberTab();
+  }
+  if (e.target.dataset && e.target.dataset.tab === 'reflex') {
+    renderReflexTab();
   }
 });
 
@@ -6642,6 +6705,286 @@ document.getElementById('ember-export-btn').addEventListener('click', function()
   var url  = URL.createObjectURL(blob);
   var a    = document.createElement('a');
   a.href = url; a.download = 'ember-' + Date.now() + '.json'; a.click();
+  URL.revokeObjectURL(url);
+});
+
+/* ================================================================
+   REFLEX TAB — Engagement Latency & Time-to-First-Interaction
+   For every page a visitor lands on, measures the gap between
+   arrival (the pv) and the first real action on that page (a click
+   or a scroll) — the "activation time" / time-to-first-interaction
+   signal no other tool captures. Every existing tool measures how
+   MUCH a visit engaged; Reflex measures how FAST. Read-only over
+   _gam_analytics_v1 — no new storage key, no analytics.js change.
+   ================================================================ */
+
+/* Speed buckets (warm amber ramp, fast → slow, then muted silent). */
+var REFLEX_BUCKETS = [
+  { key: 'instant',    label: 'Instant (<2s)',      max: 2000,     color: 'rgba(176,122,74,0.95)' },
+  { key: 'quick',      label: 'Quick (2–5s)',       max: 5000,     color: 'rgba(201,168,124,0.9)' },
+  { key: 'considered', label: 'Considered (5–15s)', max: 15000,    color: 'rgba(214,190,150,0.85)' },
+  { key: 'slow',       label: 'Slow (15s+)',        max: Infinity, color: 'rgba(150,104,62,0.6)' },
+  { key: 'silent',     label: 'Silent (no action)', max: null,     color: 'rgba(120,116,108,0.5)' }
+];
+var REFLEX_QUICK_MS = 5000; /* threshold for the "quick-hook" headline stat */
+
+function reflexBucketOf(ms) {
+  for (var i = 0; i < REFLEX_BUCKETS.length; i++) {
+    var b = REFLEX_BUCKETS[i];
+    if (b.max === null || b.max === Infinity) { if (b.max === Infinity) return b.key; continue; }
+    if (ms < b.max) return b.key;
+  }
+  return 'slow';
+}
+
+/* Sub-second aware latency formatter. */
+function reflexDur(ms) {
+  if (ms < 10000) return (Math.round(ms / 100) / 10) + 's';
+  return jFmtDur(ms);
+}
+
+function reflexMedian(arr) {
+  if (!arr.length) return 0;
+  var s = arr.slice().sort(function(a, b){ return a - b; });
+  var m = Math.floor(s.length / 2);
+  return s.length % 2 ? s[m] : Math.round((s[m - 1] + s[m]) / 2);
+}
+
+function buildReflex() {
+  var events = CommissionData.getAnalytics() || [];
+
+  /* Group events by session. */
+  var bySid = {};
+  events.forEach(function(e){ if (e.sid) (bySid[e.sid] = bySid[e.sid] || []).push(e); });
+
+  /* Per (session, page): arrival ts + first interaction ts/type. */
+  var visits = []; /* { page, latency|null, firstAction|null, ts } */
+
+  Object.keys(bySid).forEach(function(sid) {
+    var evts = bySid[sid].slice().sort(function(a, b){ return a.ts - b.ts; });
+    var arrivals = {};   /* page -> earliest pv ts */
+    var firstAct = {};   /* page -> { ts, type } of first click/scroll at/after arrival */
+
+    evts.forEach(function(e) {
+      var pg = e.page || '/';
+      if (e.type === 'pv') {
+        if (arrivals[pg] === undefined) arrivals[pg] = e.ts;
+      } else if (e.type === 'click' || e.type === 'scroll') {
+        if (arrivals[pg] === undefined) return;              /* action before any pv on this page — ignore */
+        if (e.ts < arrivals[pg]) return;
+        if (firstAct[pg] === undefined) firstAct[pg] = { ts: e.ts, type: e.type };
+      }
+    });
+
+    Object.keys(arrivals).forEach(function(pg) {
+      var a = arrivals[pg];
+      var f = firstAct[pg];
+      if (f) {
+        visits.push({ page: pg, latency: Math.max(0, f.ts - a), firstAction: f.type, ts: f.ts });
+      } else {
+        visits.push({ page: pg, latency: null, firstAction: null, ts: a });
+      }
+    });
+  });
+
+  var total       = visits.length;
+  var interacted  = visits.filter(function(v){ return v.latency !== null; });
+  var silentCount = total - interacted.length;
+
+  /* Bucket distribution */
+  var bucketCounts = {};
+  REFLEX_BUCKETS.forEach(function(b){ bucketCounts[b.key] = 0; });
+  interacted.forEach(function(v){ bucketCounts[reflexBucketOf(v.latency)]++; });
+  bucketCounts.silent = silentCount;
+
+  var latencies      = interacted.map(function(v){ return v.latency; });
+  var medianLatency  = reflexMedian(latencies);
+  var quickHooks     = interacted.filter(function(v){ return v.latency <= REFLEX_QUICK_MS; }).length;
+  var quickHookRate  = total ? Math.round((quickHooks / total) * 100) : 0;
+  var silentRate     = total ? Math.round((silentCount / total) * 100) : 0;
+
+  /* First-action split */
+  var firstAction = { scroll: 0, click: 0 };
+  interacted.forEach(function(v){ if (v.firstAction === 'click') firstAction.click++; else firstAction.scroll++; });
+
+  /* Per-page aggregation */
+  var pg = {};
+  visits.forEach(function(v) {
+    var g = pg[v.page] = pg[v.page] || { page: v.page, visits: 0, lat: [], silent: 0, quick: 0 };
+    g.visits++;
+    if (v.latency === null) { g.silent++; }
+    else { g.lat.push(v.latency); if (v.latency <= REFLEX_QUICK_MS) g.quick++; }
+  });
+  var pages = Object.keys(pg).map(function(k) {
+    var g = pg[k];
+    return {
+      page: g.page, visits: g.visits, interacted: g.lat.length, silent: g.silent,
+      median: reflexMedian(g.lat),
+      silentRate: g.visits ? Math.round((g.silent / g.visits) * 100) : 0,
+      quickRate:  g.visits ? Math.round((g.quick / g.visits) * 100) : 0
+    };
+  });
+
+  /* Fastest = has interactions, ranked by lowest median. Slowest = ranked by highest median (or silence). */
+  var withData = pages.filter(function(p){ return p.interacted > 0; });
+  var fastest  = withData.slice().sort(function(a, b){ return a.median - b.median; }).slice(0, 8);
+  var slowest  = pages.slice().sort(function(a, b) {
+    return (b.median - a.median) || (b.silentRate - a.silentRate);
+  }).slice(0, 8);
+
+  var recent = interacted.slice().sort(function(a, b){ return b.ts - a.ts; }).slice(0, 20);
+
+  return {
+    total: total, interacted: interacted.length, silent: silentCount,
+    medianLatency: medianLatency, quickHookRate: quickHookRate, silentRate: silentRate,
+    bucketCounts: bucketCounts, firstAction: firstAction,
+    pages: pages, fastest: fastest, slowest: slowest, recent: recent
+  };
+}
+
+/* Bar list for page latency rankings — bar width relative to the slowest median in the set. */
+function reflexLatencyBars(rows, maxMedian, subFn) {
+  if (!rows.length) return '<p style="color:#444;font-size:0.85em;padding:0.5em 0">Not enough interaction data yet. Browse the public pages and reaction times will populate automatically.</p>';
+  var mx = Math.max(maxMedian || 0, 1);
+  return '<div class="spotlight-board">' + rows.map(function(r) {
+    var w = Math.max(4, Math.round((r.median / mx) * 100));
+    return '<div class="spotlight-row">' +
+      '<div class="sp-info">' +
+        '<div class="sp-label" title="' + escHtml(jPageLabel(r.page)) + '">' + escHtml(jPageLabel(r.page)) + '</div>' +
+        '<div class="sp-bar-wrap"><div class="sp-bar" style="width:' + w + '%"></div></div>' +
+      '</div>' +
+      '<div class="sp-meta">' +
+        '<span class="sp-time">' + (r.interacted ? reflexDur(r.median) : '—') + '</span>' +
+        '<span class="sp-views">' + subFn(r) + '</span>' +
+      '</div>' +
+    '</div>';
+  }).join('') + '</div>';
+}
+
+function reflexRecent(rows) {
+  if (!rows.length) return '<p style="color:#444;font-size:0.85em;padding:0.5em 0">No activations recorded yet.</p>';
+  return rows.map(function(v) {
+    var cls = v.firstAction === 'click' ? 'reflex-act-click' : 'reflex-act-scroll';
+    return '<div class="reflex-recent-row">' +
+      '<div class="reflex-recent-main">' +
+        '<div><span class="reflex-act-tag ' + cls + '">' + (v.firstAction || 'act') + '</span> ' +
+          '<span class="reflex-recent-sub">' + escHtml(jPageLabel(v.page)) + '</span></div>' +
+      '</div>' +
+      '<div class="reflex-recent-meta">' +
+        '<div class="reflex-lat">' + reflexDur(v.latency) + '</div>' +
+        '<div class="reflex-recent-sub">' + escHtml(fmtDate(v.ts)) + '</div>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+}
+
+function drawReflexDonut(rf) {
+  var canvas = document.getElementById('reflex-donut');
+  if (!canvas) return;
+  var ctx = canvas.getContext('2d');
+  var W = canvas.width, H = canvas.height;
+  ctx.clearRect(0, 0, W, H);
+  var cx = W / 2, cy = H / 2, rOut = 78, rIn = 46;
+
+  if (!rf.total) {
+    ctx.fillStyle = '#444';
+    ctx.font = '12px -apple-system, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('No page-visits yet.', cx, cy);
+    return;
+  }
+
+  var start = -Math.PI / 2;
+  REFLEX_BUCKETS.forEach(function(b) {
+    var v = rf.bucketCounts[b.key] || 0;
+    if (!v) return;
+    var ang = (v / rf.total) * Math.PI * 2;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.arc(cx, cy, rOut, start, start + ang);
+    ctx.closePath();
+    ctx.fillStyle = b.color;
+    ctx.fill();
+    start += ang;
+  });
+
+  ctx.globalCompositeOperation = 'destination-out';
+  ctx.beginPath();
+  ctx.arc(cx, cy, rIn, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.globalCompositeOperation = 'source-over';
+
+  ctx.fillStyle = '#c9a87c';
+  ctx.font = 'bold 20px -apple-system, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(rf.interacted ? reflexDur(rf.medianLatency) : '—', cx, cy - 6);
+  ctx.fillStyle = '#8c887f';
+  ctx.font = '10px "Courier New", monospace';
+  ctx.fillText('MEDIAN', cx, cy + 12);
+}
+
+function renderReflexTab() {
+  var rf = buildReflex();
+
+  function chip(num, label) {
+    return '<div class="analytics-stat-chip"><span class="asc-num">' + num +
+      '</span><span class="asc-label">' + label + '</span></div>';
+  }
+  document.getElementById('reflex-stats').innerHTML =
+    chip(rf.total,                                      'Page Visits') +
+    chip(rf.interacted ? reflexDur(rf.medianLatency) : '—', 'Median Time-to-Interact') +
+    chip(rf.quickHookRate + '%',                        'Quick-Hook Rate (<5s)') +
+    chip(rf.silentRate + '%',                           'Silent Rate');
+
+  drawReflexDonut(rf);
+  var legendEl = document.getElementById('reflex-legend');
+  legendEl.innerHTML = REFLEX_BUCKETS.map(function(b) {
+    var v = rf.bucketCounts[b.key] || 0;
+    var share = rf.total ? Math.round((v / rf.total) * 100) : 0;
+    return '<div class="compass-legend-item">' +
+      '<span class="compass-legend-swatch" style="background:' + b.color + '"></span>' +
+      '<span>' + b.label + '</span>' +
+      '<span class="compass-legend-val">' + v + ' · ' + share + '%</span>' +
+    '</div>';
+  }).join('');
+
+  var slowestMax = rf.slowest.reduce(function(m, p){ return Math.max(m, p.median); }, 1);
+  document.getElementById('reflex-fastest').innerHTML = reflexLatencyBars(rf.fastest, slowestMax, function(r) {
+    return r.interacted + (r.interacted === 1 ? ' visit' : ' visits');
+  });
+  document.getElementById('reflex-slowest').innerHTML = reflexLatencyBars(rf.slowest, slowestMax, function(r) {
+    return r.silent ? (r.silentRate + '% silent') : (r.visits + (r.visits === 1 ? ' visit' : ' visits'));
+  });
+
+  var faTotal = rf.firstAction.scroll + rf.firstAction.click;
+  document.getElementById('reflex-firstaction').innerHTML = jBarList([
+    { label: 'Scroll first (reading)',  count: rf.firstAction.scroll },
+    { label: 'Click first (exploring)', count: rf.firstAction.click }
+  ].filter(function(r){ return r.count > 0; }).sort(function(a, b){ return b.count - a.count; }), faTotal, {
+    suffix: function(r, share){ return share + '% of actions'; }
+  });
+
+  document.getElementById('reflex-recent').innerHTML = reflexRecent(rf.recent);
+}
+
+document.getElementById('reflex-refresh-btn').addEventListener('click', renderReflexTab);
+
+document.getElementById('reflex-export-btn').addEventListener('click', function() {
+  var rf = buildReflex();
+  var out = {
+    total: rf.total, interacted: rf.interacted, silent: rf.silent,
+    medianLatencyMs: rf.medianLatency, quickHookRate: rf.quickHookRate, silentRate: rf.silentRate,
+    buckets: rf.bucketCounts, firstAction: rf.firstAction,
+    pages: rf.pages.map(function(p){
+      return { page: p.page, visits: p.visits, interacted: p.interacted, silent: p.silent,
+               medianMs: p.median, silentRate: p.silentRate, quickRate: p.quickRate };
+    })
+  };
+  var blob = new Blob([JSON.stringify(out, null, 2)], { type: 'application/json' });
+  var url  = URL.createObjectURL(blob);
+  var a    = document.createElement('a');
+  a.href = url; a.download = 'reflex-' + Date.now() + '.json'; a.click();
   URL.revokeObjectURL(url);
 });
 </script>

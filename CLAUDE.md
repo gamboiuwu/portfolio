@@ -198,6 +198,7 @@ Password-protected (SHA-256 hash in localStorage, 5-attempt lockout). Session tr
 | Mosaic      | Artwork affinity & co-view — which pieces get viewed together per visit, top co-viewed pairs, hub/connective artworks, per-artwork companions explorer |
 | Tide        | Trends & momentum — recent-window vs prior-window deltas: daily traffic momentum chart, rising/cooling artworks, trending pages & sources |
 | Ember       | Engagement quality index — composite 0–100 per-session score from six weighted signals, quality-tier distribution, score drivers, best entry pages & sources, top sessions |
+| Reflex      | Engagement latency — time-to-first-interaction per page (arrival → first click/scroll), response-speed mix, fastest-hooking vs. hesitation pages, scroll-vs-click first action, recent activations |
 
 ---
 
@@ -767,6 +768,46 @@ Each signal is capped, normalized to its weight, summed, rounded, and clamped to
 
 ---
 
+## Reflex — Engagement Latency & Time-to-First-Interaction (Admin → Reflex tab) — NEW TOOL
+
+Answers a dimension the entire analytics family structurally misses: **not how *much* a visit engaged, but how *fast*.** Spotlight = artwork attention, Depth = scroll amount, Journey = flow, Beacon = conversion, Ember = a composite quality index — every one measures the *magnitude* of engagement. Reflex measures its *speed*: for each page a visitor lands on, the gap between arrival (the `pv`) and their first real action on that page (a `click` or a `scroll`) — the industry-standard **time-to-first-interaction / "activation time"** signal. A page that hooks people in a second is earning its arrival above the fold; a page where visitors sit motionless for ten seconds — or never move at all before leaving — is a slow front door, regardless of how deep the eventual scroll goes.
+
+**Why it's genuinely new:** it's a *latency* metric, not another volume aggregate. Depth reports *whether* people scrolled; Reflex reports *how long they hesitated before the first move*. No existing tool times the arrival-to-action gap, and none surfaces the "silent" page-visit (loaded, then abandoned with zero interaction) as a distinct, above-the-fold failure signal.
+
+**No new storage key** — derived live from `_gam_analytics_v1` (`pv`, `click`, `scroll` timestamps, each already carrying `page` + `ts` + `sid`), the same read-only pattern as Journey/Depth/Ember. No changes to `analytics.js`.
+
+**How it works:**
+1. `buildReflex()` groups events by `sid`, sorts each session by `ts`, and for each **page** in the session records `arrival` (earliest `pv` ts) and `firstAct` (earliest `click`/`scroll` at or after arrival, with its type).
+2. Each `(sid, page)` becomes a **page-visit**: `latency = firstAct.ts − arrival` (clamped ≥ 0), or `null` = **silent** (a `pv` with no subsequent interaction on that page).
+3. Interacted latencies are bucketed by speed and aggregated per page (median latency, silent rate, quick-hook rate). Actions occurring before any `pv` on their page are ignored.
+
+**Speed buckets** (`REFLEX_BUCKETS`, warm amber ramp fast→slow, muted grey for silent): Instant (<2s), Quick (2–5s), Considered (5–15s), Slow (15s+), Silent (no action). "Quick-hook" headline = interacted within `REFLEX_QUICK_MS` (5s).
+
+**Admin tab sections:**
+- **Stats**: Page Visits, Median Time-to-Interact, Quick-Hook Rate (<5s), Silent Rate
+- **Response Speed Mix**: canvas donut + legend across the five buckets; centre shows the median time-to-interact
+- **Fastest-Hooking Pages**: pages ranked by *lowest* median latency (the front doors that pull people into action quickest)
+- **Where Visitors Hesitate**: pages ranked by *highest* median latency + silent rate (weak above-the-fold hooks)
+- **First Action — Scroll vs Click**: of visits that acted, whether the first move was a scroll (reading) or a click (exploring)
+- **Recent Activations**: latest page-visits with measured reaction time and first-action type
+
+**Derived schema (for export):**
+```js
+{ total, interacted, silent, medianLatencyMs, quickHookRate, silentRate,
+  buckets:{instant,quick,considered,slow,silent}, firstAction:{scroll,click},
+  pages:[{ page, visits, interacted, silent, medianMs, silentRate, quickRate }] }
+```
+
+**Technical notes:**
+- Donut/bars use the warm amber/clay ramp (`rgba(176,122,74…)` instant → `rgba(120,116,108…)` silent) — no blue/pink. New `.reflex-*` / `.reflex-act-*` CSS classes; reuses the `spotlight-board`/`sp-*` bar styles, `analytics-stat-chip`, `compass-legend`/`compass-donut-row`, `jFmtDur()`, `jPageLabel()`, `jBarList()`, `escHtml()`, `fmtDate()`.
+- Latency is a heuristic from stored events, not a live timing API — a page whose only `pv`/action pair straddles a tab switch may read long; medians (not means) blunt those outliers.
+- Page-visit is keyed per `(sid, page)`, so one visitor across several tabs may count more than once (consistent with the rest of the family).
+- Tab renders lazily on click, same pattern as Ember/Tide/Mosaic/etc.
+
+**API:** none new on `CommissionData` — uses `CommissionData.getAnalytics()`. Logic lives in `renderReflexTab()` / `buildReflex()` inside `admin/index.html`.
+
+---
+
 ## Commission System
 
 ### Pages
@@ -844,4 +885,4 @@ Stored in `_gam_prices_v1`. Three sections: `digital`, `stickers`, `animation`. 
 
 ---
 
-*Last updated: 2026-07-23*
+*Last updated: 2026-07-24*
