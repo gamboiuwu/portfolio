@@ -198,6 +198,7 @@ Password-protected (SHA-256 hash in localStorage, 5-attempt lockout). Session tr
 | Mosaic      | Artwork affinity & co-view — which pieces get viewed together per visit, top co-viewed pairs, hub/connective artworks, per-artwork companions explorer |
 | Tide        | Trends & momentum — recent-window vs prior-window deltas: daily traffic momentum chart, rising/cooling artworks, trending pages & sources |
 | Ember       | Engagement quality index — composite 0–100 per-session score from six weighted signals, quality-tier distribution, score drivers, best entry pages & sources, top sessions |
+| Latch       | First-impression & engagement latency — time-to-first-interaction per landing, first-action mix (scroll/click/none), latency distribution, fastest-hooking entry pages & sources, recent landings |
 
 ---
 
@@ -767,6 +768,49 @@ Each signal is capped, normalized to its weight, summed, rounded, and clamped to
 
 ---
 
+## Latch — First-Impression & Engagement Latency (Admin → Latch tab) — NEW TOOL
+
+Answers the question no other tool in the family measures: **how fast does a visit begin?** Every existing tool measures the *magnitude* of engagement (Ember, Depth, Spotlight), *when* it happens (Pulse, Tide), or *where* it goes (Journey, Relay) — none measures the *speed* at which a visitor first engages after landing. Latch is the make-or-break first-impression window: for every landing it clocks the gap between arriving and the first real interaction (a scroll or a click), then ranks visits by how quickly the portfolio hooks them. The clearest read on whether the front page grabs people in the critical opening seconds or loses them before they do anything.
+
+**Why it's genuinely new:** *time-to-first-interaction* (a.k.a. activation latency / first-impression velocity) is a standard UX metric that none of the existing tools compute. Ember uses total dwell and raw click/scroll *counts* (magnitude); Depth measures how *far* scroll reaches; Journey's bounce is defined by pageview count, not by whether — or how fast — a visitor interacted. Latch measures the *latency of the first action*, an orthogonal signal.
+
+**No new storage key** — derived live from `_gam_analytics_v1` alone, using the `ts` timestamps already stamped on every `pv` / `click` / `scroll` / `exit` event, the same read-only pattern as Journey/Ember. No `analytics.js` change.
+
+**How it works:**
+1. `buildLatch()` groups events by `sid` and sorts each session by `ts`.
+2. Per session it captures the first `pv` (entry page + `refHost`), then the earliest `click`/`scroll` at or after that pageview — the **first action**. `latency = firstActionTs − firstPvTs`.
+3. A session with no click/scroll is **never engaged**; one that also left within `LATCH_EARLY_MS` (8 s, from `exit.ms` or the session span) is a **cold bounce**.
+4. Aggregates the first-action mix, a latency-bucket distribution, per-entry-page and per-source average latency, and a recent-landings feed.
+
+**Latency buckets:** Instant (`<2s`), Quick (`2–5s`), Warming (`5–15s`), Slow (`15s+`), Never engaged. Thresholds live in `LATCH_INSTANT` / `LATCH_QUICK` / `LATCH_WARM` at the top of the Latch block.
+
+**Admin tab sections:**
+- **Stats**: Landings, Median Time-to-Engage, Instant-Engage Rate %, Never-Engaged Rate %
+- **First-Action Mix**: canvas donut + legend (scrolled first / clicked first / never engaged); centre shows the share of visits that engaged at all
+- **Time-to-First-Interaction**: the five latency buckets ranked (shared `jBarList` renderer)
+- **Fastest-Hooking Entry Pages**: landing pages ranked by average latency, fastest first (fuller bar = faster hook, inverse-scaled)
+- **Engagement Speed by Source**: acquisition channels ranked by how fast their visitors engage (`compassClassify`) — the *readiest* source, complementing Compass's *most* and Ember's *best*
+- **Recent Landings**: latest arrivals tagged `SCROLL` / `CLICK` (with latency) or `COLD` (left without interacting)
+
+**Derived schema (for export):**
+```js
+{ total, engagedCount, medianMs, instant, instantRate, neverCount, neverRate,
+  coldBounces, engagedRate, mix:{scroll,click,none}, buckets:[{bucket,count}],
+  byEntry:[{label,avg,count}], bySource:[…],
+  sessions:[{entry, refHost, engaged, latencyMs, firstAct, dwellMs, coldBounce, ts}] }
+```
+
+**Technical notes:**
+- Donut + swatches use the warm amber/sand palette (`rgba(176,122,74…)` scrolled, `rgba(201,168,124…)` clicked, muted grey never-engaged) — no blue/pink. New `.latch-*` CSS classes; reuses `jBarList()`, `analytics-stat-chip`, `compass-legend`/`compass-donut-row`, `jFmtDur()`, `jPageLabel()`, `compassClassify()`, `escHtml()`, `fmtDate()`.
+- Speed bars are inverse-scaled (bar width = faster hook), capped at `LATCH_SPEED_CAP` (20 s), unlike the relative bars elsewhere — so a shorter latency reads as a longer bar.
+- The first `scroll` event fires at the 25% threshold, so "first scroll" is a proxy for the first vertical engagement, not a literal pixel event (consistent with Depth's caveat).
+- Latency is per session (`sid`), so one visitor across several tabs may count more than once (consistent with the rest of the family).
+- Tab renders lazily on click, same pattern as Ember/Tide/Mosaic/etc.
+
+**API:** none new on `CommissionData` — uses `CommissionData.getAnalytics()`. Logic lives in `renderLatchTab()` / `buildLatch()` inside `admin/index.html`.
+
+---
+
 ## Commission System
 
 ### Pages
@@ -844,4 +888,4 @@ Stored in `_gam_prices_v1`. Three sections: `digital`, `stickers`, `animation`. 
 
 ---
 
-*Last updated: 2026-07-23*
+*Last updated: 2026-07-27*
