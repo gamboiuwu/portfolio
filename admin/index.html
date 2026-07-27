@@ -911,6 +911,13 @@
 		.ember-sess-meta { text-align: right; flex-shrink: 0; }
 		.ember-sess-score { font-family: 'Courier New', monospace; font-size: 1.05em; color: #c9a87c; font-weight: bold; }
 		.ember-weight { color: #57534c; font-size: 0.82em; }
+		/* Latch tab — first-impression & engagement latency */
+		.latch-tag { display: inline-block; font-family: 'Courier New', monospace; font-size: 0.62em; letter-spacing: 0.05em; text-transform: uppercase; padding: 0.12em 0.5em; border-radius: 3px; vertical-align: 1px; }
+		.latch-row { display: flex; justify-content: space-between; align-items: center; gap: 1em; padding: 0.5em 0; border-bottom: 1px solid rgba(255,255,255,0.06); }
+		.latch-row:last-child { border-bottom: none; }
+		.latch-main { min-width: 0; flex: 1; }
+		.latch-sub { font-size: 0.72em; color: #8c887f; font-family: 'Courier New', monospace; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+		.latch-meta { text-align: right; flex-shrink: 0; }
 	</style>
 </head>
 <body class="is-preload">
@@ -995,6 +1002,7 @@
 				<button class="admin-tab" data-tab="mosaic">Mosaic</button>
 				<button class="admin-tab" data-tab="tide">Tide</button>
 				<button class="admin-tab" data-tab="ember">Ember</button>
+				<button class="admin-tab" data-tab="latch">Latch</button>
 			</div>
 
 			<!-- ============ GALLERY TAB ============ -->
@@ -2040,6 +2048,53 @@
 
 					</div>
 
+						<div id="tab-latch" class="tab-content">
+
+							<div class="admin-card">
+								<h3>Latch — First-Impression &amp; Engagement Latency</h3>
+								<p class="hint">Every other tool measures how <em>much</em> a visit engaged, when it happened, or where it went &mdash; none measures how <em>fast</em> engagement begins. Latch is the make-or-break window: for every landing it clocks the gap between arriving and the first real interaction (a scroll or a click), then sorts visits by how quickly the portfolio hooks them. It answers &ldquo;does the front page grab people in the first seconds, or do they land and slip away before doing anything?&rdquo; Derived live from <code>_gam_analytics_v1</code> (<code>pv</code> / <code>click</code> / <code>scroll</code> / <code>exit</code> timestamps) &mdash; no new storage key, no <code>analytics.js</code> change.</p>
+								<div id="latch-stats" class="analytics-stats" style="margin-bottom:1em"></div>
+								<div style="display:flex;gap:0.5em;flex-wrap:wrap">
+									<button class="button small" id="latch-refresh-btn">Refresh</button>
+									<button class="button small" id="latch-export-btn">Export JSON</button>
+								</div>
+							</div>
+
+							<div class="admin-card">
+								<h3>First-Action Mix</h3>
+								<p class="hint">What the very first thing each visitor did was: <strong>scrolled</strong>, <strong>clicked</strong>, or <strong>never engaged</strong> (landed and left without a single interaction). The donut centre shows the share of visits that engaged at all. A large &ldquo;never engaged&rdquo; slice is a cold front door &mdash; people are arriving but nothing pulls them in.</p>
+								<div class="compass-donut-row">
+									<div class="heatmap-wrap"><canvas id="latch-donut" width="200" height="200"></canvas></div>
+									<div id="latch-legend" class="compass-legend"></div>
+								</div>
+							</div>
+
+							<div class="admin-card">
+								<h3>Time-to-First-Interaction</h3>
+								<p class="hint">How long visitors take before their first scroll or click, bucketed: <strong>Instant</strong> (&lt;2s), <strong>Quick</strong> (2&ndash;5s), <strong>Warming</strong> (5&ndash;15s), <strong>Slow</strong> (15s+), and <strong>Never engaged</strong>. A healthy portfolio front-loads the Instant/Quick buckets &mdash; the work should catch the eye before a visitor decides to leave.</p>
+								<div id="latch-dist"></div>
+							</div>
+
+							<div class="admin-card">
+								<h3>Fastest-Hooking Entry Pages</h3>
+								<p class="hint">Landing pages ranked by how quickly the visits that started there reach their first interaction (fastest first, fuller bar = faster hook). The page that latches attention quickest is your strongest front door; a slow one is where people hesitate before doing anything.</p>
+								<div id="latch-entry"></div>
+							</div>
+
+							<div class="admin-card">
+								<h3>Engagement Speed by Source</h3>
+								<p class="hint">Acquisition channels ranked by how fast the visitors they send begin engaging (classified the same way as Compass). Compass tells you which source sends the <em>most</em> visitors and Ember which sends the <em>best</em>; Latch tells you which sends the <em>readiest</em> &mdash; audiences that arrive primed to act rather than needing to be won over.</p>
+								<div id="latch-source"></div>
+							</div>
+
+							<div class="admin-card">
+								<h3>Recent Landings</h3>
+								<p class="hint">The latest arrivals with their first action and how long it took &mdash; or tagged <code>COLD</code> when the visitor left without interacting. Useful for sanity-checking the signal and spotting whether cold landings cluster on a particular page.</p>
+								<div id="latch-recent"></div>
+							</div>
+
+						</div>
+
 		</div><!-- /#admin-dash -->
 		<input type="file" id="img-file-input" accept="image/*" style="display:none" />
 
@@ -3063,6 +3118,9 @@ document.addEventListener('click', function(e){
   }
   if (e.target.dataset && e.target.dataset.tab === 'ember') {
     renderEmberTab();
+  }
+  if (e.target.dataset && e.target.dataset.tab === 'latch') {
+    renderLatchTab();
   }
 });
 
@@ -6642,6 +6700,267 @@ document.getElementById('ember-export-btn').addEventListener('click', function()
   var url  = URL.createObjectURL(blob);
   var a    = document.createElement('a');
   a.href = url; a.download = 'ember-' + Date.now() + '.json'; a.click();
+  URL.revokeObjectURL(url);
+});
+
+/* ================================================================
+   LATCH TAB — First-Impression & Engagement Latency
+   For every landing, measures the gap between arriving (first pv)
+   and the first real interaction (earliest click or scroll), then
+   ranks visits by how quickly the portfolio hooks them. Read-only
+   over _gam_analytics_v1 — no new storage key, no analytics.js change.
+   ================================================================ */
+
+/* Latency thresholds (ms) for the buckets, and the cold-bounce window. */
+var LATCH_INSTANT = 2000, LATCH_QUICK = 5000, LATCH_WARM = 15000;
+var LATCH_EARLY_MS = 8000;   /* left within 8s without interacting = cold bounce */
+var LATCH_SPEED_CAP = 20000; /* speed bars: 0ms → full, 20s+ → empty */
+
+/* First-action mix colours — warm amber/sand, no blue/pink. */
+var LATCH_MIX = [
+  { key: 'scroll', label: 'Scrolled first', color: 'rgba(176,122,74,0.9)' },
+  { key: 'click',  label: 'Clicked first',  color: 'rgba(201,168,124,0.9)' },
+  { key: 'none',   label: 'Never engaged',  color: 'rgba(120,116,108,0.5)' }
+];
+
+function latchMedian(arr) {
+  if (!arr.length) return 0;
+  var s = arr.slice().sort(function(a, b){ return a - b; });
+  var m = Math.floor(s.length / 2);
+  return s.length % 2 ? s[m] : Math.round((s[m - 1] + s[m]) / 2);
+}
+
+function buildLatch() {
+  var events = CommissionData.getAnalytics() || [];
+  var bySid = {};
+  events.forEach(function(e){ if (e.sid) (bySid[e.sid] = bySid[e.sid] || []).push(e); });
+
+  var sessions = [];
+  Object.keys(bySid).forEach(function(sid) {
+    var evts = bySid[sid].slice().sort(function(a, b){ return (a.ts || 0) - (b.ts || 0); });
+    var firstPvTs = null, entry = null, refHost = 'direct';
+    var firstActTs = null, firstActType = null, lastTs = null, exitMs = 0;
+
+    evts.forEach(function(e) {
+      if (lastTs === null || e.ts > lastTs) lastTs = e.ts;
+      if (e.type === 'pv') {
+        if (firstPvTs === null) { firstPvTs = e.ts; entry = e.page || '/'; refHost = e.refHost || 'direct'; }
+      } else if (e.type === 'click' || e.type === 'scroll') {
+        if (firstPvTs !== null && e.ts >= firstPvTs && firstActTs === null) {
+          firstActTs = e.ts; firstActType = e.type;
+        }
+      } else if (e.type === 'exit') {
+        if ((e.ms || 0) > exitMs) exitMs = e.ms;
+      }
+    });
+    if (firstPvTs === null) return; /* no landing → not a real visit */
+
+    var engaged = firstActTs !== null;
+    var latency = engaged ? Math.max(0, firstActTs - firstPvTs) : null;
+    var dwell   = Math.max((lastTs || firstPvTs) - firstPvTs, exitMs);
+    sessions.push({
+      sid: sid, entry: entry || '/', refHost: refHost, engaged: engaged,
+      latency: latency, firstAct: engaged ? firstActType : 'none',
+      dwell: dwell, coldBounce: (!engaged && dwell < LATCH_EARLY_MS),
+      ts: lastTs || firstPvTs
+    });
+  });
+
+  var total   = sessions.length;
+  var engagedSessions = sessions.filter(function(s){ return s.engaged; });
+  var latencies = engagedSessions.map(function(s){ return s.latency; });
+  var median  = latchMedian(latencies);
+  var instant = engagedSessions.filter(function(s){ return s.latency < LATCH_INSTANT; }).length;
+  var neverCount  = total - engagedSessions.length;
+  var coldBounces = sessions.filter(function(s){ return s.coldBounce; }).length;
+  var engagedRate = total ? Math.round((engagedSessions.length / total) * 100) : 0;
+
+  /* First-action mix */
+  var mix = { scroll: 0, click: 0, none: 0 };
+  sessions.forEach(function(s){ mix[s.firstAct === 'scroll' ? 'scroll' : s.firstAct === 'click' ? 'click' : 'none']++; });
+
+  /* Latency distribution buckets */
+  var buckets = [
+    { key: 'instant', label: 'Instant (<2s)',  count: 0 },
+    { key: 'quick',   label: 'Quick (2–5s)',   count: 0 },
+    { key: 'warm',    label: 'Warming (5–15s)', count: 0 },
+    { key: 'slow',    label: 'Slow (15s+)',    count: 0 },
+    { key: 'never',   label: 'Never engaged',  count: 0 }
+  ];
+  sessions.forEach(function(s) {
+    if (!s.engaged) buckets[4].count++;
+    else if (s.latency < LATCH_INSTANT) buckets[0].count++;
+    else if (s.latency < LATCH_QUICK)   buckets[1].count++;
+    else if (s.latency < LATCH_WARM)    buckets[2].count++;
+    else buckets[3].count++;
+  });
+
+  var byEntry  = latchGroupSpeed(engagedSessions, function(s){ return jPageLabel(s.entry); });
+  var bySource = latchGroupSpeed(engagedSessions, function(s){ return compassClassify(s.refHost || 'direct'); });
+  var recent   = sessions.slice().sort(function(a, b){ return (b.ts || 0) - (a.ts || 0); }).slice(0, 14);
+
+  return {
+    sessions: sessions, total: total, engagedCount: engagedSessions.length,
+    median: median, instant: instant,
+    instantRate: total ? Math.round((instant / total) * 100) : 0,
+    neverCount: neverCount, neverRate: total ? Math.round((neverCount / total) * 100) : 0,
+    coldBounces: coldBounces, engagedRate: engagedRate,
+    mix: mix, buckets: buckets, byEntry: byEntry, bySource: bySource, recent: recent
+  };
+}
+
+/* Group engaged sessions by a key → average latency + count, fastest first. */
+function latchGroupSpeed(list, keyFn) {
+  var g = {};
+  list.forEach(function(s) {
+    var k = keyFn(s);
+    (g[k] = g[k] || { sum: 0, n: 0 });
+    g[k].sum += s.latency; g[k].n++;
+  });
+  return Object.keys(g).map(function(k) {
+    return { label: k, avg: Math.round(g[k].sum / g[k].n), count: g[k].n };
+  }).sort(function(a, b){ return (a.avg - b.avg) || (b.count - a.count); });
+}
+
+/* Speed bars: faster (lower latency) = fuller bar. */
+function latchSpeedBars(rows) {
+  if (!rows.length) return '<p class="tide-empty">Not enough engaged sessions yet.</p>';
+  return '<div class="spotlight-board">' + rows.map(function(r) {
+    var w = Math.max(4, Math.round(100 * (1 - Math.min(r.avg, LATCH_SPEED_CAP) / LATCH_SPEED_CAP)));
+    return '<div class="spotlight-row">' +
+      '<div class="sp-info">' +
+        '<div class="sp-label" title="' + escHtml(r.label) + '">' + escHtml(r.label) + '</div>' +
+        '<div class="sp-bar-wrap"><div class="sp-bar" style="width:' + w + '%"></div></div>' +
+      '</div>' +
+      '<div class="sp-meta">' +
+        '<span class="sp-time">' + jFmtDur(r.avg) + '</span>' +
+        '<span class="sp-views">' + r.count + (r.count === 1 ? ' session' : ' sessions') + '</span>' +
+      '</div>' +
+    '</div>';
+  }).join('') + '</div>';
+}
+
+function latchRecent(rows) {
+  if (!rows.length) return '<p class="tide-empty">No landings recorded yet.</p>';
+  return rows.map(function(s) {
+    var tag, tagColor, desc;
+    if (!s.engaged) {
+      tag = 'COLD'; tagColor = 'rgba(120,116,108,0.6)'; desc = 'left without interacting';
+    } else {
+      tag = s.firstAct === 'scroll' ? 'SCROLL' : 'CLICK';
+      tagColor = 'rgba(176,122,74,0.85)';
+      desc = 'first ' + s.firstAct + ' in ' + jFmtDur(s.latency);
+    }
+    return '<div class="latch-row">' +
+      '<div class="latch-main">' +
+        '<div><span class="latch-tag" style="background:' + tagColor + ';color:#1a1712">' + tag + '</span> ' +
+          '<span class="latch-sub">' + escHtml(jPageLabel(s.entry)) + '</span></div>' +
+        '<div class="latch-sub">' + desc + ' · ' + jFmtDur(s.dwell) + ' on site</div>' +
+      '</div>' +
+      '<div class="latch-meta"><div class="latch-sub">' + escHtml(fmtDate(s.ts)) + '</div></div>' +
+    '</div>';
+  }).join('');
+}
+
+function drawLatchDonut(la) {
+  var canvas = document.getElementById('latch-donut');
+  if (!canvas) return;
+  var ctx = canvas.getContext('2d');
+  var W = canvas.width, H = canvas.height;
+  ctx.clearRect(0, 0, W, H);
+  var cx = W / 2, cy = H / 2, rOut = 78, rIn = 46;
+
+  if (!la.total) {
+    ctx.fillStyle = '#444';
+    ctx.font = '12px -apple-system, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('No landings yet.', cx, cy);
+    return;
+  }
+
+  var start = -Math.PI / 2;
+  LATCH_MIX.forEach(function(m) {
+    var v = la.mix[m.key] || 0;
+    if (!v) return;
+    var ang = (v / la.total) * Math.PI * 2;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.arc(cx, cy, rOut, start, start + ang);
+    ctx.closePath();
+    ctx.fillStyle = m.color;
+    ctx.fill();
+    start += ang;
+  });
+
+  ctx.globalCompositeOperation = 'destination-out';
+  ctx.beginPath();
+  ctx.arc(cx, cy, rIn, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.globalCompositeOperation = 'source-over';
+
+  ctx.fillStyle = '#c9a87c';
+  ctx.font = 'bold 22px -apple-system, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(la.engagedRate + '%', cx, cy - 6);
+  ctx.fillStyle = '#8c887f';
+  ctx.font = '10px "Courier New", monospace';
+  ctx.fillText('ENGAGED', cx, cy + 12);
+}
+
+function renderLatchTab() {
+  var la = buildLatch();
+
+  function chip(num, label) {
+    return '<div class="analytics-stat-chip"><span class="asc-num">' + num +
+      '</span><span class="asc-label">' + label + '</span></div>';
+  }
+  document.getElementById('latch-stats').innerHTML =
+    chip(la.total,                          'Landings') +
+    chip(la.engagedCount ? jFmtDur(la.median) : '—', 'Median Time-to-Engage') +
+    chip(la.instantRate + '%',              'Instant-Engage Rate') +
+    chip(la.neverRate + '%',                'Never-Engaged Rate');
+
+  drawLatchDonut(la);
+  var legendEl = document.getElementById('latch-legend');
+  legendEl.innerHTML = LATCH_MIX.map(function(m) {
+    var v = la.mix[m.key] || 0;
+    var share = la.total ? Math.round((v / la.total) * 100) : 0;
+    return '<div class="compass-legend-item">' +
+      '<span class="compass-legend-swatch" style="background:' + m.color + '"></span>' +
+      '<span>' + m.label + '</span>' +
+      '<span class="compass-legend-val">' + v + ' · ' + share + '%</span>' +
+    '</div>';
+  }).join('');
+
+  document.getElementById('latch-dist').innerHTML   = jBarList(la.buckets, la.total);
+  document.getElementById('latch-entry').innerHTML  = latchSpeedBars(la.byEntry);
+  document.getElementById('latch-source').innerHTML = latchSpeedBars(la.bySource);
+  document.getElementById('latch-recent').innerHTML = latchRecent(la.recent);
+}
+
+document.getElementById('latch-refresh-btn').addEventListener('click', renderLatchTab);
+
+document.getElementById('latch-export-btn').addEventListener('click', function() {
+  var la = buildLatch();
+  var out = {
+    total: la.total, engagedCount: la.engagedCount,
+    medianMs: la.median, instant: la.instant, instantRate: la.instantRate,
+    neverCount: la.neverCount, neverRate: la.neverRate,
+    coldBounces: la.coldBounces, engagedRate: la.engagedRate,
+    mix: la.mix,
+    buckets: la.buckets.map(function(b){ return { bucket: b.key, count: b.count }; }),
+    byEntry: la.byEntry, bySource: la.bySource,
+    sessions: la.sessions.map(function(s){
+      return { entry: s.entry, refHost: s.refHost, engaged: s.engaged,
+               latencyMs: s.latency, firstAct: s.firstAct, dwellMs: s.dwell,
+               coldBounce: s.coldBounce, ts: s.ts };
+    })
+  };
+  var blob = new Blob([JSON.stringify(out, null, 2)], { type: 'application/json' });
+  var url  = URL.createObjectURL(blob);
+  var a    = document.createElement('a');
+  a.href = url; a.download = 'latch-' + Date.now() + '.json'; a.click();
   URL.revokeObjectURL(url);
 });
 </script>
