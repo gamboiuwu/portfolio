@@ -199,6 +199,7 @@ Password-protected (SHA-256 hash in localStorage, 5-attempt lockout). Session tr
 | Tide        | Trends & momentum — recent-window vs prior-window deltas: daily traffic momentum chart, rising/cooling artworks, trending pages & sources |
 | Ember       | Engagement quality index — composite 0–100 per-session score from six weighted signals, quality-tier distribution, score drivers, best entry pages & sources, top sessions |
 | Latch       | First-impression & engagement latency — time-to-first-interaction per landing, first-action mix (scroll/click/none), latency distribution, fastest-hooking entry pages & sources, recent landings |
+| Thread      | Artwork viewing order & progression — ordered artwork sequence per visit: anchor (first-seen) pieces, terminal (last-seen) pieces, most common ordered paths, next-artwork flow explorer |
 
 ---
 
@@ -811,6 +812,44 @@ Answers the question no other tool in the family measures: **how fast does a vis
 
 ---
 
+## Thread — Artwork Viewing Order & Progression (Admin → Thread tab) — NEW TOOL
+
+Answers a sequencing question no other tool can: **in what order do visitors actually look at the artworks, and where does the thread of a visit begin and end?** Spotlight ranks each artwork on its own (magnitude); Mosaic pairs the pieces seen together but **unordered**; Journey maps directional flow but for **pages**, not artworks. None follows the *order* artworks are viewed within a single visit. Thread is the directional, in-order companion to Mosaic and the artwork analog of Journey's page flow — it reconstructs each session's ordered artwork sequence and surfaces the **anchor** (first-seen) pieces, the **terminal** (last-seen) pieces, the most common ordered paths, and a next-artwork flow explorer. A concrete signal for deciding what to lead with, what to place next, and which piece quietly ends most visits.
+
+**Why it's genuinely new:** every existing artwork tool is either magnitude (Spotlight) or unordered association (Mosaic). Thread is the first with a sense of *artwork direction* — first→next→last within a visit. Journey does this for pages; Thread does it for the artworks themselves, which pages can't express (multiple pieces live on one page).
+
+**No new storage key** — derived live from `_gam_spotlight_v1` (the artwork viewport events Spotlight already records via `IntersectionObserver`), the same read-only pattern as Mosaic/Journey. No `analytics.js` change.
+
+**How it works:**
+1. `buildThread()` groups spotlight events by `sid`, sorts each session's events by `ts`, and builds an ordered artwork sequence (collapsing immediate repeats).
+2. Every session's sequence contributes an **anchor** (`firstOf[seq[0]]`) and a **terminal** (`lastOf[seq[last]]`), even single-artwork visits.
+3. Sessions with `≥ 2` distinct artworks in order are counted as **sequenced**: each adjacent pair increments a directional transition `trans[from][to]`, the final piece transitions to a synthetic `✕ left` terminal step, and the full ordered path is tallied.
+4. A **next-artwork flow explorer** reads `trans` to show, for any picked piece, the distribution of what visitors view next (including the share who stopped there).
+
+**Admin tab sections:**
+- **Stats**: Sequenced Sessions, Avg Arts / Sequence, Top Anchor, Top Terminal
+- **Anchor Artworks — Where Visits Begin**: pieces ranked by how often they're viewed first (first-impression artwork)
+- **Where the Thread Ends — Last Artwork Seen**: pieces ranked by how often they're the last thing viewed before leaving
+- **Most Common Artwork Sequences**: full ordered paths (`A → B → C → ✕ left`) ranked by frequency
+- **Next-Artwork Flow Explorer**: pick any artwork → ranked distribution of the next piece viewed (with `✕ left / stopped here`)
+
+**Derived schema (for export):**
+```js
+{ sequenced, avgSeq, topAnchor, topTerminal,
+  anchors:[{label,count}], terminals:[{label,count}], paths:[{seq:[…],count}] }
+```
+
+**Technical notes:**
+- Bars use the shared warm amber `spotlight-board`/`sp-*` styles; the sequence rows use a small `.thread-arrow` (amber `→`) + `.thread-end` (clay `✕ left`) wrapper — no blue/pink.
+- Reuses `jBarList()`, `analytics-stat-chip`, the `journey-select` dropdown, and `escHtml()`; only the `.thread-*` label classes are new.
+- Ordering is per session (`sid`), so one visitor across several tabs may count more than once (consistent with the rest of the family).
+- Immediate repeats of the same artwork are collapsed (an element flickering in/out of the viewport is one step, not many).
+- Tab renders lazily on click, same pattern as Latch/Ember/Tide/Mosaic/etc.
+
+**API:** none new on `CommissionData` — uses `CommissionData.getSpotlight()`. Logic lives in `renderThreadTab()` / `buildThread()` inside `admin/index.html`.
+
+---
+
 ## Commission System
 
 ### Pages
@@ -888,4 +927,4 @@ Stored in `_gam_prices_v1`. Three sections: `digital`, `stickers`, `animation`. 
 
 ---
 
-*Last updated: 2026-07-27*
+*Last updated: 2026-07-28*

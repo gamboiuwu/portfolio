@@ -874,6 +874,11 @@
 		.mosaic-x { font-family: 'Courier New', monospace; font-size: 0.72em; color: #c9a87c;
 			border: 1px solid rgba(201,168,124,0.35); border-radius: 3px; padding: 0 0.35em; flex-shrink: 0; }
 
+		/* Thread tab — artwork viewing order & progression (reuses spotlight bars) */
+		.thread-seq-lbl { display: flex; align-items: center; gap: 0.5em; flex-wrap: wrap; }
+		.thread-arrow { font-family: 'Courier New', monospace; font-size: 0.78em; color: #c9a87c; flex-shrink: 0; }
+		.thread-end { color: #96683e; font-family: 'Courier New', monospace; font-size: 0.9em; }
+
 		/* Tide tab — trends & momentum (reuses spotlight bars) */
 		#tide-canvas { display: block; }
 		.tide-win { display: flex; align-items: center; gap: 0.6em; flex-wrap: wrap; margin-bottom: 1em; }
@@ -1003,6 +1008,7 @@
 				<button class="admin-tab" data-tab="tide">Tide</button>
 				<button class="admin-tab" data-tab="ember">Ember</button>
 				<button class="admin-tab" data-tab="latch">Latch</button>
+				<button class="admin-tab" data-tab="thread">Thread</button>
 			</div>
 
 			<!-- ============ GALLERY TAB ============ -->
@@ -2095,6 +2101,45 @@
 
 						</div>
 
+						<div id="tab-thread" class="tab-content">
+
+							<div class="admin-card">
+								<h3>Thread — Artwork Viewing Order &amp; Progression</h3>
+								<p class="hint">Spotlight ranks each artwork on its own and Mosaic pairs the pieces seen <em>together</em> &mdash; but neither knows the <em>order</em>. Thread follows the actual path an eye takes through the gallery in one visit: which piece <strong>anchors</strong> the visit (the first artwork seen), which piece visitors move to <strong>next</strong> after any given one, and which piece is the <strong>last</strong> thing they look at before they leave. It is the directional, in-order companion to Mosaic and the artwork analog of Journey&rsquo;s page flow &mdash; a sequencing signal for deciding what to lead with, what to place next, and which piece quietly ends most visits. Derived live from the artwork viewport events Spotlight already records (<code>_gam_spotlight_v1</code>) &mdash; no new storage key, read-only, no <code>analytics.js</code> change.</p>
+								<div id="thread-stats" class="analytics-stats" style="margin-bottom:1em"></div>
+								<div style="display:flex;gap:0.5em;flex-wrap:wrap">
+									<button class="button small" id="thread-refresh-btn">Refresh</button>
+									<button class="button small" id="thread-export-btn">Export JSON</button>
+								</div>
+							</div>
+
+							<div class="admin-card">
+								<h3>Anchor Artworks — Where Visits Begin</h3>
+								<p class="hint">The pieces most often viewed <em>first</em> in a visit &mdash; the artwork that forms the visitor&rsquo;s first impression of your work. A strong anchor earns its place at the top of the page or the front of a series; if a piece you buried is anchoring visits, the layout is leading with it whether you meant to or not.</p>
+								<div id="thread-anchors"></div>
+							</div>
+
+							<div class="admin-card">
+								<h3>Where the Thread Ends — Last Artwork Seen</h3>
+								<p class="hint">The pieces most often viewed <em>last</em> before a visitor leaves. A terminal artwork is where attention runs out &mdash; sometimes a satisfying closer, sometimes the point people lose interest. Cross-check against Anchors: a piece that both opens and ends many visits is doing a lot of the work; one that only ever ends them may be a drop-off point.</p>
+								<div id="thread-terminals"></div>
+							</div>
+
+							<div class="admin-card">
+								<h3>Most Common Artwork Sequences</h3>
+								<p class="hint">The full ordered paths visitors trace through the artworks, most frequent first (<code>&times; left</code> marks where the visit ended). These are the real reading orders your layout produces &mdash; useful for confirming a deliberate sequence is being followed, or spotting an accidental one worth designing around.</p>
+								<div id="thread-paths"></div>
+							</div>
+
+							<div class="admin-card">
+								<h3>Next-Artwork Flow Explorer</h3>
+								<p class="hint">Pick any artwork to see what visitors view <em>next</em> after it &mdash; the directional hand-off from one piece to the rest, with <code>&times; left / stopped here</code> showing the share who went no further. Use it to decide what to place immediately after a given piece to keep people moving through the collection.</p>
+								<select id="thread-flow-select" class="journey-select" style="margin-bottom:0.9em"></select>
+								<div id="thread-flow"></div>
+							</div>
+
+						</div>
+
 		</div><!-- /#admin-dash -->
 		<input type="file" id="img-file-input" accept="image/*" style="display:none" />
 
@@ -3121,6 +3166,9 @@ document.addEventListener('click', function(e){
   }
   if (e.target.dataset && e.target.dataset.tab === 'latch') {
     renderLatchTab();
+  }
+  if (e.target.dataset && e.target.dataset.tab === 'thread') {
+    renderThreadTab();
   }
 });
 
@@ -6961,6 +7009,210 @@ document.getElementById('latch-export-btn').addEventListener('click', function()
   var url  = URL.createObjectURL(blob);
   var a    = document.createElement('a');
   a.href = url; a.download = 'latch-' + Date.now() + '.json'; a.click();
+  URL.revokeObjectURL(url);
+});
+
+/* ================================================================
+   THREAD TAB — artwork viewing order & progression
+   The directional, in-order companion to Mosaic. Spotlight ranks
+   each artwork alone (magnitude); Mosaic pairs the pieces seen
+   together (unordered); Journey maps directional flow but for
+   PAGES. None follows the ORDER artworks are viewed within a visit.
+   Thread reconstructs each session's ordered artwork sequence from
+   the viewport events Spotlight already records and surfaces the
+   anchor (first-seen) pieces, the terminal (last-seen) pieces, the
+   most common ordered paths, and a next-artwork flow explorer.
+   Derived live from _gam_spotlight_v1 — no new storage key,
+   read-only, same pattern as Mosaic/Journey.
+================================================================ */
+
+var THREAD_END = '✕ left';   /* synthetic terminal step */
+
+function buildThread() {
+  var events = CommissionData.getSpotlight() || [];
+
+  /* session -> ordered list of viewport events; artId -> best human label */
+  var bySid   = {};
+  var labelOf = {};
+  events.forEach(function(e) {
+    if (!e.sid || !e.artId) return;
+    var lbl = e.label || e.alt || e.artId.split('::').pop() || e.artId;
+    if (!labelOf[e.artId] || lbl.length > labelOf[e.artId].length) labelOf[e.artId] = lbl;
+    (bySid[e.sid] = bySid[e.sid] || []).push(e);
+  });
+
+  var firstOf   = {};   /* artId -> sessions it anchored (first-seen) */
+  var lastOf    = {};   /* artId -> sessions it terminated (last-seen) */
+  var trans     = {};   /* fromArtId -> { toArtId|THREAD_END -> count } */
+  var fromTot   = {};   /* fromArtId -> total outgoing steps */
+  var paths     = {};   /* "a>b>c" ordered path -> count */
+  var pathSeqOf = {};   /* path key -> array of artIds (for labels) */
+  var sequenced = 0;    /* sessions with >= 2 distinct arts in order */
+  var seqArtSum = 0;    /* sum of sequence lengths (for avg) */
+
+  Object.keys(bySid).forEach(function(sid) {
+    var evs = bySid[sid].slice().sort(function(a, b){ return (a.ts || 0) - (b.ts || 0); });
+    /* ordered sequence of artIds, collapsing immediate repeats */
+    var seq = [];
+    evs.forEach(function(e) {
+      if (!seq.length || seq[seq.length - 1] !== e.artId) seq.push(e.artId);
+    });
+    if (!seq.length) return;
+
+    firstOf[seq[0]]                = (firstOf[seq[0]] || 0) + 1;
+    lastOf[seq[seq.length - 1]]    = (lastOf[seq[seq.length - 1]] || 0) + 1;
+
+    if (seq.length < 2) return;   /* a lone artwork has no progression */
+    sequenced++;
+    seqArtSum += seq.length;
+
+    for (var i = 0; i < seq.length; i++) {
+      var from = seq[i];
+      var to   = (i < seq.length - 1) ? seq[i + 1] : THREAD_END;
+      trans[from]      = trans[from] || {};
+      trans[from][to]  = (trans[from][to] || 0) + 1;
+      fromTot[from]    = (fromTot[from] || 0) + 1;
+    }
+
+    var pk = seq.join('>');
+    paths[pk] = (paths[pk] || 0) + 1;
+    if (!pathSeqOf[pk]) pathSeqOf[pk] = seq.slice();
+  });
+
+  function rankLabelled(map) {
+    return Object.keys(map).map(function(id){
+      return { artId: id, label: threadLabel(labelOf, id), count: map[id] };
+    }).sort(function(a, b){ return b.count - a.count; });
+  }
+
+  var pathList = Object.keys(paths).map(function(k){
+    return { seq: pathSeqOf[k], count: paths[k] };
+  }).sort(function(a, b){ return b.count - a.count; });
+
+  var anchors   = rankLabelled(firstOf);
+  var terminals = rankLabelled(lastOf);
+
+  return {
+    labelOf: labelOf,
+    anchors: anchors,
+    terminals: terminals,
+    paths: pathList,
+    trans: trans,
+    fromTot: fromTot,
+    sequenced: sequenced,
+    anchorCount: anchors.length,
+    avgSeq: sequenced ? (seqArtSum / sequenced) : 0,
+    topAnchor: anchors.length ? anchors[0].label : '—',
+    topTerminal: terminals.length ? terminals[0].label : '—'
+  };
+}
+
+function threadLabel(labelOf, artId) {
+  return labelOf[artId] || (artId ? artId.split('::').pop() : artId) || artId;
+}
+
+function renderThreadTab() {
+  var t = buildThread();
+
+  function chip(num, label) {
+    return '<div class="analytics-stat-chip"><span class="asc-num">' + num +
+      '</span><span class="asc-label">' + label + '</span></div>';
+  }
+  document.getElementById('thread-stats').innerHTML =
+    chip(t.sequenced,             'Sequenced Sessions') +
+    chip(t.avgSeq.toFixed(1),     'Avg Arts / Sequence') +
+    chip(escHtml(t.topAnchor),    'Top Anchor') +
+    chip(escHtml(t.topTerminal),  'Top Terminal');
+
+  var emptyMsg = '<p style="color:#444;font-size:0.85em;padding:0.5em 0">No artwork sequences yet. Once visitors view artworks in order within a visit, their viewing path shows up here.</p>';
+
+  /* ── Anchors (first-seen) ── */
+  document.getElementById('thread-anchors').innerHTML = t.anchors.length
+    ? jBarList(t.anchors, 0, {
+        suffix: function(r){ return r.count + (r.count === 1 ? ' visit opened here' : ' visits opened here'); }
+      })
+    : emptyMsg;
+
+  /* ── Terminals (last-seen) ── */
+  document.getElementById('thread-terminals').innerHTML = t.terminals.length
+    ? jBarList(t.terminals, 0, {
+        suffix: function(r){ return r.count + (r.count === 1 ? ' visit ended here' : ' visits ended here'); }
+      })
+    : emptyMsg;
+
+  /* ── Most common ordered sequences ── */
+  var pathEl = document.getElementById('thread-paths');
+  if (!t.paths.length) {
+    pathEl.innerHTML = emptyMsg;
+  } else {
+    var maxPath = t.paths[0].count;
+    pathEl.innerHTML = '<div class="spotlight-board">' + t.paths.slice(0, 12).map(function(p) {
+      var pct = Math.round((p.count / maxPath) * 100);
+      var seqHtml = p.seq.map(function(id){ return '<span>' + escHtml(threadLabel(t.labelOf, id)) + '</span>'; })
+        .join('<span class="thread-arrow">&rarr;</span>') +
+        '<span class="thread-arrow">&rarr;</span><span class="thread-end">&times; left</span>';
+      return '<div class="spotlight-row">' +
+        '<div class="sp-info">' +
+          '<div class="sp-label thread-seq-lbl">' + seqHtml + '</div>' +
+          '<div class="sp-bar-wrap"><div class="sp-bar" style="width:' + pct + '%"></div></div>' +
+        '</div>' +
+        '<div class="sp-meta">' +
+          '<span class="sp-time">' + p.count + '</span>' +
+          '<span class="sp-views">' + (p.count === 1 ? 'visit' : 'visits') + '</span>' +
+        '</div>' +
+      '</div>';
+    }).join('') + '</div>';
+  }
+
+  /* ── Next-artwork flow explorer ── */
+  var sel = document.getElementById('thread-flow-select');
+  var fromArts = Object.keys(t.fromTot).sort(function(a, b){ return t.fromTot[b] - t.fromTot[a]; });
+  var prev = sel.value;
+  sel.innerHTML = fromArts.map(function(id){
+    return '<option value="' + escHtml(id) + '">' +
+      escHtml(threadLabel(t.labelOf, id)) + ' (' + t.fromTot[id] + ')</option>';
+  }).join('');
+  if (prev && fromArts.indexOf(prev) !== -1) sel.value = prev;
+
+  function drawFlow() {
+    var id = sel.value;
+    var el = document.getElementById('thread-flow');
+    if (!id || !t.trans[id]) {
+      el.innerHTML = '<p style="color:#444;font-size:0.85em;padding:0.5em 0">Pick an artwork above to see what visitors view next.</p>';
+      return;
+    }
+    var tot  = t.fromTot[id];
+    var rows = Object.keys(t.trans[id]).map(function(to){
+      return {
+        label: to === THREAD_END ? '✕ left / stopped here' : threadLabel(t.labelOf, to),
+        count: t.trans[id][to]
+      };
+    }).sort(function(a, b){ return b.count - a.count; });
+    el.innerHTML = jBarList(rows, tot, {
+      suffix: function(r, share){ return share + '% of views of this piece'; }
+    });
+  }
+  sel.onchange = drawFlow;
+  drawFlow();
+}
+
+document.getElementById('thread-refresh-btn').addEventListener('click', renderThreadTab);
+
+document.getElementById('thread-export-btn').addEventListener('click', function() {
+  var t = buildThread();
+  var out = {
+    sequenced: t.sequenced, avgSeq: t.avgSeq,
+    topAnchor: t.topAnchor, topTerminal: t.topTerminal,
+    anchors:   t.anchors.map(function(a){ return { label: a.label, count: a.count }; }),
+    terminals: t.terminals.map(function(a){ return { label: a.label, count: a.count }; }),
+    paths:     t.paths.slice(0, 50).map(function(p){
+      return { seq: p.seq.map(function(id){ return threadLabel(t.labelOf, id); }), count: p.count };
+    })
+  };
+  var blob = new Blob([JSON.stringify(out, null, 2)], { type: 'application/json' });
+  var url  = URL.createObjectURL(blob);
+  var a    = document.createElement('a');
+  a.href = url; a.download = 'thread-' + Date.now() + '.json'; a.click();
   URL.revokeObjectURL(url);
 });
 </script>
