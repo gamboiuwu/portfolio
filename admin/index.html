@@ -879,6 +879,15 @@
 		.thread-arrow { font-family: 'Courier New', monospace; font-size: 0.78em; color: #c9a87c; flex-shrink: 0; }
 		.thread-end { color: #96683e; font-family: 'Courier New', monospace; font-size: 0.9em; }
 
+		/* Muse tab — artwork-to-conversion attribution (reuses compass donut + spotlight bars) */
+		.muse-donut-row { display: flex; gap: 1.4em; align-items: center; flex-wrap: wrap; }
+		#muse-donut { display: block; flex-shrink: 0; }
+		.muse-lift { display: inline-block; font-family: 'Courier New', monospace; font-size: 0.66em;
+			letter-spacing: 0.04em; padding: 0.1em 0.45em; border-radius: 3px; margin-left: 0.5em;
+			vertical-align: middle; }
+		.muse-lift-hot  { background: rgba(176,122,74,0.22); color: #d6a878; border: 1px solid rgba(176,122,74,0.4); }
+		.muse-lift-cold { background: rgba(140,136,127,0.16); color: #b7b3aa; border: 1px solid rgba(140,136,127,0.32); }
+
 		/* Tide tab — trends & momentum (reuses spotlight bars) */
 		#tide-canvas { display: block; }
 		.tide-win { display: flex; align-items: center; gap: 0.6em; flex-wrap: wrap; margin-bottom: 1em; }
@@ -1009,6 +1018,7 @@
 				<button class="admin-tab" data-tab="ember">Ember</button>
 				<button class="admin-tab" data-tab="latch">Latch</button>
 				<button class="admin-tab" data-tab="thread">Thread</button>
+				<button class="admin-tab" data-tab="muse">Muse</button>
 			</div>
 
 			<!-- ============ GALLERY TAB ============ -->
@@ -2140,6 +2150,47 @@
 
 						</div>
 
+						<div id="tab-muse" class="tab-content">
+
+							<div class="admin-card">
+								<h3>Muse — Artwork-to-Conversion Attribution</h3>
+								<p class="hint">Spotlight tells you which pieces hold attention and Beacon tells you which <em>sources</em> convert &mdash; but neither tells you <strong>which artworks the visitors who show commission intent actually looked at</strong>. Muse joins the artwork viewport events Spotlight records (<code>_gam_spotlight_v1</code>) with the commission-goal events Beacon records (<code>_gam_analytics_v1</code>) by session, then scores every piece by how much more likely a visitor is to reach out <em>after</em> seeing it. It is the first view that attributes intent to the work on the wall rather than the traffic at the door &mdash; the clearest read on which pieces actually sell. A session counts as <strong>interested</strong> if it fired any commission goal (CTA click, form open, contact step, or submit). Derived live &mdash; no new storage key, read-only, no <code>analytics.js</code> change.</p>
+								<div id="muse-stats" class="analytics-stats" style="margin-bottom:1em"></div>
+								<div style="display:flex;gap:0.5em;flex-wrap:wrap">
+									<button class="button small" id="muse-refresh-btn">Refresh</button>
+									<button class="button small" id="muse-export-btn">Export JSON</button>
+								</div>
+							</div>
+
+							<div class="admin-card">
+								<h3>Interest Mix — Art-Viewing Sessions</h3>
+								<p class="hint">Of every visit that looked at at least one artwork, the share that went on to show commission intent (fired a CTA / form goal) versus those that only browsed. The donut centre is the <strong>baseline intent rate</strong> &mdash; the bar every individual piece below is measured against.</p>
+								<div class="muse-donut-row">
+									<canvas id="muse-donut" width="180" height="180"></canvas>
+									<div class="compass-legend" id="muse-legend"></div>
+								</div>
+							</div>
+
+							<div class="admin-card">
+								<h3>Pieces That Convert — Highest Intent Lift</h3>
+								<p class="hint">Artworks ranked by <strong>conversion lift</strong>: how much the intent rate of visitors who saw a piece beats the baseline (<code>&times;1.0</code> = average, <code>&times;2.0</code> = twice as likely to reach out). Bars are sized by lift; each row shows <em>interested / total</em> sessions that viewed it. Only pieces with at least 2 art-viewing sessions are ranked, so a single lucky visit can&rsquo;t top the board. These are the works quietly doing the selling &mdash; lead with them, and hang the next commission-driver beside them.</p>
+								<div id="muse-converters"></div>
+							</div>
+
+							<div class="admin-card">
+								<h3>What Interested Visitors Look At</h3>
+								<p class="hint">The pieces most-viewed by sessions that showed commission intent, ranked by raw count &mdash; the actual gallery the would-be clients walked through. High lift says a piece <em>punches above its traffic</em>; this list says which pieces interested visitors simply see the most. A piece high on both is a genuine anchor for the commission funnel.</p>
+								<div id="muse-viewed"></div>
+							</div>
+
+							<div class="admin-card">
+								<h3>Cold Pieces — Attention Without Intent</h3>
+								<p class="hint">Artworks seen by several visitors but rarely followed by any commission intent (lowest intent rate, at least 2 art-viewing sessions). Not necessarily weak work &mdash; often a piece that pulls the eye but doesn&rsquo;t read as commissionable. Worth pairing with a clear call-to-action, or checking its placement isn&rsquo;t pulling attention away from the pieces that do convert.</p>
+								<div id="muse-cold"></div>
+							</div>
+
+						</div>
+
 		</div><!-- /#admin-dash -->
 		<input type="file" id="img-file-input" accept="image/*" style="display:none" />
 
@@ -3169,6 +3220,9 @@ document.addEventListener('click', function(e){
   }
   if (e.target.dataset && e.target.dataset.tab === 'thread') {
     renderThreadTab();
+  }
+  if (e.target.dataset && e.target.dataset.tab === 'muse') {
+    renderMuseTab();
   }
 });
 
@@ -7213,6 +7267,229 @@ document.getElementById('thread-export-btn').addEventListener('click', function(
   var url  = URL.createObjectURL(blob);
   var a    = document.createElement('a');
   a.href = url; a.download = 'thread-' + Date.now() + '.json'; a.click();
+  URL.revokeObjectURL(url);
+});
+
+/* ================================================================
+   MUSE TAB — Artwork-to-Conversion Attribution
+   Joins the artwork viewport events Spotlight records
+   (_gam_spotlight_v1) with the commission-goal events Beacon records
+   (_gam_analytics_v1) by session, then scores each piece by how much
+   more likely a visitor is to show commission intent after seeing it.
+   No new storage key — read-only, derived live.
+================================================================ */
+
+function buildMuse() {
+  var spots  = CommissionData.getSpotlight() || [];
+  var events = CommissionData.getAnalytics() || [];
+
+  /* sessions that fired any commission-intent goal (CTA / form_open / step3 / submit) */
+  var intentSids = {};
+  events.forEach(function(e) {
+    if (e && e.type === 'goal' && e.sid) intentSids[e.sid] = true;
+  });
+
+  /* artwork -> distinct viewing sessions + best human label */
+  var artSids = {};   /* artId -> { sids:{}, label } */
+  var allArt  = {};   /* sid -> true (any art-viewing session) */
+  spots.forEach(function(e) {
+    if (!e || !e.sid || !e.artId) return;
+    var a = artSids[e.artId] || (artSids[e.artId] = { sids: {}, label: '' });
+    a.sids[e.sid] = true;
+    allArt[e.sid] = true;
+    var lbl = e.label || e.alt || e.artId.split('::').pop() || e.artId;
+    if (lbl.length > a.label.length) a.label = lbl;
+  });
+
+  var artSidList      = Object.keys(allArt);
+  var artViewSessions = artSidList.length;
+  var intentArt       = artSidList.filter(function(s){ return intentSids[s]; }).length;
+  var baseline        = artViewSessions ? (intentArt / artViewSessions) : 0;
+
+  var pieces = Object.keys(artSids).map(function(id) {
+    var sids     = Object.keys(artSids[id].sids);
+    var sessions = sids.length;
+    var intent   = sids.filter(function(s){ return intentSids[s]; }).length;
+    var rate     = sessions ? (intent / sessions) : 0;
+    var lift     = baseline > 0 ? (rate / baseline) : 0;
+    return { artId: id, label: artSids[id].label || id.split('::').pop() || id,
+             sessions: sessions, intent: intent, rate: rate, lift: lift };
+  });
+
+  var converters = pieces.filter(function(p){ return p.sessions >= 2 && p.intent > 0; })
+    .sort(function(a, b){ return (b.lift - a.lift) || (b.sessions - a.sessions); });
+
+  var cold = pieces.filter(function(p){ return p.sessions >= 2; })
+    .sort(function(a, b){ return (a.rate - b.rate) || (b.sessions - a.sessions); });
+
+  var viewed = pieces.filter(function(p){ return p.intent > 0; })
+    .sort(function(a, b){ return (b.intent - a.intent) || (b.lift - a.lift); });
+
+  return {
+    artViewSessions: artViewSessions,
+    intentArt: intentArt,
+    baseline: baseline,
+    pieces: pieces,
+    converters: converters,
+    cold: cold,
+    viewed: viewed,
+    topConverter: converters.length ? converters[0].label : '—'
+  };
+}
+
+function museRow(label, pct, tagHtml, num, sub) {
+  return '<div class="spotlight-row">' +
+    '<div class="sp-info">' +
+      '<div class="sp-label" title="' + escHtml(label) + '">' + escHtml(label) + tagHtml + '</div>' +
+      '<div class="sp-bar-wrap"><div class="sp-bar" style="width:' + pct + '%"></div></div>' +
+    '</div>' +
+    '<div class="sp-meta">' +
+      '<span class="sp-time">' + num + '</span>' +
+      '<span class="sp-views">' + sub + '</span>' +
+    '</div>' +
+  '</div>';
+}
+
+function museLegendItem(color, label, v, total) {
+  var share = total ? Math.round((v / total) * 100) : 0;
+  return '<div class="compass-legend-item">' +
+    '<span class="compass-legend-swatch" style="background:' + color + '"></span>' +
+    '<span>' + label + '</span>' +
+    '<span class="compass-legend-val">' + v + ' · ' + share + '%</span>' +
+  '</div>';
+}
+
+function drawMuseDonut(m) {
+  var canvas = document.getElementById('muse-donut');
+  if (!canvas) return;
+  var ctx = canvas.getContext('2d');
+  var W = canvas.width, H = canvas.height;
+  ctx.clearRect(0, 0, W, H);
+  var cx = W / 2, cy = H / 2, rOut = 78, rIn = 46;
+  var total = m.artViewSessions;
+
+  if (!total) {
+    ctx.fillStyle = '#444';
+    ctx.font = '12px -apple-system, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('No art views yet.', cx, cy);
+    return;
+  }
+
+  var segs = [
+    { v: m.intentArt,          c: 'rgba(176,122,74,0.92)' },
+    { v: total - m.intentArt,  c: 'rgba(214,190,150,0.92)' }
+  ];
+  var start = -Math.PI / 2;
+  segs.forEach(function(s) {
+    if (!s.v) return;
+    var ang = (s.v / total) * Math.PI * 2;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.arc(cx, cy, rOut, start, start + ang);
+    ctx.closePath();
+    ctx.fillStyle = s.c;
+    ctx.fill();
+    start += ang;
+  });
+
+  ctx.globalCompositeOperation = 'destination-out';
+  ctx.beginPath();
+  ctx.arc(cx, cy, rIn, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.globalCompositeOperation = 'source-over';
+
+  ctx.fillStyle = '#c9a87c';
+  ctx.font = 'bold 22px -apple-system, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(Math.round(m.baseline * 100) + '%', cx, cy - 6);
+  ctx.fillStyle = '#8c887f';
+  ctx.font = '10px "Courier New", monospace';
+  ctx.fillText('INTENT', cx, cy + 12);
+}
+
+function renderMuseTab() {
+  var m = buildMuse();
+
+  function chip(num, label) {
+    return '<div class="analytics-stat-chip"><span class="asc-num">' + num +
+      '</span><span class="asc-label">' + label + '</span></div>';
+  }
+  document.getElementById('muse-stats').innerHTML =
+    chip(m.artViewSessions,                 'Art-Viewing Sessions') +
+    chip(m.intentArt,                       'Interested Sessions')  +
+    chip(Math.round(m.baseline * 100) + '%', 'Baseline Intent Rate') +
+    chip(escHtml(m.topConverter),           'Top Converting Piece');
+
+  /* ── Interest-mix donut + legend ── */
+  drawMuseDonut(m);
+  var browsing = m.artViewSessions - m.intentArt;
+  document.getElementById('muse-legend').innerHTML =
+    museLegendItem('rgba(176,122,74,0.92)',  'Interested',    m.intentArt, m.artViewSessions) +
+    museLegendItem('rgba(214,190,150,0.92)', 'Browsing only', browsing,    m.artViewSessions);
+
+  var empty = '<p style="color:#444;font-size:0.85em;padding:0.5em 0">No commission-intent sessions have viewed artwork yet. Once a visitor views a piece and then clicks a commission CTA or opens the inquiry form, attribution shows up here.</p>';
+
+  /* ── Pieces that convert — lift-sized bars ── */
+  var conv = m.converters;
+  if (!conv.length) {
+    document.getElementById('muse-converters').innerHTML = empty;
+  } else {
+    var maxLift = conv[0].lift || 1;
+    document.getElementById('muse-converters').innerHTML = '<div class="spotlight-board">' +
+      conv.slice(0, 15).map(function(p) {
+        var pct = Math.max(6, Math.round((p.lift / maxLift) * 100));
+        return museRow(p.label, pct,
+          '<span class="muse-lift muse-lift-hot">&times;' + p.lift.toFixed(1) + '</span>',
+          p.intent, p.intent + ' / ' + p.sessions + ' sessions');
+      }).join('') + '</div>';
+  }
+
+  /* ── What interested visitors look at — raw count ── */
+  var viewedRows = m.viewed.slice(0, 15).map(function(p){ return { label: p.label, count: p.intent }; });
+  document.getElementById('muse-viewed').innerHTML = viewedRows.length
+    ? jBarList(viewedRows, m.intentArt, {
+        suffix: function(r){ return r.count + (r.count === 1 ? ' interested visit' : ' interested visits'); }
+      })
+    : empty;
+
+  /* ── Cold pieces — attention without intent ── */
+  var cold = m.cold.filter(function(p){ return p.rate <= m.baseline; }).slice(0, 12);
+  if (!cold.length) {
+    document.getElementById('muse-cold').innerHTML =
+      '<p style="color:#444;font-size:0.85em;padding:0.5em 0">Not enough repeat-viewed artwork yet to flag cold pieces.</p>';
+  } else {
+    var maxS = cold.reduce(function(x, p){ return Math.max(x, p.sessions); }, 1);
+    document.getElementById('muse-cold').innerHTML = '<div class="spotlight-board">' +
+      cold.map(function(p) {
+        var pct = Math.max(6, Math.round((p.sessions / maxS) * 100));
+        return museRow(p.label, pct,
+          '<span class="muse-lift muse-lift-cold">' + Math.round(p.rate * 100) + '% intent</span>',
+          p.sessions, p.sessions + (p.sessions === 1 ? ' session' : ' sessions'));
+      }).join('') + '</div>';
+  }
+}
+
+document.getElementById('muse-refresh-btn').addEventListener('click', renderMuseTab);
+
+document.getElementById('muse-export-btn').addEventListener('click', function() {
+  var m = buildMuse();
+  var trim = function(p){ return { label: p.label, sessions: p.sessions, intent: p.intent,
+    rate: +p.rate.toFixed(3), lift: +p.lift.toFixed(2) }; };
+  var out = {
+    artViewSessions: m.artViewSessions,
+    intentSessions: m.intentArt,
+    baselineIntentRate: +m.baseline.toFixed(3),
+    topConverter: m.topConverter,
+    converters: m.converters.slice(0, 50).map(trim),
+    viewed:     m.viewed.slice(0, 50).map(trim),
+    cold:       m.cold.slice(0, 50).map(trim)
+  };
+  var blob = new Blob([JSON.stringify(out, null, 2)], { type: 'application/json' });
+  var url  = URL.createObjectURL(blob);
+  var a    = document.createElement('a');
+  a.href = url; a.download = 'muse-' + Date.now() + '.json'; a.click();
   URL.revokeObjectURL(url);
 });
 </script>

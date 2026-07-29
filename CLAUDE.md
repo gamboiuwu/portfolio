@@ -200,6 +200,7 @@ Password-protected (SHA-256 hash in localStorage, 5-attempt lockout). Session tr
 | Ember       | Engagement quality index — composite 0–100 per-session score from six weighted signals, quality-tier distribution, score drivers, best entry pages & sources, top sessions |
 | Latch       | First-impression & engagement latency — time-to-first-interaction per landing, first-action mix (scroll/click/none), latency distribution, fastest-hooking entry pages & sources, recent landings |
 | Thread      | Artwork viewing order & progression — ordered artwork sequence per visit: anchor (first-seen) pieces, terminal (last-seen) pieces, most common ordered paths, next-artwork flow explorer |
+| Muse        | Artwork-to-conversion attribution — joins artwork viewport events with commission-goal events per session: which pieces interested visitors view, conversion lift per artwork, cold pieces (attention without intent) |
 
 ---
 
@@ -850,6 +851,42 @@ Answers a sequencing question no other tool can: **in what order do visitors act
 
 ---
 
+## Muse — Artwork-to-Conversion Attribution (Admin → Muse tab) — NEW TOOL
+
+Answers the one question that ties the artwork tools to the business goal: **which artworks do the visitors who actually reach out for a commission look at?** Spotlight ranks each piece by attention on its own; Mosaic pairs pieces seen together (unordered); Thread orders them; Beacon reports the conversion funnel but attributes it to **traffic sources**; Ember folds a `goal` flag into a six-signal *session* score. **None attributes commission intent to specific artworks.** Muse is the first view that connects *the work on the wall* to *the visitor picking up the phone* — a direct read on which pieces sell.
+
+**Why it's genuinely new:** it is a *join* across the two data streams no other tool crosses — the artwork viewport events (`_gam_spotlight_v1`) **and** the commission-goal events (`_gam_analytics_v1`), matched by session id. Every existing artwork tool reads only spotlight; every conversion tool (Beacon) reads only analytics. Muse is the artwork-attribution layer on top of Beacon's funnel.
+
+**No new storage key** — derived live from `_gam_spotlight_v1` (artwork views) and `_gam_analytics_v1` (`goal` events), the same read-only pattern as Mosaic/Thread reading spotlight. No `analytics.js` change.
+
+**How it works:**
+1. `buildMuse()` marks every session (`sid`) that fired **any** `goal` event as **interested** (commission intent: `cta_commission` / `form_open` / `form_step3` / `form_submit`).
+2. It groups spotlight events into the distinct set of sessions that viewed each artwork (`artId`), keeping the longest human `label`.
+3. **Baseline intent rate** = interested art-viewing sessions ÷ all art-viewing sessions — the conversion rate of a visit that looked at *any* artwork.
+4. Per piece it derives `sessions` (distinct viewers), `intent` (of those, how many were interested), `rate` (`intent/sessions`), and **`lift`** (`rate / baseline`) — how much a piece over- or under-indexes on intent versus the average. Pieces need ≥ 2 art-viewing sessions to be ranked for lift, so one lucky visit can't top the board.
+
+**Admin tab sections:**
+- **Stats**: Art-Viewing Sessions, Interested Sessions, Baseline Intent Rate %, Top Converting Piece
+- **Interest Mix**: canvas donut + legend (interested vs. browsing-only art-viewers); centre shows the baseline intent rate %
+- **Pieces That Convert — Highest Intent Lift**: artworks ranked by conversion lift, bars sized by lift, each annotated `×lift` and *interested / total* sessions
+- **What Interested Visitors Look At**: pieces most-viewed by interested sessions, ranked by raw count (the gallery would-be clients actually walk through)
+- **Cold Pieces — Attention Without Intent**: pieces seen by ≥ 2 sessions with the lowest intent rate (attention that doesn't translate)
+
+**Derived schema (for export):**
+```js
+{ artViewSessions, intentSessions, baselineIntentRate, topConverter,
+  converters:[{label,sessions,intent,rate,lift}], viewed:[…], cold:[…] }
+```
+
+**Technical notes:**
+- Donut + swatches and the lift/intent tags use the warm amber/sand palette (`rgba(176,122,74…)` interested/hot, `rgba(214,190,150…)` browsing) — no blue/pink. New `.muse-*` CSS classes; reuses `jBarList()`, `analytics-stat-chip`, `compass-legend`/`compass-donut-row` styles, the `spotlight-board`/`sp-*` bar styles, and `escHtml()`.
+- Attribution is *association*, not proof of causation — a session that both viewed a piece and later showed intent, matched by `sid`. One visitor across several tabs may count as separate sessions (consistent with the rest of the family).
+- Tab renders lazily on click, same pattern as Thread/Latch/Ember/etc.
+
+**API:** none new on `CommissionData` — uses `CommissionData.getSpotlight()` + `.getAnalytics()`. Logic lives in `renderMuseTab()` / `buildMuse()` inside `admin/index.html`.
+
+---
+
 ## Commission System
 
 ### Pages
@@ -927,4 +964,4 @@ Stored in `_gam_prices_v1`. Three sections: `digital`, `stickers`, `animation`. 
 
 ---
 
-*Last updated: 2026-07-28*
+*Last updated: 2026-07-29*
