@@ -201,6 +201,7 @@ Password-protected (SHA-256 hash in localStorage, 5-attempt lockout). Session tr
 | Latch       | First-impression & engagement latency — time-to-first-interaction per landing, first-action mix (scroll/click/none), latency distribution, fastest-hooking entry pages & sources, recent landings |
 | Thread      | Artwork viewing order & progression — ordered artwork sequence per visit: anchor (first-seen) pieces, terminal (last-seen) pieces, most common ordered paths, next-artwork flow explorer |
 | Muse        | Artwork-to-conversion attribution — joins artwork viewport events with commission-goal events per session: which pieces interested visitors view, conversion lift per artwork, cold pieces (attention without intent) |
+| Reel        | Session replay & event timeline — reconstructs a single visit moment-by-moment: chronological interleaved stream of pageviews, clicks, scrolls, artwork views, goals & exit, with per-session summary and picker |
 
 ---
 
@@ -887,6 +888,44 @@ Answers the one question that ties the artwork tools to the business goal: **whi
 
 ---
 
+## Reel — Session Replay & Event Timeline (Admin → Reel tab) — NEW TOOL
+
+Answers the one question the entire analytics family structurally cannot: **what did a single visit actually look like, moment by moment?** Every other tool *aggregates* across sessions — Journey ranks page flows, Spotlight ranks artworks, Pulse buckets timing, Compass buckets sources, Ember scores whole sessions into a number, Muse attributes intent to pieces. None lets you **watch one visitor's session unfold in order**. Reel is the forensic, per-visitor companion to the family's aggregate views: it reconstructs a chosen session as a chronological timeline — where the visitor landed, how they arrived, every click, how far they scrolled, which artworks held their eye and for how long, any commission goal they hit, and where they finally clicked off.
+
+**Why it's genuinely new:** it is the only view that is *not* an aggregate. The Analytics tab's "Recent Sessions" list shows a one-line *summary* per session (page, duration, clicks, max scroll, ref) — it does **not** reconstruct the ordered event stream. Reel is also the only tool that **interleaves both data streams into one time-ordered narrative**: Muse joins spotlight + analytics but only to score pieces; Reel merges every `pv` / `click` / `scroll` / `tile_hover` / `goal` / `exit` event with every artwork-viewport event and lays them out on a single timeline sorted by `ts`.
+
+**No new storage key** — derived live from `_gam_analytics_v1` (the full event stream) and `_gam_spotlight_v1` (artwork viewport events), joined by `sid` and ordered by `ts`, the same read-only pattern as Muse. No `analytics.js` change.
+
+**How it works:**
+1. `buildReel()` groups every analytics event and every spotlight event by `sid`. Spotlight events are normalized to a synthetic `art` event (`{type:'art', ts, page, ms, label, artId}`) so they slot into the same stream.
+2. Per session it sorts the merged events by `ts` and derives a summary: `entry`/`exit` page, `refHost` source, `dev` device, `dur` (max of session span and longest `exit.ms`), `pvCount`, `clicks`, `maxScroll`, `artCount`, `artMs`, `goalCount`, `hasIntent`.
+3. Sessions are sorted newest-first for the picker. `renderReelSession()` renders the chosen session's summary chips and `reelBuildTimeline()` renders the ordered event rows, each with an elapsed-time offset (`+Xs`/`+Xm`) from the session start.
+4. Event rows are colour-coded per type (Land/Page, Click, Scroll, Artwork, Hover, Goal, Exit) and carry a human description (e.g. artwork rows show how long the piece stayed in view; goal rows map `form_submit` → "Submitted a commission inquiry").
+
+**Admin tab sections:**
+- **Stats**: Sessions Recorded, Avg Events / Session, Artwork-Enriched (sessions with ≥1 artwork view), With Commission Intent
+- **Replay session picker**: dropdown of recent sessions (entry page · date/time · event count · `intent` badge), newest first, up to 200
+- **Session Summary**: chips for the selected visit — Entry Page, Source, Device, Duration, Pageviews, Clicks, Max Scroll, Artworks, Commission Intent
+- **Replay Timeline**: the selected visit in order top-to-bottom, elapsed time on the left, one row per real event (pageview / click / scroll milestone / artwork-in-view / goal / exit) along a vertical amber timeline
+
+**Derived schema (for export):**
+```js
+{ totalSessions, totalEvents, avgEvents, artSessions, intentSessions,
+  sessions:[{ sid, entry, exit, source, device, durationMs, pageviews, clicks,
+              maxScroll, artworks, artMs, goals, hasIntent,
+              events:[{ type, ts, offsetMs, page, … }] }] }
+```
+
+**Technical notes:**
+- Timeline dots and type tags use the warm amber/clay/sand palette only (`#d6be96` pageview, `#b07a4a` click, `#8c887f` scroll, `#d6be96` artwork, `#c9a87c` goal with a soft glow, `#96683e` exit) — no blue/pink. New `.reel-*` CSS classes; reuses `analytics-stat-chip`, the `journey-select` dropdown, `jFmtDur()`, `jPageLabel()`, `escHtml()`.
+- One session (`sid`) is one tab, so a visitor across several tabs shows up as separate replays (consistent with the rest of the family).
+- Artwork rows come from the same `IntersectionObserver` viewport tracking Spotlight uses; scroll rows fire at the 25 / 50 / 75 / 100 thresholds (a proxy for vertical progress, matching Depth's caveat).
+- The picker is capped at the 200 most recent sessions; selection is preserved across a Refresh when the session still exists. Tab renders lazily on click, same pattern as Muse/Thread/Latch/etc.
+
+**API:** none new on `CommissionData` — uses `CommissionData.getAnalytics()` + `.getSpotlight()`. Logic lives in `renderReelTab()` / `buildReel()` / `reelBuildTimeline()` inside `admin/index.html`.
+
+---
+
 ## Commission System
 
 ### Pages
@@ -964,4 +1003,4 @@ Stored in `_gam_prices_v1`. Three sections: `digital`, `stickers`, `animation`. 
 
 ---
 
-*Last updated: 2026-07-29*
+*Last updated: 2026-07-30*
