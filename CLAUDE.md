@@ -201,6 +201,7 @@ Password-protected (SHA-256 hash in localStorage, 5-attempt lockout). Session tr
 | Latch       | First-impression & engagement latency — time-to-first-interaction per landing, first-action mix (scroll/click/none), latency distribution, fastest-hooking entry pages & sources, recent landings |
 | Thread      | Artwork viewing order & progression — ordered artwork sequence per visit: anchor (first-seen) pieces, terminal (last-seen) pieces, most common ordered paths, next-artwork flow explorer |
 | Muse        | Artwork-to-conversion attribution — joins artwork viewport events with commission-goal events per session: which pieces interested visitors view, conversion lift per artwork, cold pieces (attention without intent) |
+| Ripple      | Cohort retention & return decay — weekly acquisition cohorts (by first-seen week via persistent `vid`), retention triangle grid, average return-decay curve, best-retained cohorts, cohort sizes |
 
 ---
 
@@ -887,6 +888,47 @@ Answers the one question that ties the artwork tools to the business goal: **whi
 
 ---
 
+## Ripple — Cohort Retention & Return Decay (Admin → Ripple tab) — NEW TOOL
+
+Answers the one retention question the rest of the family structurally cannot: **do the visitors who found the site this week keep coming back next week, and the week after?** Orbit reports an *all-time* loyalty snapshot (new vs. returning, frequency, recency); Tide reports *recent-vs-prior* momentum; Pulse reports *time-of-week* rhythm. None groups visitors by *when they first arrived* and follows that group forward through time. Ripple is the first **time-cohorted retention** view — the classic retention triangle — the truest read on whether the work is holding an audience or just passing traffic.
+
+**Why it's genuinely new:** it's a *cohort* view, not an aggregate. Orbit's "returning %" mixes every visitor from every era into one number; Ripple isolates each acquisition week and measures its decay curve independently, so a good recent week isn't masked by a weak old one (or vice-versa). It reuses the persistent visitor id (`vid`) that Orbit introduced — but where Orbit asks *how many* come back, Ripple asks *how a given week's arrivals fade over their own lifetime*.
+
+**No new storage key** — derived live from `_gam_analytics_v1` `pv` events, which already carry `vid` and `vfirst` (added for Orbit). The same read-only pattern as Orbit/Tide/Muse. No `analytics.js` change.
+
+**Cohort model:** a visitor's **cohort** is the epoch-aligned week (`floor(firstSeen / week)`) of their first-ever pageview. A pageview's **week-offset** is `floor((ts − cohortWeekStart) / week)` — W0 is the acquisition week, W1 the next week, etc. **Retention[cohort][offset]** = the count of distinct cohort visitors active in that offset week; W0 is always 100% (the cohort itself). Legacy pageviews without a `vid` fold in as single-visit visitors keyed by `sid` (offset 0 only), consistent with Orbit.
+
+**Honest-window rule:** a cohort only contributes to week N if week N has actually **elapsed** for it (`maxElapsed = floor((now − cohortWeekStart) / week) ≥ N`). Cells for un-elapsed weeks are left **blank** (never counted as zero), and the decay curve's week-N point averages only cohorts old enough to have reached week N — so a young cohort that simply hasn't aged yet can't drag the tail down.
+
+**How it works:**
+1. `buildRipple()` walks `pv` events, groups them by `vid` (fallback `legacy:<sid>`), capturing each visitor's first-seen time and the set of week-offsets they were active in.
+2. It buckets visitors into weekly cohorts, tallies per-offset distinct returners, and marks a visitor as *returned* if active in any offset ≥ 1.
+3. It computes per-cohort `size` / `retCount` / `returnRate` / `maxElapsed`, the cross-cohort **decay** array (avg retention per offset over eligible cohorts), overall return rate, and week-1 retention.
+
+**Admin tab sections:**
+- **Stats**: Cohorts Tracked, Overall Return Rate, Avg Week-1 Retention, Best-Retained Cohort
+- **Cohort Retention Grid**: canvas retention triangle — rows = weekly cohorts (newest on top, ≤ 12 shown), columns = weeks-since (W0…W8 cap), each cell amber-scaled by retention % with the % printed in-cell; un-elapsed cells blank
+- **Return Decay Curve**: canvas line of average retention by week-offset across all eligible cohorts — how fast a typical cohort fades
+- **Best-Retained Cohorts**: acquisition weeks ranked by their week-1+ return rate (only cohorts ≥ 1 week old qualify)
+- **Cohort Sizes — New Visitors per Week**: cohorts ranked by new-visitor count (newest first)
+
+**Derived schema (for export):**
+```js
+{ cohortsTracked, totalVisitors, overallReturnRate, week1Retention, bestCohort,
+  decay:[{week, rate, cohorts}],
+  cohorts:[{weekOf, startMs, size, returned, returnRate, weeksElapsed, retention:{offset:count}}] }
+```
+
+**Technical notes:**
+- Grid cells and the decay line/area use the warm amber palette (`rgba(201,168,124,α)`, α scaled by retention) — no blue/pink. New `.ripple-*` CSS classes; reuses `jBarList()`, `analytics-stat-chip`, the `spotlight-board`/`sp-*` bar styles, and `escHtml()`.
+- Week cohorts are epoch-aligned (`floor(ts / week)`), so a "week" is a fixed 7-day bucket, not a locale week-start — consistent bucketing across all cohorts. Row/column labels show the cohort's start date and `W0…Wn` offsets.
+- Retention is per persistent visitor (`vid`), so unlike the `sid`-keyed tools a visitor returning in a new tab/session is correctly counted as the *same* person — that is the whole point of the cohort view.
+- Column count is capped at `RIPPLE_CAP` (8 weeks) and the grid to 12 rows; the tab renders lazily on click, same pattern as Muse/Thread/Latch/etc.
+
+**API:** none new on `CommissionData` — uses `CommissionData.getAnalytics()`. Logic lives in `renderRippleTab()` / `buildRipple()` inside `admin/index.html`.
+
+---
+
 ## Commission System
 
 ### Pages
@@ -964,4 +1006,4 @@ Stored in `_gam_prices_v1`. Three sections: `digital`, `stickers`, `animation`. 
 
 ---
 
-*Last updated: 2026-07-29*
+*Last updated: 2026-07-31*
