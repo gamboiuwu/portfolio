@@ -202,6 +202,7 @@ Password-protected (SHA-256 hash in localStorage, 5-attempt lockout). Session tr
 | Thread      | Artwork viewing order & progression — ordered artwork sequence per visit: anchor (first-seen) pieces, terminal (last-seen) pieces, most common ordered paths, next-artwork flow explorer |
 | Muse        | Artwork-to-conversion attribution — joins artwork viewport events with commission-goal events per session: which pieces interested visitors view, conversion lift per artwork, cold pieces (attention without intent) |
 | Ripple      | Cohort retention & return decay — weekly acquisition cohorts (by first-seen week via persistent `vid`), retention triangle grid, average return-decay curve, best-retained cohorts, cohort sizes |
+| Loom        | Session replay & event timeline — reconstructs a single visit as an ordered event stream (joins analytics + spotlight by `sid`): session picker, summary header, chronological replay timeline, recent-sessions directory |
 
 ---
 
@@ -929,6 +930,43 @@ Answers the one retention question the rest of the family structurally cannot: *
 
 ---
 
+## Loom — Session Replay & Event Timeline (Admin → Loom tab) — NEW TOOL
+
+Answers the one thing the entire analytics family structurally cannot: **what did a single visit actually look like, moment to moment?** Every other tab *aggregates* — Spotlight ranks artworks, Journey maps page flow, Beacon counts a funnel, Ember scores sessions, Ripple triangulates cohorts — all of them flatten hundreds of visits into rankings, funnels, and averages. **Loom is the only qualitative, single-session view**: it picks one visit and replays it in order, event by event. It is the "why" behind a number the aggregate tools only count — the session-replay layer standard in real analytics suites (Hotjar/FullStory), reconstructed with zero new instrumentation.
+
+**Why it's genuinely new:** it's a *drill-down replay*, not another aggregate. The Analytics tab's existing "Recent Sessions" list shows a one-line summary per session (page, duration, clicks, scroll, ref); Loom instead expands one session into its full ordered event stream and renders it as a vertical timeline. It is also the only tool that **weaves the two event streams together** — the behavioural log (`_gam_analytics_v1`) and the artwork-attention log (`_gam_spotlight_v1`) — interleaved by timestamp within one session, so an artwork view sits inline between a scroll and a click exactly where it happened.
+
+**No new storage key** — derived live from `_gam_analytics_v1` (`pv` / `click` / `scroll` / `tile_hover` / `goal` / `exit`) and `_gam_spotlight_v1` (artwork viewport views), matched by session id, the same read-only pattern as Journey/Ember/Muse. No `analytics.js` change.
+
+**How it works:**
+1. `buildLoom()` groups every analytics event and every spotlight view by `sid`, tagging each with a `kind` (`pv`/`click`/`scroll`/`art`/`tile_hover`/`goal`/`exit`), then sorts each session's merged stream by `ts`.
+2. Per session it derives the summary: `entry` (first pageview page), `refHost`/`channel` (via `compassClassify`), `dev`, `vnum`, counts (`pvCount`/`clicks`/`arts`/`goals`), `maxScroll`, and `spanMs` (max of the event-span and the longest `exit.ms`).
+3. Sessions are returned most-recent-activity first. The timeline renderer stamps each event with its offset from session start, shows the gap since the previous event when it's a meaningful pause (≥3 s), and marks pageviews (navigation) and goals (ringed) distinctly.
+
+**Admin tab sections:**
+- **Stats**: Sessions Recorded, Avg Events / Session, Richest Session (most events), Avg Session Span
+- **Session picker**: a dropdown of recent sessions (entry page · time · event count · ★ if the visit hit a goal); newest auto-selected
+- **Session Summary**: entry, source/channel, device, duration, pageviews, clicks, artworks, max scroll, goals, visit number, start time, event count
+- **Replay Timeline**: the full ordered event stream — each row tagged `PAGE` / `ART` / `CLICK` / `SCROLL` / `HOVER` / `GOAL` / `EXIT` with event-specific detail (click target + href, scroll %, artwork label + dwell, goal name + `ctype`, exit dwell)
+- **Recent Sessions**: clickable directory of the latest visits (entry page, at-a-glance glyphs, time) — click any row to load it into the replay
+
+**Derived schema (per session, for export):**
+```js
+{ sid, entry, source, channel, device, visitNumber, startedMs, spanMs,
+  pageviews, clicks, artworks, goals, maxScroll,
+  events:[{ t, kind, page, detail }] }   // t = ms offset from session start
+```
+
+**Technical notes:**
+- All tags/rails use the warm amber/sand/clay palette (`.loom-tag-pv` amber, `-art` clay, `-click` sand, `-goal` ringed gold, `-exit` deep grey) — no blue/pink. New `.loom-*` CSS classes; reuses `escHtml()`, `jFmtDur()`, `jPageLabel()`, `compassClassify()`, and the `analytics-stat-chip` styles.
+- Artwork (`art`) events are timestamped at the *end* of each in-view span (that's when the `IntersectionObserver` records elapsed ms), so an `ART` row lands where the piece left the screen — noted in the tab hint.
+- Sessions are keyed by `sid` (per-tab), so one visitor across several tabs appears as separate sessions (consistent with the rest of the family).
+- Tab renders lazily on click, same pattern as Ripple/Muse/Thread/etc. The session picker and the directory both drive the same replay; the current selection persists across refreshes when still present.
+
+**API:** none new on `CommissionData` — uses `CommissionData.getAnalytics()` + `.getSpotlight()`. Logic lives in `renderLoomTab()` / `buildLoom()` / `loomRenderSession()` inside `admin/index.html`.
+
+---
+
 ## Commission System
 
 ### Pages
@@ -1006,4 +1044,4 @@ Stored in `_gam_prices_v1`. Three sections: `digital`, `stickers`, `animation`. 
 
 ---
 
-*Last updated: 2026-07-31*
+*Last updated: 2026-08-03*

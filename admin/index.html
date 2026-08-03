@@ -899,6 +899,47 @@
 			letter-spacing: 0.04em; padding: 0.1em 0.45em; border-radius: 3px; margin-left: 0.5em; vertical-align: middle;
 			background: rgba(176,122,74,0.22); color: #d6a878; border: 1px solid rgba(176,122,74,0.4); }
 
+		/* Loom tab — per-session replay & event timeline (warm amber, no blue/pink) */
+		.loom-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+			gap: 0.5em; margin: 0.2em 0 0.4em; }
+		.loom-sum-cell { background: rgba(255,255,255,0.03); border: 1px solid rgba(201,201,201,0.08);
+			border-radius: 6px; padding: 0.55em 0.7em; }
+		.loom-sum-k { display: block; font-family: 'Courier New', monospace; font-size: 0.6em;
+			letter-spacing: 0.09em; text-transform: uppercase; color: #8c887f; margin-bottom: 0.25em; }
+		.loom-sum-v { display: block; font-size: 0.9em; color: #d8d2c6; word-break: break-word; }
+		.loom-timeline { position: relative; margin-top: 0.4em; padding-left: 0.4em; }
+		.loom-ev { display: flex; align-items: flex-start; gap: 0.7em; padding: 0.32em 0;
+			border-left: 2px solid rgba(201,168,124,0.16); padding-left: 0.9em; margin-left: 0.3em; position: relative; }
+		.loom-ev::before { content: ''; position: absolute; left: -5px; top: 0.62em; width: 8px; height: 8px;
+			border-radius: 50%; background: #6b5c44; border: 1px solid rgba(201,168,124,0.5); }
+		.loom-ev.loom-nav::before { background: #c9a87c; }
+		.loom-ev.loom-goalrow::before { background: #d6a878; box-shadow: 0 0 0 3px rgba(201,168,124,0.22); }
+		.loom-off { flex: 0 0 3.4em; font-family: 'Courier New', monospace; font-size: 0.68em;
+			color: #8c887f; text-align: right; padding-top: 0.18em; }
+		.loom-body { flex: 1 1 auto; min-width: 0; }
+		.loom-tag { display: inline-block; font-family: 'Courier New', monospace; font-size: 0.6em;
+			letter-spacing: 0.06em; text-transform: uppercase; padding: 0.08em 0.4em; border-radius: 3px;
+			vertical-align: middle; margin-right: 0.5em; }
+		.loom-tag-pv    { background: rgba(201,168,124,0.9);  color: #20201d; }
+		.loom-tag-click { background: rgba(214,190,150,0.24); color: #e0c79c; border: 1px solid rgba(214,190,150,0.4); }
+		.loom-tag-scroll{ background: rgba(140,136,127,0.18); color: #b7b1a6; border: 1px solid rgba(140,136,127,0.4); }
+		.loom-tag-art   { background: rgba(176,122,74,0.28);  color: #d6a878; border: 1px solid rgba(176,122,74,0.5); }
+		.loom-tag-hover { background: rgba(140,136,127,0.12); color: #a49f96; border: 1px solid rgba(140,136,127,0.3); }
+		.loom-tag-goal  { background: rgba(201,168,124,1);    color: #20201d; }
+		.loom-tag-exit  { background: rgba(120,116,108,0.85); color: #ece7dd; }
+		.loom-detail { font-size: 0.84em; color: #cfc9bf; }
+		.loom-detail .loom-path { font-family: 'Courier New', monospace; font-size: 0.92em; color: #b79b6f; }
+		.loom-detail .loom-href { color: #8c887f; font-family: 'Courier New', monospace; font-size: 0.82em; word-break: break-all; }
+		.loom-gap { font-family: 'Courier New', monospace; font-size: 0.62em; color: #6b675f; margin-left: 0.4em; }
+		.loom-dir-item { display: flex; align-items: center; gap: 0.6em; padding: 0.45em 0.5em;
+			border-bottom: 1px solid rgba(255,255,255,0.05); cursor: pointer; border-radius: 5px; }
+		.loom-dir-item:hover { background: rgba(201,168,124,0.08); }
+		.loom-dir-item.active { background: rgba(201,168,124,0.14); }
+		.loom-dir-page { flex: 1 1 auto; min-width: 0; font-family: 'Courier New', monospace; font-size: 0.78em;
+			color: #b79b6f; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+		.loom-dir-meta { flex: 0 0 auto; font-size: 0.7em; color: #8c887f; font-family: 'Courier New', monospace; }
+		.loom-dir-glyphs { flex: 0 0 auto; font-size: 0.66em; color: #a49f96; font-family: 'Courier New', monospace; }
+
 		/* Tide tab — trends & momentum (reuses spotlight bars) */
 		#tide-canvas { display: block; }
 		.tide-win { display: flex; align-items: center; gap: 0.6em; flex-wrap: wrap; margin-bottom: 1em; }
@@ -1031,6 +1072,7 @@
 				<button class="admin-tab" data-tab="thread">Thread</button>
 				<button class="admin-tab" data-tab="muse">Muse</button>
 				<button class="admin-tab" data-tab="ripple">Ripple</button>
+				<button class="admin-tab" data-tab="loom">Loom</button>
 			</div>
 
 			<!-- ============ GALLERY TAB ============ -->
@@ -2246,6 +2288,40 @@
 
 						</div>
 
+						<div id="tab-loom" class="tab-content">
+
+							<div class="admin-card">
+								<h3>Loom — Session Replay &amp; Event Timeline</h3>
+								<p class="hint">Every other tab in this dashboard <em>aggregates</em> &mdash; it flattens hundreds of visits into rankings, funnels and averages. Loom does the opposite: it picks a <strong>single visit</strong> and replays it, in order, event by event. It weaves the two event streams the site already records &mdash; the behavioural log (<code>_gam_analytics_v1</code>: pageviews, clicks, scroll depth, goals, exits) and the artwork-attention log (<code>_gam_spotlight_v1</code>: which piece was in view and for how long) &mdash; into one chronological thread keyed by session id, so you can watch exactly how one person moved through the portfolio: where they landed, what caught their eye, what they clicked, how far they read, and the moment they left. It is the qualitative complement to the aggregate tools &mdash; the &ldquo;why&rdquo; behind a number Beacon or Journey only counts. Read-only, no new storage key, no <code>analytics.js</code> change.</p>
+								<div id="loom-stats" class="analytics-stats" style="margin-bottom:1em"></div>
+								<div style="display:flex;gap:0.5em;flex-wrap:wrap;align-items:center">
+									<label style="font-size:0.72em;color:#8c887f;font-family:'Courier New',monospace;letter-spacing:0.04em">Session</label>
+									<select id="loom-select" class="journey-select" style="flex:1 1 260px;max-width:520px"></select>
+									<button class="button small" id="loom-refresh-btn">Refresh</button>
+									<button class="button small" id="loom-export-btn">Export JSON</button>
+								</div>
+							</div>
+
+							<div class="admin-card">
+								<h3>Session Summary</h3>
+								<p class="hint">A quick read on the visit you&rsquo;re replaying: where it began, what brought them in, what device they were on, how long they stayed, and the raw shape of their activity. The timeline below tells the story; this is the caption.</p>
+								<div id="loom-summary"></div>
+							</div>
+
+							<div class="admin-card">
+								<h3>Replay Timeline</h3>
+								<p class="hint">The visit, top to bottom, exactly as it unfolded. Each row is one recorded event stamped with its offset from the moment the session began; the gap since the previous event is shown when it&rsquo;s a meaningful pause. <strong>PAGE</strong> marks a navigation, <strong>ART</strong> is an artwork held in view (with dwell time), <strong>CLICK</strong> / <strong>SCROLL</strong> are interactions, <strong>GOAL</strong> is a commission-intent milestone (ringed, because that&rsquo;s the outcome that matters), and <strong>EXIT</strong> is the last thing recorded before they left. Artwork attention is timestamped at the end of each in-view span, so an <strong>ART</strong> row lands where the piece left the screen.</p>
+								<div id="loom-timeline"></div>
+							</div>
+
+							<div class="admin-card">
+								<h3>Recent Sessions</h3>
+								<p class="hint">The most recent visits, newest first. Click any row to load it into the replay above. Glyphs summarise the visit at a glance &mdash; ◱ pageviews, ⌖ clicks, ◆ artworks viewed, ★ commission-intent goals.</p>
+								<div id="loom-directory"></div>
+							</div>
+
+						</div>
+
 		</div><!-- /#admin-dash -->
 		<input type="file" id="img-file-input" accept="image/*" style="display:none" />
 
@@ -3281,6 +3357,9 @@ document.addEventListener('click', function(e){
   }
   if (e.target.dataset && e.target.dataset.tab === 'ripple') {
     renderRippleTab();
+  }
+  if (e.target.dataset && e.target.dataset.tab === 'loom') {
+    renderLoomTab();
   }
 });
 
@@ -7846,6 +7925,285 @@ document.getElementById('ripple-export-btn').addEventListener('click', function(
   var url  = URL.createObjectURL(blob);
   var a    = document.createElement('a');
   a.href = url; a.download = 'ripple-' + Date.now() + '.json'; a.click();
+  URL.revokeObjectURL(url);
+});
+
+/* ================================================================
+   LOOM — Session Replay & Event Timeline
+   Reconstructs a single visit as an ordered event stream, weaving
+   _gam_analytics_v1 (pv/click/scroll/goal/exit/tile_hover) together
+   with _gam_spotlight_v1 (artwork viewport views) by session id.
+   Every other tab aggregates across sessions; Loom replays one.
+   Read-only. No new storage key. No analytics.js change.
+   ================================================================ */
+var _loomList = null;   /* cached built sessions, most-recent activity first */
+var _loomSel  = null;   /* currently selected sid */
+
+function loomChannel(host) {
+  if (!host || host === 'direct') return 'direct';
+  try { return compassClassify(host); } catch (e) { return 'referral'; }
+}
+
+function buildLoom() {
+  var events = CommissionData.getAnalytics() || [];
+  var spots  = CommissionData.getSpotlight() || [];
+  var sess = {};
+  function ensure(sid) { return sess[sid] || (sess[sid] = { sid: sid, evts: [] }); }
+
+  events.forEach(function(e) {
+    if (!e || !e.sid || e.ts == null) return;
+    ensure(e.sid).evts.push({ kind: e.type, ts: e.ts, page: e.page, e: e });
+  });
+  spots.forEach(function(s) {
+    if (!s || !s.sid || s.ts == null) return;
+    ensure(s.sid).evts.push({ kind: 'art', ts: s.ts, page: s.page, e: s });
+  });
+
+  var list = Object.keys(sess).map(function(k) {
+    var s = sess[k];
+    s.evts.sort(function(a, b) { return a.ts - b.ts; });
+    s.evtCount = s.evts.length;
+    s.first = s.evts.length ? s.evts[0].ts : 0;
+    s.last  = s.evts.length ? s.evts[s.evts.length - 1].ts : 0;
+
+    var pv = s.evts.filter(function(x) { return x.kind === 'pv'; });
+    var firstPv = pv.length ? pv[0].e : null;
+    s.entry   = firstPv ? firstPv.page : (s.evts[0] ? s.evts[0].page : '/');
+    s.refHost = firstPv ? (firstPv.refHost || firstPv.ref || 'direct') : 'direct';
+    s.channel = loomChannel(s.refHost);
+    s.dev     = firstPv ? (firstPv.dev || '') : '';
+    s.vnum    = (firstPv && firstPv.vnum != null) ? firstPv.vnum : null;
+    s.pvCount = pv.length;
+    s.clicks  = s.evts.filter(function(x) { return x.kind === 'click'; }).length;
+    s.arts    = s.evts.filter(function(x) { return x.kind === 'art'; }).length;
+    s.goals   = s.evts.filter(function(x) { return x.kind === 'goal'; }).length;
+
+    var sc = s.evts.filter(function(x) { return x.kind === 'scroll'; })
+                   .map(function(x) { return x.e.depth || 0; });
+    s.maxScroll = sc.length ? Math.max.apply(null, sc) : 0;
+
+    var ex = s.evts.filter(function(x) { return x.kind === 'exit'; });
+    var exMs = ex.length ? Math.max.apply(null, ex.map(function(x) { return x.e.ms || 0; })) : 0;
+    s.spanMs = Math.max(s.last - s.first, exMs);
+    return s;
+  }).filter(function(s) { return s.evtCount > 0; })
+    .sort(function(a, b) { return b.last - a.last; });
+
+  return list;
+}
+
+function loomTagInfo(kind) {
+  switch (kind) {
+    case 'pv':         return { cls: 'loom-tag-pv',     label: 'Page' };
+    case 'click':      return { cls: 'loom-tag-click',  label: 'Click' };
+    case 'scroll':     return { cls: 'loom-tag-scroll', label: 'Scroll' };
+    case 'art':        return { cls: 'loom-tag-art',    label: 'Art' };
+    case 'tile_hover': return { cls: 'loom-tag-hover',  label: 'Hover' };
+    case 'goal':       return { cls: 'loom-tag-goal',   label: 'Goal' };
+    case 'exit':       return { cls: 'loom-tag-exit',   label: 'Exit' };
+    default:           return { cls: 'loom-tag-scroll', label: escHtml(kind) };
+  }
+}
+
+function loomOffset(ms) {
+  if (ms < 1000) return '+0s';
+  return '+' + jFmtDur(ms);
+}
+
+function loomEventDetail(x, prevPage) {
+  var e = x.e;
+  function path(p) { return '<span class="loom-path">' + escHtml(jPageLabel(p)) + '</span>'; }
+  switch (x.kind) {
+    case 'pv':
+      return (prevPage == null ? 'Landed on ' : 'Navigated to ') + path(x.page) +
+        (prevPage == null && e && e.refHost && e.refHost !== 'direct'
+          ? ' <span class="loom-href">via ' + escHtml(e.refHost) + '</span>' : '');
+    case 'click':
+      var tgt  = e.text ? '“' + escHtml(String(e.text).slice(0, 60)) + '”'
+                        : ('<code>' + escHtml(e.el || 'element') + '</code>');
+      var href = e.href ? ' <span class="loom-href">→ ' + escHtml(e.href) + '</span>' : '';
+      return 'Clicked ' + tgt + href;
+    case 'scroll':
+      return 'Scrolled to ' + (e.depth || 0) + '% of ' + path(x.page);
+    case 'art':
+      return 'Viewed <strong>' + escHtml(e.label || e.alt || e.artId || 'artwork') +
+        '</strong> for ' + jFmtDur(e.ms || 0);
+    case 'tile_hover':
+      return 'Lingered on <strong>' + escHtml(e.title || 'a tile') + '</strong>';
+    case 'goal':
+      return 'Goal reached — <strong>' + escHtml(e.goal || 'goal') + '</strong>' +
+        (e.ctype ? ' (' + escHtml(e.ctype) + ')' : '');
+    case 'exit':
+      return 'Left ' + path(x.page) + ' after ' + jFmtDur(e.ms || 0) + ' on the page';
+    default:
+      return escHtml(x.kind);
+  }
+}
+
+function loomPlainDetail(x) {
+  var e = x.e;
+  switch (x.kind) {
+    case 'pv':         return 'pageview ' + x.page;
+    case 'click':      return 'click ' + (e.el || '') + (e.text ? ' "' + String(e.text).slice(0, 60) + '"' : '') + (e.href ? ' -> ' + e.href : '');
+    case 'scroll':     return 'scroll ' + (e.depth || 0) + '%';
+    case 'art':        return 'art ' + (e.label || e.alt || e.artId || '') + ' ' + (e.ms || 0) + 'ms';
+    case 'tile_hover': return 'hover ' + (e.title || '');
+    case 'goal':       return 'goal ' + (e.goal || '') + (e.ctype ? ' ' + e.ctype : '');
+    case 'exit':       return 'exit after ' + (e.ms || 0) + 'ms';
+    default:           return x.kind;
+  }
+}
+
+function loomRenderSession(s) {
+  var sumEl = document.getElementById('loom-summary');
+  var tlEl  = document.getElementById('loom-timeline');
+  if (!s) {
+    sumEl.innerHTML = '<p style="color:#444;font-size:0.85em;padding:0.5em 0">No session selected.</p>';
+    tlEl.innerHTML  = '<p style="color:#444;font-size:0.85em;padding:0.5em 0">Pick a session above to replay it.</p>';
+    return;
+  }
+
+  var srcLabel = s.refHost === 'direct' ? 'Direct' : (escHtml(s.refHost) + ' · ' + escHtml(s.channel));
+  function cell(k, v) {
+    return '<div class="loom-sum-cell"><span class="loom-sum-k">' + k +
+      '</span><span class="loom-sum-v">' + v + '</span></div>';
+  }
+  sumEl.innerHTML = '<div class="loom-summary">' +
+    cell('Entry',      '<span class="loom-path">' + escHtml(jPageLabel(s.entry)) + '</span>') +
+    cell('Source',     srcLabel) +
+    cell('Device',     escHtml(s.dev || '—')) +
+    cell('Duration',   s.spanMs ? jFmtDur(s.spanMs) : '—') +
+    cell('Pageviews',  s.pvCount) +
+    cell('Clicks',     s.clicks) +
+    cell('Artworks',   s.arts) +
+    cell('Max Scroll', s.maxScroll ? s.maxScroll + '%' : '—') +
+    cell('Goals',      s.goals) +
+    cell('Visit #',    s.vnum != null ? s.vnum : '—') +
+    cell('Started',    escHtml(new Date(s.first).toLocaleString())) +
+    cell('Events',     s.evtCount) +
+    '</div>';
+
+  var start = s.first, prevPage = null, prevTs = null;
+  var rows = s.evts.map(function(x) {
+    var info = loomTagInfo(x.kind);
+    var off  = loomOffset(x.ts - start);
+    var gap  = (prevTs != null) ? (x.ts - prevTs) : 0;
+    var gapHtml = (gap >= 3000) ? ' <span class="loom-gap">' + jFmtDur(gap) + ' later</span>' : '';
+    var rowCls = 'loom-ev' + (x.kind === 'pv' ? ' loom-nav' : '') + (x.kind === 'goal' ? ' loom-goalrow' : '');
+    var detail = loomEventDetail(x, prevPage);
+    if (x.kind === 'pv') prevPage = x.page;
+    prevTs = x.ts;
+    return '<div class="' + rowCls + '">' +
+      '<div class="loom-off">' + off + '</div>' +
+      '<div class="loom-body">' +
+        '<span class="loom-tag ' + info.cls + '">' + info.label + '</span>' +
+        '<span class="loom-detail">' + detail + gapHtml + '</span>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+  tlEl.innerHTML = '<div class="loom-timeline">' + rows + '</div>';
+}
+
+function loomRenderDirectory(list) {
+  var el = document.getElementById('loom-directory');
+  if (!list.length) {
+    el.innerHTML = '<p style="color:#444;font-size:0.85em;padding:1em 0">No sessions recorded yet. Browse the public pages and visits will appear here.</p>';
+    return;
+  }
+  el.innerHTML = list.slice(0, 40).map(function(s) {
+    var glyphs = '▱ ' + s.pvCount + '  ⌖ ' + s.clicks + '  ◆ ' + s.arts +
+      (s.goals ? '  ★ ' + s.goals : '');
+    var when = new Date(s.last).toLocaleString();
+    return '<div class="loom-dir-item' + (s.sid === _loomSel ? ' active' : '') +
+      '" data-loom-sid="' + escHtml(s.sid) + '">' +
+      '<span class="loom-dir-page" title="' + escHtml(s.entry) + '">' + escHtml(jPageLabel(s.entry)) + '</span>' +
+      '<span class="loom-dir-glyphs">' + glyphs + '</span>' +
+      '<span class="loom-dir-meta">' + escHtml(when) + '</span>' +
+    '</div>';
+  }).join('');
+}
+
+function renderLoomTab() {
+  var list = buildLoom();
+  _loomList = list;
+
+  function chip(num, label) {
+    return '<div class="analytics-stat-chip"><span class="asc-num">' + num +
+      '</span><span class="asc-label">' + label + '</span></div>';
+  }
+  var totalEv = list.reduce(function(s, x) { return s + x.evtCount; }, 0);
+  var avgEv   = list.length ? (totalEv / list.length) : 0;
+  var richest = list.reduce(function(m, x) { return x.evtCount > m ? x.evtCount : m; }, 0);
+  var avgSpan = list.length ? (list.reduce(function(s, x){ return s + (x.spanMs || 0); }, 0) / list.length) : 0;
+  document.getElementById('loom-stats').innerHTML =
+    chip(list.length,                          'Sessions Recorded')    +
+    chip(avgEv.toFixed(1),                      'Avg Events / Session') +
+    chip(richest,                               'Richest Session')      +
+    chip(list.length ? jFmtDur(avgSpan) : '—', 'Avg Session Span');
+
+  var sel = document.getElementById('loom-select');
+  if (!list.length) {
+    sel.innerHTML = '<option value="">No sessions yet</option>';
+    _loomSel = null;
+    loomRenderSession(null);
+    loomRenderDirectory(list);
+    return;
+  }
+  if (!_loomSel || !list.some(function(s){ return s.sid === _loomSel; })) {
+    _loomSel = list[0].sid;
+  }
+  sel.innerHTML = list.slice(0, 200).map(function(s) {
+    var when = new Date(s.last).toLocaleString();
+    return '<option value="' + escHtml(s.sid) + '">' +
+      escHtml(jPageLabel(s.entry)) + '  ·  ' + escHtml(when) + '  ·  ' +
+      s.evtCount + ' events' + (s.goals ? '  ★' : '') + '</option>';
+  }).join('');
+  sel.value = _loomSel;
+
+  var cur = list.filter(function(s){ return s.sid === _loomSel; })[0];
+  loomRenderSession(cur);
+  loomRenderDirectory(list);
+}
+
+document.getElementById('loom-select').addEventListener('change', function() {
+  _loomSel = this.value;
+  var cur = (_loomList || []).filter(function(s){ return s.sid === _loomSel; })[0];
+  loomRenderSession(cur);
+  loomRenderDirectory(_loomList || []);
+});
+
+document.addEventListener('click', function(e) {
+  var t = (e.target && e.target.closest) ? e.target.closest('[data-loom-sid]') : null;
+  if (!t) return;
+  var sid = t.getAttribute('data-loom-sid');
+  if (!sid) return;
+  _loomSel = sid;
+  var sel = document.getElementById('loom-select');
+  if (sel) sel.value = sid;
+  var cur = (_loomList || []).filter(function(s){ return s.sid === sid; })[0];
+  loomRenderSession(cur);
+  loomRenderDirectory(_loomList || []);
+});
+
+document.getElementById('loom-refresh-btn').addEventListener('click', renderLoomTab);
+
+document.getElementById('loom-export-btn').addEventListener('click', function() {
+  var list = _loomList || buildLoom();
+  var cur  = list.filter(function(s){ return s.sid === _loomSel; })[0] || list[0];
+  if (!cur) return;
+  var out = {
+    sid: cur.sid, entry: cur.entry, source: cur.refHost, channel: cur.channel,
+    device: cur.dev, visitNumber: cur.vnum, startedMs: cur.first, spanMs: cur.spanMs,
+    pageviews: cur.pvCount, clicks: cur.clicks, artworks: cur.arts, goals: cur.goals,
+    maxScroll: cur.maxScroll,
+    events: cur.evts.map(function(x) {
+      return { t: x.ts - cur.first, kind: x.kind, page: x.page, detail: loomPlainDetail(x) };
+    })
+  };
+  var blob = new Blob([JSON.stringify(out, null, 2)], { type: 'application/json' });
+  var url  = URL.createObjectURL(blob);
+  var a    = document.createElement('a');
+  a.href = url; a.download = 'loom-' + cur.sid + '-' + Date.now() + '.json'; a.click();
   URL.revokeObjectURL(url);
 });
 </script>
