@@ -984,6 +984,28 @@
 		.latch-main { min-width: 0; flex: 1; }
 		.latch-sub { font-size: 0.72em; color: #8c887f; font-family: 'Courier New', monospace; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 		.latch-meta { text-align: right; flex-shrink: 0; }
+		/* ---- Prism Tab — Audience Segments & Comparative Behaviour ---- */
+		.prism-scroll { overflow-x: auto; }
+		.prism-matrix { width: 100%; border-collapse: collapse; font-size: 0.8em; }
+		.prism-matrix th {
+			text-align: left; padding: 0.45em 0.65em; color: #8c887f;
+			font-size: 0.72em; text-transform: uppercase; letter-spacing: 0.08em;
+			border-bottom: 1px solid rgba(201,201,201,0.14); white-space: nowrap;
+		}
+		.prism-matrix th.prism-num, .prism-matrix td.prism-num { text-align: right; }
+		.prism-matrix td {
+			padding: 0.55em 0.65em; color: #cfccc6;
+			border-bottom: 1px solid rgba(201,201,201,0.06);
+			font-family: 'Courier New', monospace; white-space: nowrap;
+		}
+		.prism-matrix tbody tr:last-child td { border-bottom: none; }
+		.prism-matrix tbody tr:hover td { background: rgba(201,168,124,0.05); }
+		.prism-seg-name { display: flex; align-items: center; gap: 0.5em; font-family: -apple-system, sans-serif; color: #e5e1db; }
+		.prism-seg-dot { width: 0.75em; height: 0.75em; border-radius: 2px; flex-shrink: 0; }
+		.prism-cell { position: relative; }
+		.prism-cell-bar { position: absolute; right: 0; top: 4px; bottom: 4px; background: rgba(201,168,124,0.16); border-radius: 2px; z-index: 0; }
+		.prism-cell-val { position: relative; z-index: 1; }
+		.prism-empty { color: #444; font-size: 0.85em; padding: 0.6em 0; }
 	</style>
 </head>
 <body class="is-preload">
@@ -1073,6 +1095,7 @@
 				<button class="admin-tab" data-tab="muse">Muse</button>
 				<button class="admin-tab" data-tab="ripple">Ripple</button>
 				<button class="admin-tab" data-tab="loom">Loom</button>
+				<button class="admin-tab" data-tab="prism">Prism</button>
 			</div>
 
 			<!-- ============ GALLERY TAB ============ -->
@@ -2322,6 +2345,53 @@
 
 						</div>
 
+						<div id="tab-prism" class="tab-content">
+
+							<div class="admin-card">
+								<h3>Prism — Audience Segments &amp; Comparative Behaviour</h3>
+								<p class="hint">Every other tab measures a single lens across <em>all</em> visitors folded together &mdash; Compass counts where traffic comes from, Depth watches scroll, Beacon counts conversion, Ember scores each visit. None of them ask how those behaviours <em>differ between kinds of visitor</em>. Prism is the dashboard&rsquo;s only <strong>comparative</strong> view: pick a way to split the audience &mdash; by <strong>device</strong>, by <strong>acquisition channel</strong>, or by <strong>new vs. returning</strong> &mdash; and see every core behaviour laid side by side for each group, so you can tell at a glance whether mobile visitors bounce harder than desktop, whether Instagram traffic converts better than search, or whether returning fans read deeper than first-timers. It answers &ldquo;<em>who</em> are my visitors, and does what they do change depending on which group they&rsquo;re in?&rdquo; Derived live from <code>_gam_analytics_v1</code> + <code>_gam_spotlight_v1</code> &mdash; no new storage key, read-only, no <code>analytics.js</code> change.</p>
+								<div style="display:flex;gap:0.5em;flex-wrap:wrap;align-items:center">
+									<label style="font-size:0.72em;color:#8c887f;font-family:'Courier New',monospace;letter-spacing:0.04em">Split by</label>
+									<select id="prism-axis" class="journey-select" style="flex:0 1 220px">
+										<option value="device">Device</option>
+										<option value="channel">Acquisition Channel</option>
+										<option value="visitor">New vs. Returning</option>
+									</select>
+									<button class="button small" id="prism-refresh-btn">Refresh</button>
+									<button class="button small" id="prism-export-btn">Export JSON</button>
+								</div>
+								<div id="prism-stats" class="analytics-stats" style="margin-top:1em"></div>
+							</div>
+
+							<div class="admin-card">
+								<h3>Segment Share</h3>
+								<p class="hint">How the audience divides across the chosen split, by number of sessions. The donut centre shows how many distinct segments the current axis produces. A single dominant slice means most visitors share one profile; an even spread means a mixed audience worth serving in more than one way.</p>
+								<div class="compass-donut-row">
+									<div class="heatmap-wrap"><canvas id="prism-donut" width="200" height="200"></canvas></div>
+									<div id="prism-legend" class="compass-legend"></div>
+								</div>
+							</div>
+
+							<div class="admin-card">
+								<h3>Segment Comparison Matrix</h3>
+								<p class="hint">The heart of Prism: every segment as a row, every core behaviour as a column &mdash; sessions, bounce rate, pages per session, average scroll reach, average time on site, commission conversion rate, and average artwork attention. The faint bar behind each number scales it against the strongest segment in that column, so the leaders and laggards read down each metric at a glance. This is the side-by-side the single-lens tabs can&rsquo;t give you.</p>
+								<div class="prism-scroll"><div id="prism-matrix"></div></div>
+							</div>
+
+							<div class="admin-card">
+								<h3>Conversion Rate by Segment</h3>
+								<p class="hint">The share of each segment&rsquo;s visits that fired a commission-intent goal (a CTA click or a step through the inquiry form), ranked. This is the actionable payoff &mdash; it tells you which kind of visitor is worth chasing more of, not just which is the biggest.</p>
+								<div id="prism-conv"></div>
+							</div>
+
+							<div class="admin-card">
+								<h3>Engagement by Segment</h3>
+								<p class="hint">Depth of the visit per segment, ranked by pages viewed per session, with average time on site and scroll reach alongside. Where the conversion chart shows intent, this shows attention &mdash; the two together separate an audience that browses deeply from one that skims and leaves.</p>
+								<div id="prism-engage"></div>
+							</div>
+
+						</div>
+
 		</div><!-- /#admin-dash -->
 		<input type="file" id="img-file-input" accept="image/*" style="display:none" />
 
@@ -3361,6 +3431,9 @@ document.addEventListener('click', function(e){
   if (e.target.dataset && e.target.dataset.tab === 'loom') {
     renderLoomTab();
   }
+  if (e.target.dataset && e.target.dataset.tab === 'prism') {
+    renderPrismTab();
+  }
 });
 
 /* ================================================================
@@ -4112,7 +4185,7 @@ function renderQueueTab() {
     col.innerHTML =
       '<div class="queue-col-head">'
       + '<span class="queue-col-head-dot ' + dotClass[status] + '"></span>'
-      + esc(QUEUE_STATUS_LABELS[status]) + ' (' + colItems.length + ')'
+      + escHtml(QUEUE_STATUS_LABELS[status]) + ' (' + colItems.length + ')'
       + '</div>';
     if (colItems.length === 0) {
       col.innerHTML += '<div style="font-size:0.72em;color:#444;padding:0.5em 0">— empty —</div>';
@@ -4149,21 +4222,21 @@ function buildQueueCard(item, today) {
   }
 
   card.innerHTML =
-    '<div class="queue-item-client">' + esc(item.client || '(no client)') + '</div>'
-    + '<div class="queue-item-type">' + esc(item.type || '') + (item.desc ? ' — ' + esc(item.desc) : '') + '</div>'
+    '<div class="queue-item-client">' + escHtml(item.client || '(no client)') + '</div>'
+    + '<div class="queue-item-type">' + escHtml(item.type || '') + (item.desc ? ' — ' + escHtml(item.desc) : '') + '</div>'
     + (item.price ? '<div class="queue-item-price">$' + parseFloat(item.price).toFixed(0) + '</div>' : '')
     + dueHtml
-    + (item.notes ? '<div style="font-size:0.7em;color:#555;margin-top:0.35em;line-height:1.5">' + esc(item.notes).replace(/\n/g,'<br>') + '</div>' : '')
+    + (item.notes ? '<div style="font-size:0.7em;color:#555;margin-top:0.35em;line-height:1.5">' + escHtml(item.notes).replace(/\n/g,'<br>') + '</div>' : '')
     + '<div class="queue-item-actions">'
-    +   '<button class="queue-item-btn" data-action="edit" data-id="' + esc(String(item.id)) + '">Edit</button>';
+    +   '<button class="queue-item-btn" data-action="edit" data-id="' + escHtml(String(item.id)) + '">Edit</button>';
 
   if (item.status !== 'done' && item.status !== 'cancelled') {
     card.innerHTML +=
-      '<button class="queue-item-btn" data-action="next" data-id="' + esc(String(item.id)) + '">'
+      '<button class="queue-item-btn" data-action="next" data-id="' + escHtml(String(item.id)) + '">'
       + nextStatusLabel(item.status) + '</button>';
   }
   card.innerHTML +=
-    '<button class="queue-item-btn del" data-action="del" data-id="' + esc(String(item.id)) + '">Delete</button>'
+    '<button class="queue-item-btn del" data-action="del" data-id="' + escHtml(String(item.id)) + '">Delete</button>'
     + '</div>';
 
   card.addEventListener('click', function(e) {
@@ -4323,7 +4396,7 @@ function renderRevenueDashboard() {
   tbody.innerHTML = clients.slice(0, 12).map(function(c) {
     var d = clientData[c];
     var avg = d.count > 0 ? '$' + (d.earned / d.count).toFixed(0) : '—';
-    return '<tr><td>' + esc(c) + '</td><td>$' + d.earned.toFixed(0) + '</td><td>' + d.count + '</td><td>' + avg + '</td></tr>';
+    return '<tr><td>' + escHtml(c) + '</td><td>$' + d.earned.toFixed(0) + '</td><td>' + d.count + '</td><td>' + avg + '</td></tr>';
   }).join('');
 }
 
@@ -8204,6 +8277,279 @@ document.getElementById('loom-export-btn').addEventListener('click', function() 
   var url  = URL.createObjectURL(blob);
   var a    = document.createElement('a');
   a.href = url; a.download = 'loom-' + cur.sid + '-' + Date.now() + '.json'; a.click();
+  URL.revokeObjectURL(url);
+});
+
+/* ================================================================
+   PRISM TAB — Audience Segments & Comparative Behaviour
+   The dashboard's only comparative lens: split every session by an
+   axis (device / acquisition channel / new-vs-returning) and lay the
+   core behavioural KPIs side by side per segment. Read-only over
+   _gam_analytics_v1 + _gam_spotlight_v1 — no new storage key,
+   no analytics.js change.
+   ================================================================ */
+
+/* Warm amber → clay → sand ramp, reused for donut, dots and bars. No blue/pink. */
+var PRISM_PALETTE = [
+  'rgba(176,122,74,0.95)', 'rgba(201,168,124,0.9)', 'rgba(214,190,150,0.85)',
+  'rgba(150,104,62,0.78)', 'rgba(163,148,112,0.82)', 'rgba(120,116,108,0.6)'
+];
+
+var PRISM_AXES = {
+  device:  { label: 'Device',  order: ['desktop', 'mobile', 'tablet', 'unknown'],
+             names: { desktop: 'Desktop', mobile: 'Mobile', tablet: 'Tablet', unknown: 'Unknown' } },
+  channel: { label: 'Channel', order: ['direct', 'social', 'search', 'referral'],
+             names: { direct: 'Direct', social: 'Social', search: 'Search', referral: 'Referral' } },
+  visitor: { label: 'Visitor', order: ['new', 'returning'],
+             names: { 'new': 'New', returning: 'Returning' } }
+};
+
+/* Which segment a session belongs to for the chosen axis. */
+function prismSegKey(axis, s) {
+  if (axis === 'device') return s.dev || 'unknown';
+  if (axis === 'channel') {
+    var ch = compassClassify(s.refHost || 'direct');
+    return ch === 'internal' ? 'direct' : ch;   /* fold same-site nav into direct, like Compass */
+  }
+  return (s.vnum && s.vnum >= 2) ? 'returning' : 'new';
+}
+
+function buildPrism(axis) {
+  if (!PRISM_AXES[axis]) axis = 'device';
+  var events = CommissionData.getAnalytics() || [];
+  var spot   = CommissionData.getSpotlight() || [];
+
+  /* Group by session; total artwork viewport ms per session. */
+  var bySid = {};
+  events.forEach(function(e){ if (e.sid) (bySid[e.sid] = bySid[e.sid] || []).push(e); });
+  var artMsBySid = {};
+  spot.forEach(function(e){ if (e.sid) artMsBySid[e.sid] = (artMsBySid[e.sid] || 0) + (e.ms || 0); });
+
+  /* Derive one behavioural record per session. */
+  var sessions = [];
+  Object.keys(bySid).forEach(function(sid) {
+    var evts = bySid[sid];
+    var pv = 0, clicks = 0, maxScroll = 0, exitMs = 0;
+    var firstTs = null, lastTs = null, goal = false, gotPv = false;
+    var dev = 'unknown', refHost = 'direct', vnum = 1;
+
+    evts.forEach(function(e) {
+      if (firstTs === null || e.ts < firstTs) firstTs = e.ts;
+      if (lastTs  === null || e.ts > lastTs)  lastTs  = e.ts;
+      if (e.type === 'pv') {
+        pv++;
+        if (!gotPv) { gotPv = true; dev = e.dev || 'unknown'; refHost = e.refHost || 'direct'; vnum = e.vnum || 1; }
+      } else if (e.type === 'click')  { clicks++; }
+      else if (e.type === 'scroll')   { if ((e.depth || 0) > maxScroll) maxScroll = e.depth; }
+      else if (e.type === 'exit')     { if ((e.ms || 0) > exitMs) exitMs = e.ms; }
+      else if (e.type === 'goal')     { goal = true; }
+    });
+    if (pv === 0) return; /* no pageview → not a real visit */
+
+    var dwell = Math.max((lastTs || 0) - (firstTs || 0), exitMs);
+    sessions.push({
+      sid: sid, pv: pv, clicks: clicks, scroll: maxScroll, dwell: dwell,
+      goal: goal, dev: dev, refHost: refHost, vnum: vnum, artMs: artMsBySid[sid] || 0
+    });
+  });
+
+  /* Aggregate into segments. */
+  var segMap = {};
+  sessions.forEach(function(s) {
+    var k = prismSegKey(axis, s);
+    var g = segMap[k] || (segMap[k] = { key: k, n: 0, pv: 0, bounce: 0, scroll: 0, dwell: 0, conv: 0, art: 0 });
+    g.n++; g.pv += s.pv; g.scroll += s.scroll; g.dwell += s.dwell; g.art += s.artMs;
+    if (s.pv <= 1) g.bounce++;
+    if (s.goal)    g.conv++;
+  });
+
+  var cfg = PRISM_AXES[axis];
+  var segments = Object.keys(segMap).map(function(k) {
+    var g = segMap[k];
+    return {
+      key: k, label: (cfg.names[k] || k), n: g.n,
+      pagesPer:   g.n ? g.pv / g.n : 0,
+      bounceRate: g.n ? Math.round((g.bounce / g.n) * 100) : 0,
+      avgScroll:  g.n ? Math.round(g.scroll / g.n) : 0,
+      avgDwell:   g.n ? Math.round(g.dwell / g.n) : 0,
+      convRate:   g.n ? Math.round((g.conv / g.n) * 100) : 0,
+      convN:      g.conv,
+      avgArt:     g.n ? Math.round(g.art / g.n) : 0
+    };
+  });
+
+  /* Sort by the axis's defined order, then session count; colour by final order. */
+  var ord = cfg.order;
+  segments.sort(function(a, b) {
+    var ia = ord.indexOf(a.key); if (ia === -1) ia = 99;
+    var ib = ord.indexOf(b.key); if (ib === -1) ib = 99;
+    return (ia - ib) || (b.n - a.n);
+  });
+  segments.forEach(function(s, i){ s.color = PRISM_PALETTE[i % PRISM_PALETTE.length]; });
+
+  var total    = sessions.length;
+  var topSeg   = segments.slice().sort(function(a, b){ return b.n - a.n; })[0] || null;
+  var bestConv = segments.slice().sort(function(a, b){ return (b.convRate - a.convRate) || (b.n - a.n); })[0] || null;
+
+  return { axis: axis, axisLabel: cfg.label, segments: segments, total: total, topSeg: topSeg, bestConv: bestConv };
+}
+
+/* Side-by-side comparison table — the centrepiece. Faint per-column bar
+   scales each cell against the strongest segment in that column. */
+function prismMatrix(pr) {
+  var segs = pr.segments;
+  if (!segs.length) return '<p class="prism-empty">No sessions yet. Browse the public pages and this populates automatically.</p>';
+  var cols = [
+    { label: 'Sessions',     val: function(s){ return s.n; },          fmt: function(s){ return s.n; } },
+    { label: 'Bounce',       val: function(s){ return s.bounceRate; }, fmt: function(s){ return s.bounceRate + '%'; } },
+    { label: 'Pages / Sess', val: function(s){ return s.pagesPer; },   fmt: function(s){ return s.pagesPer.toFixed(1); } },
+    { label: 'Avg Scroll',   val: function(s){ return s.avgScroll; },  fmt: function(s){ return s.avgScroll + '%'; } },
+    { label: 'Avg Time',     val: function(s){ return s.avgDwell; },   fmt: function(s){ return jFmtDur(s.avgDwell); } },
+    { label: 'Conv Rate',    val: function(s){ return s.convRate; },   fmt: function(s){ return s.convRate + '%'; } },
+    { label: 'Art Attn',     val: function(s){ return s.avgArt; },     fmt: function(s){ return jFmtDur(s.avgArt); } }
+  ];
+  var maxes = cols.map(function(c){ return segs.reduce(function(m, s){ return Math.max(m, c.val(s)); }, 0) || 1; });
+  var head = '<tr><th>' + escHtml(pr.axisLabel) + '</th>' +
+    cols.map(function(c){ return '<th class="prism-num">' + c.label + '</th>'; }).join('') + '</tr>';
+  var body = segs.map(function(s) {
+    var cells = cols.map(function(c, i) {
+      var w = Math.round((c.val(s) / maxes[i]) * 100);
+      return '<td class="prism-num prism-cell">' +
+        '<span class="prism-cell-bar" style="width:' + w + '%"></span>' +
+        '<span class="prism-cell-val">' + c.fmt(s) + '</span></td>';
+    }).join('');
+    return '<tr><td><span class="prism-seg-name"><span class="prism-seg-dot" style="background:' +
+      s.color + '"></span>' + escHtml(s.label) + '</span></td>' + cells + '</tr>';
+  }).join('');
+  return '<table class="prism-matrix"><thead>' + head + '</thead><tbody>' + body + '</tbody></table>';
+}
+
+/* Ranked segment bar list (colour-matched to the donut). */
+function prismBars(segs, valFn, fmtFn, subFn) {
+  if (!segs.length) return '<p class="prism-empty">No sessions yet.</p>';
+  var max  = segs.reduce(function(m, s){ return Math.max(m, valFn(s)); }, 0) || 1;
+  var rows = segs.slice().sort(function(a, b){ return valFn(b) - valFn(a); });
+  return '<div class="spotlight-board">' + rows.map(function(s) {
+    var w = Math.max(2, Math.round((valFn(s) / max) * 100));
+    return '<div class="spotlight-row">' +
+      '<div class="sp-info">' +
+        '<div class="sp-label"><span class="prism-seg-dot" style="display:inline-block;vertical-align:middle;background:' +
+          s.color + '"></span> ' + escHtml(s.label) + '</div>' +
+        '<div class="sp-bar-wrap"><div class="sp-bar" style="width:' + w + '%;background:' + s.color + '"></div></div>' +
+      '</div>' +
+      '<div class="sp-meta">' +
+        '<span class="sp-time">' + fmtFn(s) + '</span>' +
+        '<span class="sp-views">' + subFn(s) + '</span>' +
+      '</div>' +
+    '</div>';
+  }).join('') + '</div>';
+}
+
+function drawPrismDonut(pr) {
+  var canvas = document.getElementById('prism-donut');
+  if (!canvas) return;
+  var ctx = canvas.getContext('2d');
+  var W = canvas.width, H = canvas.height;
+  ctx.clearRect(0, 0, W, H);
+  var cx = W / 2, cy = H / 2, rOut = 78, rIn = 46;
+
+  if (!pr.total) {
+    ctx.fillStyle = '#444';
+    ctx.font = '12px -apple-system, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('No sessions yet.', cx, cy);
+    return;
+  }
+
+  var start = -Math.PI / 2;
+  pr.segments.forEach(function(s) {
+    if (!s.n) return;
+    var ang = (s.n / pr.total) * Math.PI * 2;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.arc(cx, cy, rOut, start, start + ang);
+    ctx.closePath();
+    ctx.fillStyle = s.color;
+    ctx.fill();
+    start += ang;
+  });
+
+  ctx.globalCompositeOperation = 'destination-out';
+  ctx.beginPath();
+  ctx.arc(cx, cy, rIn, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.globalCompositeOperation = 'source-over';
+
+  ctx.fillStyle = '#c9a87c';
+  ctx.font = 'bold 22px -apple-system, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(pr.segments.length, cx, cy - 6);
+  ctx.fillStyle = '#8c887f';
+  ctx.font = '10px "Courier New", monospace';
+  ctx.fillText('SEGMENTS', cx, cy + 12);
+}
+
+function renderPrismTab() {
+  var axisSel = document.getElementById('prism-axis');
+  var axis = axisSel ? axisSel.value : 'device';
+  var pr = buildPrism(axis);
+
+  function chip(num, label) {
+    return '<div class="analytics-stat-chip"><span class="asc-num">' + num +
+      '</span><span class="asc-label">' + label + '</span></div>';
+  }
+  document.getElementById('prism-stats').innerHTML =
+    chip(pr.total,                'Sessions Analysed') +
+    chip(pr.segments.length,      pr.axisLabel + ' Segments') +
+    chip(pr.topSeg ? escHtml(pr.topSeg.label) : '—',  'Largest Segment') +
+    chip((pr.bestConv && pr.bestConv.convRate > 0)
+          ? (escHtml(pr.bestConv.label) + ' · ' + pr.bestConv.convRate + '%') : '—', 'Best-Converting');
+
+  drawPrismDonut(pr);
+  document.getElementById('prism-legend').innerHTML = pr.segments.length
+    ? pr.segments.map(function(s) {
+        var share = pr.total ? Math.round((s.n / pr.total) * 100) : 0;
+        return '<div class="compass-legend-item">' +
+          '<span class="compass-legend-swatch" style="background:' + s.color + '"></span>' +
+          '<span>' + escHtml(s.label) + '</span>' +
+          '<span class="compass-legend-val">' + s.n + ' · ' + share + '%</span>' +
+        '</div>';
+      }).join('')
+    : '<p class="prism-empty">No sessions yet.</p>';
+
+  document.getElementById('prism-matrix').innerHTML = prismMatrix(pr);
+  document.getElementById('prism-conv').innerHTML = prismBars(pr.segments,
+    function(s){ return s.convRate; },
+    function(s){ return s.convRate + '%'; },
+    function(s){ return s.convN + ' of ' + s.n + (s.n === 1 ? ' session' : ' sessions'); });
+  document.getElementById('prism-engage').innerHTML = prismBars(pr.segments,
+    function(s){ return s.pagesPer; },
+    function(s){ return s.pagesPer.toFixed(1) + ' pg'; },
+    function(s){ return jFmtDur(s.avgDwell) + ' · ' + s.avgScroll + '% scroll'; });
+}
+
+document.getElementById('prism-axis').addEventListener('change', renderPrismTab);
+document.getElementById('prism-refresh-btn').addEventListener('click', renderPrismTab);
+
+document.getElementById('prism-export-btn').addEventListener('click', function() {
+  var axisSel = document.getElementById('prism-axis');
+  var pr = buildPrism(axisSel ? axisSel.value : 'device');
+  var out = {
+    axis: pr.axis, sessions: pr.total,
+    segments: pr.segments.map(function(s) {
+      return {
+        segment: s.label, sessions: s.n, bounceRate: s.bounceRate,
+        pagesPerSession: +s.pagesPer.toFixed(2), avgScrollDepth: s.avgScroll,
+        avgDwellMs: s.avgDwell, conversionRate: s.convRate, conversions: s.convN,
+        avgArtworkMs: s.avgArt
+      };
+    })
+  };
+  var blob = new Blob([JSON.stringify(out, null, 2)], { type: 'application/json' });
+  var url  = URL.createObjectURL(blob);
+  var a    = document.createElement('a');
+  a.href = url; a.download = 'prism-' + pr.axis + '-' + Date.now() + '.json'; a.click();
   URL.revokeObjectURL(url);
 });
 </script>
