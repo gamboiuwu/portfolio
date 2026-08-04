@@ -203,6 +203,7 @@ Password-protected (SHA-256 hash in localStorage, 5-attempt lockout). Session tr
 | Muse        | Artwork-to-conversion attribution — joins artwork viewport events with commission-goal events per session: which pieces interested visitors view, conversion lift per artwork, cold pieces (attention without intent) |
 | Ripple      | Cohort retention & return decay — weekly acquisition cohorts (by first-seen week via persistent `vid`), retention triangle grid, average return-decay curve, best-retained cohorts, cohort sizes |
 | Loom        | Session replay & event timeline — reconstructs a single visit as an ordered event stream (joins analytics + spotlight by `sid`): session picker, summary header, chronological replay timeline, recent-sessions directory |
+| Prism       | Audience segments & comparative behavior — the dashboard's only comparative lens: split every session by device / acquisition channel / new-vs-returning and lay core KPIs (bounce, pages/session, scroll, time, conversion, artwork attention) side by side; segment-share donut, comparison matrix, conversion & engagement rankings |
 
 ---
 
@@ -967,6 +968,50 @@ Answers the one thing the entire analytics family structurally cannot: **what di
 
 ---
 
+## Prism — Audience Segments & Comparative Behavior (Admin → Prism tab) — NEW TOOL
+
+Answers a question every other tab in the dashboard structurally cannot: **how does behavior differ between *kinds* of visitor?** Compass counts where traffic comes from, Depth watches scroll, Beacon counts conversion, Ember scores each visit, Orbit counts returns — but each measures a *single lens across the whole audience folded together*. None of them compares one slice of the audience against another. Prism is the family's only **comparative** view: pick an axis to split the audience — **device**, **acquisition channel**, or **new vs. returning** — and every core behavior is laid out side by side per segment, so you can see at a glance whether mobile bounces harder than desktop, whether social traffic converts better than search, or whether returning fans read deeper than first-timers.
+
+**Why it's genuinely new:** it's a *cross-tabulation*, not another single-lens aggregate. Compass reports device/channel *volume*; Ember's "engagement by source" ranks channels by *one composite score*. Prism is the first tool that holds a *segmentation axis* against *multiple raw behavioral KPIs at once* — a comparison matrix, the shape of analysis none of the single-metric tabs can express.
+
+**No new storage key** — derived live from `_gam_analytics_v1` (`pv` device/`refHost`/`vnum`, `click`, `scroll`, `exit`, `goal`) and `_gam_spotlight_v1` (artwork viewport ms), joined by `sid`, the same read-only pattern as Ember/Muse. No `analytics.js` change.
+
+**Segmentation axes:**
+- **Device** — `desktop` / `mobile` / `tablet` / `unknown`, from the first pageview's `dev`
+- **Channel** — `direct` / `social` / `search` / `referral`, from `refHost` via the shared `compassClassify()` (`internal` folded into `direct`, consistent with Compass)
+- **Visitor** — `new` (`vnum < 2` or missing) vs. `returning` (`vnum ≥ 2`), from the persistent-visitor visit number
+
+**KPIs compared per segment** (all derived per session, then averaged):
+- Sessions (count), Bounce rate (% sessions with ≤1 pageview), Pages / session (avg `pv`), Avg scroll depth (avg max `scroll.depth`), Avg time on site (avg `max(exit.ms, session span)`), Conversion rate (% sessions firing any `goal`), Avg artwork attention (avg Σ spotlight `ms`)
+
+**How it works:**
+1. `buildPrism(axis)` groups events by `sid`, derives one behavioral record per session (with `dev`/`refHost`/`vnum` captured from the first pageview and artwork ms joined from spotlight), and skips sessions with no pageview.
+2. `prismSegKey(axis, session)` maps each session to its segment for the chosen axis.
+3. Segments are aggregated, ordered by the axis's canonical order then by session count, and colored from a warm-amber ramp shared by the donut, dots, and bars.
+
+**Admin tab sections:**
+- **Axis selector** — dropdown (Device / Acquisition Channel / New vs. Returning); re-renders on change
+- **Stats**: Sessions Analysed, Segment count, Largest Segment, Best-Converting Segment
+- **Segment Share**: canvas donut + legend, sessions per segment (centre shows segment count)
+- **Segment Comparison Matrix**: the centerpiece — segments as rows, the seven KPIs as columns, each numeric cell backed by a faint per-column bar scaled to the strongest segment in that column
+- **Conversion Rate by Segment**: ranked bars, share of each segment's visits that fired a commission-intent goal
+- **Engagement by Segment**: ranked bars by pages/session, with avg time and scroll alongside
+
+**Derived schema (for export):**
+```js
+{ axis, sessions, segments:[{ segment, sessions, bounceRate, pagesPerSession,
+  avgScrollDepth, avgDwellMs, conversionRate, conversions, avgArtworkMs }] }
+```
+
+**Technical notes:**
+- Donut, segment dots, and bars use the warm amber/clay/sand ramp (`rgba(176,122,74…)` → `rgba(120,116,108…)`) — no blue/pink. New `.prism-*` CSS classes (matrix table + per-column cell bars); reuses `analytics-stat-chip`, `compass-donut-row`/`compass-legend`, the `spotlight-board`/`sp-*` bar styles, `journey-select`, `compassClassify()`, `jFmtDur()`, and `escHtml()`.
+- Segmentation is per session (`sid`), so one visitor across several tabs may count in more than one session (consistent with the rest of the family). The Visitor axis is the exception's partial fix — it reads the persistent-visitor `vnum`, so a returning visitor is correctly labeled returning even in a fresh session.
+- Tab renders lazily on click (and re-renders on axis change), same pattern as Loom/Ripple/Muse/etc.
+
+**API:** none new on `CommissionData` — uses `CommissionData.getAnalytics()` + `.getSpotlight()`. Logic lives in `renderPrismTab()` / `buildPrism()` / `prismMatrix()` / `prismBars()` inside `admin/index.html`.
+
+---
+
 ## Commission System
 
 ### Pages
@@ -1044,4 +1089,4 @@ Stored in `_gam_prices_v1`. Three sections: `digital`, `stickers`, `animation`. 
 
 ---
 
-*Last updated: 2026-08-03*
+*Last updated: 2026-08-04*

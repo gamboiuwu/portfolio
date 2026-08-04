@@ -167,6 +167,17 @@ Inquiries, Feedback.
   - **Pages Trending** and **Sources Trending** — pages and acquisition channels moving
     up or down versus the prior window
   - Derived live from `_gam_analytics_v1` + `_gam_spotlight_v1` — no new storage key.
+- **Prism** *(newest)* — **audience segments & comparative behavior**. The dashboard's
+  only **comparative** lens. Every other tool measures a single metric across the whole
+  audience at once; Prism splits the audience by an axis — **device**, **acquisition
+  channel**, or **new vs. returning** — and lays every core behavior side by side per
+  segment, so you can see how each group actually differs. It surfaces:
+  - Stats: sessions analysed, segment count, largest segment, best-converting segment
+  - **Segment Share** — donut of sessions per segment
+  - **Segment Comparison Matrix** — segments × KPIs (bounce, pages/session, scroll,
+    time on site, conversion rate, artwork attention), each cell backed by a per-column bar
+  - **Conversion Rate by Segment** and **Engagement by Segment** — ranked bars
+  - Derived live from `_gam_analytics_v1` + `_gam_spotlight_v1` — no new storage key.
 - **Revenue** — financial dashboard derived from the commission Queue: total earned,
   pipeline value, monthly earnings chart, revenue by type, top clients.
 - **Palette** — extract dominant colors from an uploaded artwork (k-means), save
@@ -197,4 +208,4 @@ Inquiries, Feedback.
 - `assets/js/analytics.js` owns all client-side event capture.
 - Keep the gallery light-mode and let the artwork lead; cyber accents stay subtle.
 
-*Last updated: 2026-07-09*
+*Last updated: 2026-08-04*
