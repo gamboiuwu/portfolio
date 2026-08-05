@@ -132,7 +132,7 @@ Each event is a flat object:
 
 | Type         | Extra Fields                                                                          |
 |--------------|---------------------------------------------------------------------------------------|
-| `pv`         | `ref` (referrer path or "direct"), `refHost` (full referrer hostname, www-stripped, or "direct"), `dev` (mobile/tablet/desktop), `sw`/`sh` (screen size), `vid` (persistent visitor id), `vnum` (visit number, 1 = first ever), `vfirst` (first-seen ts) |
+| `pv`         | `ref` (referrer path or "direct"), `refHost` (full referrer hostname, www-stripped, or "direct"), `dev` (mobile/tablet/desktop), `sw`/`sh` (screen size), `tz` (UTC offset in minutes, east-positive — powers Atlas), `lang` (browser language tag, lower-cased — powers Atlas), `vid` (persistent visitor id), `vnum` (visit number, 1 = first ever), `vfirst` (first-seen ts) |
 | `click`      | `el` (tag.class), `text`, `href`, `xp`, `yp`                                          |
 | `scroll`     | `depth` (25 / 50 / 75 / 100)                                                           |
 | `exit`       | `ms` (milliseconds on page)                                                            |
@@ -203,6 +203,7 @@ Password-protected (SHA-256 hash in localStorage, 5-attempt lockout). Session tr
 | Muse        | Artwork-to-conversion attribution — joins artwork viewport events with commission-goal events per session: which pieces interested visitors view, conversion lift per artwork, cold pieces (attention without intent) |
 | Ripple      | Cohort retention & return decay — weekly acquisition cohorts (by first-seen week via persistent `vid`), retention triangle grid, average return-decay curve, best-retained cohorts, cohort sizes |
 | Loom        | Session replay & event timeline — reconstructs a single visit as an ordered event stream (joins analytics + spotlight by `sid`): session picker, summary header, chronological replay timeline, recent-sessions directory |
+| Atlas       | Audience geography & locale — the first geographic view: maps visitors by timezone (UTC offset) and browser language into macro zones, a timezone band, top regions, and a language breakdown. No IP, no external geolocation |
 
 ---
 
@@ -967,6 +968,49 @@ Answers the one thing the entire analytics family structurally cannot: **what di
 
 ---
 
+## Atlas — Audience Geography & Locale (Admin → Atlas tab) — NEW TOOL
+
+Answers the one question the entire analytics family structurally cannot: **where in the world is the audience?** Every existing tool reads *on-site behaviour* (Spotlight, Journey, Depth, Friction, Ember…), *timing* (Pulse, Tide), *retention* (Orbit, Ripple), *conversion* (Beacon, Muse), *outbound reach* (Relay), or *inbound referrer* (Compass — but a referrer is *which site* sent them, never *where on Earth* they are). None places the audience geographically. Atlas is the first **geographic view** — it maps visitors by region and by language, the clearest read on which parts of the world the work is actually reaching. For an artist with a Japanese minor and an international furry/kemono following, knowing how much of the audience is (say) Japan-based or Japanese-speaking directly informs when to post and whether a caption or commission sheet is worth translating.
+
+**Why it's genuinely new:** it's a new *data axis*, not another slice of on-site activity. Compass's `refHost` answers *what site linked them*; Atlas answers *what part of the world they're in and what language they speak* — orthogonal to every referrer/behaviour signal already tracked.
+
+**Privacy-friendly by design — no new storage key, no IP, no external geolocation.** Atlas needs two coarse signals the browser already exposes, so `analytics.js` now stamps them on every `pv` event (the same additive, backward-compatible pattern Compass used for `refHost` and Orbit for `vid`):
+- **`tz`** — the visitor's UTC offset in **minutes, east-positive** (`-(new Date().getTimezoneOffset())`; US Eastern → `-300`, Japan → `+540`). A timezone is a coarse, non-identifying location hint.
+- **`lang`** — `navigator.language`, lower-cased (e.g. `"en-us"`, `"ja"`).
+
+Legacy pageviews without these fields are bucketed as **unknown** (counted in totals but excluded from *located* sessions), so nothing breaks.
+
+**How it works:**
+1. `buildAtlas()` walks all `pv` events and reduces them to **one locale per session** (`sid`): the earliest pageview carrying each signal wins, so mixed old/new events resolve cleanly.
+2. `atlasRegion(tzMin)` maps each offset to a best-guess human region (e.g. `-480` → *US & Canada Pacific*, `+540` → *Japan / Korea*, `+330` → *India / Sri Lanka*), falling back to a `UTC±h` label for uncommon offsets.
+3. `atlasZone(tzMin)` folds each offset into a macro zone — **Americas** (`≤ -180`), **Europe & Africa** (`-180 < tz < 195`), **Asia & Pacific** (`≥ 195`).
+4. Languages are grouped by primary subtag (`ja-jp` → `ja`) and named via `atlasLangName()`.
+5. **Overseas share** = located sessions outside the *Americas* zone ÷ all located sessions.
+
+**Admin tab sections:**
+- **Stats**: Located Sessions, Top Region, Top Language, Overseas Share %
+- **Macro Zones**: canvas donut + legend across the three world zones; centre shows total located sessions
+- **Timezone Band (UTC-12 → UTC+14)**: canvas heat-band, one cell per hourly offset, amber-scaled by session count, with the studio's own timezone (US Eastern) ringed; hover a cell for its exact region + count
+- **Top Regions**: timezone-inferred regions ranked by sessions (shared `jBarList` renderer)
+- **Languages**: browser languages ranked by sessions, friendly-named
+
+**Derived schema (for export):**
+```js
+{ totalSessions, located, unknown, overseasShare, topRegion, topLanguage,
+  zones:[{label,count}], regions:[{label,count}], offsets:{tzMin:count},
+  languages:[{code,label,count}] }
+```
+
+**Technical notes:**
+- Donut, band, and bars use the warm amber/sand palette (`rgba(176,122,74…)` Americas, `rgba(201,168,124…)` Europe & Africa, `rgba(214,190,150…)` Asia & Pacific) — no blue/pink. New `.atlas-*` CSS classes; reuses `jBarList()`, `analytics-stat-chip`, `compass-legend`/`museLegendItem()`, and `escHtml()`.
+- Timezone is a **coarse** signal — several countries share an offset (e.g. UTC+8 spans China, Singapore, the Philippines, and Western Australia) — so regions are best-guess, not pinpoint. Half-hour/45-min offsets are kept exact in the region list but fold to the nearest hour cell in the band.
+- Locale is resolved per session (`sid`), so one visitor across several tabs may count more than once (consistent with the rest of the family).
+- Tab renders lazily on click, same pattern as Loom/Ripple/Muse/etc.
+
+**API:** none new on `CommissionData` — uses `CommissionData.getAnalytics()`. Locale fields are written by `analytics.js`; logic lives in `renderAtlasTab()` / `buildAtlas()` inside `admin/index.html`.
+
+---
+
 ## Commission System
 
 ### Pages
@@ -1044,4 +1088,4 @@ Stored in `_gam_prices_v1`. Three sections: `digital`, `stickers`, `animation`. 
 
 ---
 
-*Last updated: 2026-08-03*
+*Last updated: 2026-08-05*
