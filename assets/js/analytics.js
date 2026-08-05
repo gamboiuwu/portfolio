@@ -87,8 +87,17 @@
   var sw  = window.screen ? window.screen.width  : 0;
   var sh  = window.screen ? window.screen.height : 0;
 
+  /* ── Locale fingerprint (powers the Atlas audience-geography tool) ──
+     tz  = the visitor's UTC offset in minutes, east-positive (UTC+9 → +540,
+           US Eastern → -300); a coarse, privacy-friendly geographic signal.
+     lang = the browser's primary language tag, lower-cased (e.g. "en-us").
+     Both are best-effort; legacy pageviews without them bucket as "unknown". */
+  var tz;
+  try { tz = -(new Date().getTimezoneOffset()); } catch (e) { tz = null; }
+  var lang = ((navigator.language || navigator.userLanguage || '') + '').toLowerCase();
+
   /* ── Pageview ── */
-  push({ sid: sid, type: 'pv', page: page, ref: ref, refHost: refHost, dev: dev, sw: sw, sh: sh, vid: vid, vnum: vnum, vfirst: vfirst, ts: pageStart });
+  push({ sid: sid, type: 'pv', page: page, ref: ref, refHost: refHost, dev: dev, sw: sw, sh: sh, tz: tz, lang: lang, vid: vid, vnum: vnum, vfirst: vfirst, ts: pageStart });
 
   /* ── Goal / conversion tracking (powers the Beacon funnel tool) ──
      A `goal` event marks a named milestone on the path to a commission

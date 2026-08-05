@@ -940,6 +940,17 @@
 		.loom-dir-meta { flex: 0 0 auto; font-size: 0.7em; color: #8c887f; font-family: 'Courier New', monospace; }
 		.loom-dir-glyphs { flex: 0 0 auto; font-size: 0.66em; color: #a49f96; font-family: 'Courier New', monospace; }
 
+		/* Atlas tab — audience geography & locale (reuses compass donut + spotlight bars, warm amber) */
+		.atlas-donut-row { display: flex; gap: 1.4em; align-items: center; flex-wrap: wrap; }
+		#atlas-donut { display: block; flex-shrink: 0; }
+		.atlas-band-scroll { overflow-x: auto; }
+		#atlas-band { display: block; max-width: 100%; }
+		.atlas-band-hint { font-family: 'Courier New', monospace; font-size: 0.66em; color: #8c887f;
+			letter-spacing: 0.04em; margin-top: 0.55em; min-height: 1.1em; }
+		.atlas-tag { display: inline-block; font-family: 'Courier New', monospace; font-size: 0.66em;
+			letter-spacing: 0.04em; padding: 0.1em 0.45em; border-radius: 3px; margin-left: 0.5em; vertical-align: middle;
+			background: rgba(176,122,74,0.22); color: #d6a878; border: 1px solid rgba(176,122,74,0.4); }
+
 		/* Tide tab — trends & momentum (reuses spotlight bars) */
 		#tide-canvas { display: block; }
 		.tide-win { display: flex; align-items: center; gap: 0.6em; flex-wrap: wrap; margin-bottom: 1em; }
@@ -1073,6 +1084,7 @@
 				<button class="admin-tab" data-tab="muse">Muse</button>
 				<button class="admin-tab" data-tab="ripple">Ripple</button>
 				<button class="admin-tab" data-tab="loom">Loom</button>
+				<button class="admin-tab" data-tab="atlas">Atlas</button>
 			</div>
 
 			<!-- ============ GALLERY TAB ============ -->
@@ -2322,6 +2334,48 @@
 
 						</div>
 
+						<div id="tab-atlas" class="tab-content">
+
+							<div class="admin-card">
+								<h3>Atlas — Audience Geography &amp; Locale</h3>
+								<p class="hint">Every other tab reads <em>on-site behaviour</em> or <em>referrer</em> &mdash; none of them tells you <strong>where in the world the audience actually is</strong>. Atlas is the first geographic view: it reads two coarse, privacy-friendly signals the browser exposes on every pageview &mdash; the visitor&rsquo;s <strong>UTC offset</strong> (their timezone) and their <strong>browser language</strong> &mdash; and turns them into a map of the audience by region and by language. No IP address, no external geolocation service, nothing that identifies a person: just the timezone their clock is set to and the language their browser prefers. For an artist with a Japanese minor and an international furry/kemono following, this is the clearest read on which parts of the world &mdash; and which language communities &mdash; the work is reaching, so posts and commission-slot openings can be timed and framed for them. Sessions without a recorded timezone (older visits before this was tracked) are bucketed as <em>unknown</em>. Derived live from <code>_gam_analytics_v1</code> pageviews &mdash; no new storage key, read-only.</p>
+								<div id="atlas-stats" class="analytics-stats" style="margin-bottom:1em"></div>
+								<div style="display:flex;gap:0.5em;flex-wrap:wrap">
+									<button class="button small" id="atlas-refresh-btn">Refresh</button>
+									<button class="button small" id="atlas-export-btn">Export JSON</button>
+								</div>
+							</div>
+
+							<div class="admin-card">
+								<h3>Macro Zones — Where the Audience Is</h3>
+								<p class="hint">Located sessions grouped into three broad world zones by timezone offset: the <strong>Americas</strong> (UTC-3 and west), <strong>Europe &amp; Africa</strong> (UTC-2 to UTC+3), and <strong>Asia &amp; Pacific</strong> (UTC+3.5 and east). A quick continental read; the region and offset breakdowns below get specific.</p>
+								<div class="atlas-donut-row">
+									<canvas id="atlas-donut" width="180" height="180"></canvas>
+									<div class="compass-legend" id="atlas-legend"></div>
+								</div>
+							</div>
+
+							<div class="admin-card">
+								<h3>Timezone Band — UTC-12 to UTC+14</h3>
+								<p class="hint">The audience spread across the world&rsquo;s clock. Each cell is one UTC offset; warmer amber means more sessions land in that timezone. The ringed cell marks the studio&rsquo;s own timezone (US Eastern) &mdash; a fast visual of how far the reach extends from home. Hover a cell for its exact session count.</p>
+								<div class="atlas-band-scroll"><canvas id="atlas-band" width="760" height="96"></canvas></div>
+								<div class="atlas-band-hint" id="atlas-band-hint"></div>
+							</div>
+
+							<div class="admin-card">
+								<h3>Top Regions</h3>
+								<p class="hint">Sessions grouped by the region each timezone offset most likely represents (e.g. UTC-8 &rarr; US &amp; Canada Pacific, UTC+9 &rarr; Japan &amp; Korea). Timezone is a coarse signal &mdash; several countries can share an offset &mdash; so these are best-guess regions, not pinpoint locations, ranked by how many visits came from each.</p>
+								<div id="atlas-regions"></div>
+							</div>
+
+							<div class="admin-card">
+								<h3>Languages</h3>
+								<p class="hint">Sessions grouped by the browser&rsquo;s preferred language. The single most useful signal for deciding whether a caption, a commission sheet, or a sticker pack description would land better with a translation &mdash; and a direct read on how much of the audience is, say, Japanese-speaking.</p>
+								<div id="atlas-languages"></div>
+							</div>
+
+						</div>
+
 		</div><!-- /#admin-dash -->
 		<input type="file" id="img-file-input" accept="image/*" style="display:none" />
 
@@ -3360,6 +3414,9 @@ document.addEventListener('click', function(e){
   }
   if (e.target.dataset && e.target.dataset.tab === 'loom') {
     renderLoomTab();
+  }
+  if (e.target.dataset && e.target.dataset.tab === 'atlas') {
+    renderAtlasTab();
   }
 });
 
@@ -8204,6 +8261,286 @@ document.getElementById('loom-export-btn').addEventListener('click', function() 
   var url  = URL.createObjectURL(blob);
   var a    = document.createElement('a');
   a.href = url; a.download = 'loom-' + cur.sid + '-' + Date.now() + '.json'; a.click();
+  URL.revokeObjectURL(url);
+});
+
+/* ================================================================
+   ATLAS — Audience Geography & Locale
+   The first geographic view in the dashboard. Reads two coarse,
+   privacy-friendly signals analytics.js stamps on every pv event:
+     tz   = UTC offset in minutes, east-positive (US Eastern → -300)
+     lang = browser language tag, lower-cased (e.g. "en-us")
+   and maps the audience by region and language. No IP, no external
+   geolocation. Read-only over _gam_analytics_v1, no new storage key.
+   ================================================================ */
+var ATLAS_HOME_TZ = -300;   /* studio timezone (US Eastern), minutes east of UTC */
+
+var ATLAS_ZONE_COLORS = {
+  'Americas':        'rgba(176,122,74,0.92)',
+  'Europe & Africa': 'rgba(201,168,124,0.92)',
+  'Asia & Pacific':  'rgba(214,190,150,0.92)'
+};
+
+var ATLAS_LANG = {
+  en:'English', es:'Spanish', ja:'Japanese', zh:'Chinese', ko:'Korean',
+  fr:'French', de:'German', pt:'Portuguese', ru:'Russian', it:'Italian',
+  nl:'Dutch', pl:'Polish', tr:'Turkish', ar:'Arabic', sv:'Swedish',
+  fi:'Finnish', no:'Norwegian', nb:'Norwegian', nn:'Norwegian', da:'Danish',
+  id:'Indonesian', th:'Thai', vi:'Vietnamese', uk:'Ukrainian', cs:'Czech',
+  hu:'Hungarian', ro:'Romanian', el:'Greek', he:'Hebrew', hi:'Hindi',
+  fil:'Filipino', tl:'Filipino', ms:'Malay', bg:'Bulgarian', hr:'Croatian',
+  sr:'Serbian', sk:'Slovak', sl:'Slovenian', lt:'Lithuanian', lv:'Latvian',
+  et:'Estonian', fa:'Persian', bn:'Bengali', ta:'Tamil', ur:'Urdu',
+  ca:'Catalan', gl:'Galician', eu:'Basque'
+};
+
+function atlasLangName(code) {
+  if (!code) return 'Unknown';
+  var primary = ('' + code).split('-')[0];
+  return ATLAS_LANG[primary] || primary.toUpperCase();
+}
+
+/* Map a UTC offset (minutes, east-positive) to a best-guess human region. */
+function atlasRegion(min) {
+  var map = {
+    '-720':'Baker Island', '-660':'Samoa / Midway', '-600':'Hawaii',
+    '-570':'Marquesas', '-540':'Alaska', '-480':'US & Canada Pacific',
+    '-420':'US & Canada Mountain', '-360':'US Central / Mexico',
+    '-300':'US & Canada Eastern', '-240':'Atlantic / Caribbean',
+    '-210':'Newfoundland', '-180':'Brazil / Argentina / Chile',
+    '-120':'South Georgia', '-60':'Azores / Cape Verde',
+    '0':'UK / Portugal / West Africa', '60':'Central Europe / West Africa',
+    '120':'Eastern Europe / South Africa', '180':'Moscow / East Africa / Middle East',
+    '210':'Iran', '240':'Gulf / Caucasus', '270':'Afghanistan',
+    '300':'Pakistan / Central Asia', '330':'India / Sri Lanka', '345':'Nepal',
+    '360':'Bangladesh / Bhutan', '390':'Myanmar', '420':'Thailand / Vietnam / Indonesia',
+    '480':'China / Singapore / Philippines', '540':'Japan / Korea',
+    '570':'Central Australia', '600':'Eastern Australia / Guam',
+    '630':'Lord Howe Island', '660':'Solomon Islands', '720':'New Zealand / Fiji',
+    '780':'Tonga / Samoa', '840':'Line Islands'
+  };
+  if (map.hasOwnProperty('' + min)) return map['' + min];
+  var h = min / 60, sign = h >= 0 ? '+' : '−', ah = Math.abs(h);
+  var hh = Math.floor(ah), mm = Math.round((ah - hh) * 60);
+  return 'UTC' + sign + hh + (mm ? ':' + (mm < 10 ? '0' : '') + mm : '');
+}
+
+/* Coarse macro zone from a UTC offset (minutes). */
+function atlasZone(min) {
+  if (min <= -180) return 'Americas';
+  if (min < 195)   return 'Europe & Africa';
+  return 'Asia & Pacific';
+}
+
+function atlasEmpty(msg) {
+  return '<p style="color:#444;font-size:0.85em;padding:0.5em 0">' + msg + '</p>';
+}
+
+function buildAtlas() {
+  var evs = (window.CommissionData && CommissionData.getAnalytics)
+    ? (CommissionData.getAnalytics() || []) : [];
+
+  /* One locale per session: earliest pv carrying each signal wins. */
+  var sess = {};
+  evs.forEach(function(e) {
+    if (e.type !== 'pv') return;
+    var sid = e.sid || 'nosid';
+    var s = sess[sid] || (sess[sid] = { tz: null, tzTs: Infinity, lang: '', langTs: Infinity });
+    if (typeof e.tz === 'number' && e.ts < s.tzTs)      { s.tz = e.tz;   s.tzTs = e.ts; }
+    if (e.lang && e.ts < s.langTs)                       { s.lang = e.lang; s.langTs = e.ts; }
+  });
+
+  var sids = Object.keys(sess);
+  var regionMap = {}, offsetMap = {}, langMap = {};
+  var zoneMap = { 'Americas': 0, 'Europe & Africa': 0, 'Asia & Pacific': 0 };
+  var located = 0, langKnown = 0, overseas = 0;
+
+  sids.forEach(function(sid) {
+    var s = sess[sid];
+    if (s.tz !== null) {
+      located++;
+      var reg = atlasRegion(s.tz);
+      regionMap[reg] = (regionMap[reg] || 0) + 1;
+      offsetMap[s.tz] = (offsetMap[s.tz] || 0) + 1;
+      var zone = atlasZone(s.tz);
+      zoneMap[zone] = (zoneMap[zone] || 0) + 1;
+      if (zone !== 'Americas') overseas++;
+    }
+    if (s.lang) {
+      langKnown++;
+      var code = ('' + s.lang).split('-')[0];
+      langMap[code] = (langMap[code] || 0) + 1;
+    }
+  });
+
+  var byCount = function(x, y) { return y.count - x.count; };
+  var regions = Object.keys(regionMap).map(function(k) { return { label: k, count: regionMap[k] }; }).sort(byCount);
+  var languages = Object.keys(langMap).map(function(k) { return { code: k, label: atlasLangName(k), count: langMap[k] }; }).sort(byCount);
+  var zones = [
+    { label: 'Americas',        count: zoneMap['Americas'] },
+    { label: 'Europe & Africa', count: zoneMap['Europe & Africa'] },
+    { label: 'Asia & Pacific',  count: zoneMap['Asia & Pacific'] }
+  ];
+
+  return {
+    totalSessions: sids.length, located: located, unknown: sids.length - located,
+    langKnown: langKnown,
+    regions: regions, zones: zones, offsets: offsetMap, languages: languages,
+    topRegion: regions.length ? regions[0].label : '',
+    topLang:   languages.length ? languages[0].label : '',
+    overseasShare: located ? overseas / located : 0
+  };
+}
+
+function drawAtlasDonut(a) {
+  var canvas = document.getElementById('atlas-donut');
+  if (!canvas) return;
+  var ctx = canvas.getContext('2d'), W = canvas.width, H = canvas.height;
+  ctx.clearRect(0, 0, W, H);
+  var cx = W / 2, cy = H / 2, rOut = 78, rIn = 46, total = a.located;
+
+  if (!total) {
+    ctx.fillStyle = '#444'; ctx.font = '12px -apple-system, sans-serif';
+    ctx.textAlign = 'center'; ctx.fillText('No located sessions yet.', cx, cy);
+    return;
+  }
+  var start = -Math.PI / 2;
+  a.zones.forEach(function(z) {
+    if (!z.count) return;
+    var ang = (z.count / total) * Math.PI * 2;
+    ctx.beginPath(); ctx.moveTo(cx, cy); ctx.arc(cx, cy, rOut, start, start + ang); ctx.closePath();
+    ctx.fillStyle = ATLAS_ZONE_COLORS[z.label] || '#c9a87c'; ctx.fill();
+    start += ang;
+  });
+  ctx.globalCompositeOperation = 'destination-out';
+  ctx.beginPath(); ctx.arc(cx, cy, rIn, 0, Math.PI * 2); ctx.fill();
+  ctx.globalCompositeOperation = 'source-over';
+  ctx.fillStyle = '#c9a87c'; ctx.font = 'bold 22px -apple-system, sans-serif';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText('' + total, cx, cy - 6);
+  ctx.fillStyle = '#8c887f'; ctx.font = '10px "Courier New", monospace';
+  ctx.fillText('SESSIONS', cx, cy + 12);
+}
+
+var _atlasBandGeom = null;
+function drawAtlasBand(a) {
+  var canvas = document.getElementById('atlas-band');
+  if (!canvas) return;
+  var ctx = canvas.getContext('2d'), W = canvas.width, H = canvas.height;
+  ctx.clearRect(0, 0, W, H);
+
+  var cells = [];
+  for (var h = -12; h <= 14; h++) cells.push({ h: h, count: 0 });
+  Object.keys(a.offsets).forEach(function(k) {
+    var hh = Math.round((+k) / 60);
+    if (hh < -12) hh = -12; if (hh > 14) hh = 14;
+    cells[hh + 12].count += a.offsets[k];
+  });
+  var max = cells.reduce(function(m, c) { return Math.max(m, c.count); }, 1);
+  var padL = 6, padR = 6, padTop = 10, bandH = 48;
+  var cw = (W - padL - padR) / cells.length;
+  var homeH = Math.round(ATLAS_HOME_TZ / 60);
+
+  cells.forEach(function(c, i) {
+    var x = padL + i * cw;
+    var alpha = c.count ? (0.16 + 0.74 * (c.count / max)) : 0.05;
+    ctx.fillStyle = 'rgba(201,168,124,' + alpha.toFixed(3) + ')';
+    ctx.fillRect(x + 1, padTop, cw - 2, bandH);
+    if (c.h === homeH) {
+      ctx.strokeStyle = '#d6a878'; ctx.lineWidth = 2;
+      ctx.strokeRect(x + 1.5, padTop + 0.5, cw - 3, bandH - 1);
+    }
+    c.x = x; c.w = cw;
+    if (c.count) {
+      ctx.fillStyle = (c.count / max > 0.55) ? '#20201d' : '#cfc9bf';
+      ctx.font = 'bold 10px "Courier New", monospace';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText('' + c.count, x + cw / 2, padTop + bandH / 2);
+    }
+    if ((c.h % 3) === 0 || c.h === -12 || c.h === 14) {
+      ctx.fillStyle = '#8c887f'; ctx.font = '9px "Courier New", monospace';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+      ctx.fillText((c.h >= 0 ? '+' : '') + c.h, x + cw / 2, padTop + bandH + 6);
+    }
+  });
+  _atlasBandGeom = cells;
+
+  if (!canvas._atlasHover) {
+    canvas._atlasHover = true;
+    canvas.addEventListener('mousemove', function(ev) {
+      if (!_atlasBandGeom) return;
+      var rect = canvas.getBoundingClientRect();
+      var sx = canvas.width / (rect.width || canvas.width);
+      var x = (ev.clientX - rect.left) * sx;
+      var hint = document.getElementById('atlas-band-hint');
+      if (!hint) return;
+      for (var i = 0; i < _atlasBandGeom.length; i++) {
+        var c = _atlasBandGeom[i];
+        if (x >= c.x && x < c.x + c.w) {
+          hint.textContent = 'UTC' + (c.h >= 0 ? '+' : '') + c.h + '  ·  ' +
+            atlasRegion(c.h * 60) + '  ·  ' + c.count + (c.count === 1 ? ' session' : ' sessions');
+          return;
+        }
+      }
+    });
+    canvas.addEventListener('mouseleave', function() {
+      var hint = document.getElementById('atlas-band-hint');
+      if (hint) hint.textContent = '';
+    });
+  }
+}
+
+function renderAtlasTab() {
+  var a = buildAtlas();
+
+  function chip(num, label) {
+    return '<div class="analytics-stat-chip"><span class="asc-num">' + num +
+      '</span><span class="asc-label">' + label + '</span></div>';
+  }
+  document.getElementById('atlas-stats').innerHTML =
+    chip(a.located,                              'Located Sessions') +
+    chip(escHtml(a.topRegion || '—'),       'Top Region')       +
+    chip(escHtml(a.topLang || '—'),         'Top Language')     +
+    chip(Math.round(a.overseasShare * 100) + '%', 'Overseas Share');
+
+  drawAtlasDonut(a);
+  document.getElementById('atlas-legend').innerHTML = a.located
+    ? a.zones.map(function(z) {
+        return museLegendItem(ATLAS_ZONE_COLORS[z.label] || '#c9a87c', z.label, z.count, a.located);
+      }).join('')
+    : '<span style="color:#444;font-size:0.85em">No located sessions yet.</span>';
+
+  drawAtlasBand(a);
+  if (!a.located) {
+    document.getElementById('atlas-band-hint').textContent = 'No timezone data recorded yet.';
+  }
+
+  document.getElementById('atlas-regions').innerHTML = a.regions.length
+    ? jBarList(a.regions.map(function(r) { return { label: r.label, count: r.count }; }), a.located)
+    : atlasEmpty('No geographic data yet. Once visitors browse the public pages, their timezone-inferred regions appear here automatically.');
+
+  document.getElementById('atlas-languages').innerHTML = a.languages.length
+    ? jBarList(a.languages.map(function(l) { return { label: l.label, count: l.count }; }), a.langKnown, {
+        suffix: function(r, share) { return share + '% of sessions'; }
+      })
+    : atlasEmpty('No language data yet.');
+}
+
+document.getElementById('atlas-refresh-btn').addEventListener('click', renderAtlasTab);
+
+document.getElementById('atlas-export-btn').addEventListener('click', function() {
+  var a = buildAtlas();
+  var out = {
+    totalSessions: a.totalSessions, located: a.located, unknown: a.unknown,
+    overseasShare: +a.overseasShare.toFixed(3),
+    topRegion: a.topRegion, topLanguage: a.topLang,
+    zones: a.zones, regions: a.regions, offsets: a.offsets,
+    languages: a.languages.map(function(l) { return { code: l.code, label: l.label, count: l.count }; })
+  };
+  var blob = new Blob([JSON.stringify(out, null, 2)], { type: 'application/json' });
+  var url  = URL.createObjectURL(blob);
+  var el   = document.createElement('a');
+  el.href = url; el.download = 'atlas-' + Date.now() + '.json'; el.click();
   URL.revokeObjectURL(url);
 });
 </script>
