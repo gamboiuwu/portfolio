@@ -852,6 +852,18 @@
 		.depth-tier-bar { height: 100%; border-radius: 3px; transition: width 0.4s ease; }
 		.depth-tier-val { width: 3.2em; font-family: 'Courier New', monospace; font-size: 0.78em; color: #c9a87c; flex-shrink: 0; }
 
+		/* Tempo tab — reading pace / scroll velocity (reuses compass donut + spotlight bars) */
+		#tempo-donut { display: block; flex-shrink: 0; }
+		.tempo-recent { display: flex; flex-direction: column; gap: 0.4em; }
+		.tempo-recent-row { display: flex; align-items: center; gap: 0.7em; padding: 0.45em 0; border-bottom: 1px solid rgba(255,255,255,0.06); }
+		.tempo-recent-row:last-child { border-bottom: none; }
+		.tempo-tag { font-family: 'Courier New', monospace; font-size: 0.64em; letter-spacing: 0.06em; padding: 0.2em 0.5em; border-radius: 3px; flex-shrink: 0; white-space: nowrap; }
+		.tempo-tag-skim { background: rgba(214,190,150,0.18); color: #d6be96; border: 1px solid rgba(214,190,150,0.4); }
+		.tempo-tag-steady { background: rgba(201,168,124,0.18); color: #c9a87c; border: 1px solid rgba(201,168,124,0.4); }
+		.tempo-tag-immersed { background: rgba(176,122,74,0.2); color: #d69a5e; border: 1px solid rgba(176,122,74,0.5); }
+		.tempo-recent-page { font-family: 'Courier New', monospace; font-size: 0.82em; color: #e7e4de; word-break: break-all; flex: 1 1 auto; }
+		.tempo-recent-meta { font-size: 0.74em; color: #8c887f; white-space: nowrap; flex-shrink: 0; font-family: 'Courier New', monospace; }
+
 		/* Orbit tab — returning-visitor / retention (reuses compass donut + legend) */
 		.orbit-donut-row { display: flex; gap: 1.4em; align-items: center; flex-wrap: wrap; }
 		#orbit-donut { display: block; flex-shrink: 0; }
@@ -1073,6 +1085,7 @@
 				<button class="admin-tab" data-tab="muse">Muse</button>
 				<button class="admin-tab" data-tab="ripple">Ripple</button>
 				<button class="admin-tab" data-tab="loom">Loom</button>
+				<button class="admin-tab" data-tab="tempo">Tempo</button>
 			</div>
 
 			<!-- ============ GALLERY TAB ============ -->
@@ -2322,6 +2335,47 @@
 
 						</div>
 
+						<div id="tab-tempo" class="tab-content">
+
+							<div class="admin-card">
+								<h3>Tempo — Reading Pace &amp; Scroll Velocity</h3>
+								<p class="hint">Depth measures how <em>far</em> down a page a visitor scrolls; Latch measures how <em>fast</em> they take their first action. Tempo measures the thing neither does &mdash; the <strong>speed at which they travel down the page once they start reading</strong>. For each visit it clocks the time between scroll milestones (the 25 / 50 / 75 / 100&nbsp;% marks the site already records) and turns it into a reading pace: a fast pace means the visitor <em>skimmed</em> and blew past the content; a slow pace means they <em>lingered</em> and actually read. It sorts visits into skim / steady / immersed, ranks which pages hold a reader&rsquo;s pace the longest (the ones worth leading with), and shows where on a page people naturally slow down or speed up. Read-only, derived live from <code>_gam_analytics_v1</code> scroll timestamps &mdash; no new storage key, no <code>analytics.js</code> change. <em>Pace is a proxy: scroll events fire at fixed thresholds via a debounced handler, and a short page that fits the viewport can register as an instant skim.</em></p>
+								<div id="tempo-stats" class="analytics-stats" style="margin-bottom:1em"></div>
+								<div style="display:flex;gap:0.5em;flex-wrap:wrap;align-items:center">
+									<button class="button small" id="tempo-refresh-btn">Refresh</button>
+									<button class="button small" id="tempo-export-btn">Export JSON</button>
+								</div>
+							</div>
+
+							<div class="admin-card">
+								<h3>Pace Mix</h3>
+								<p class="hint">Every reading visit sorted by how quickly it moved: <strong>Skim</strong> (raced down the page), <strong>Steady</strong> (a normal browsing pace), <strong>Immersed</strong> (dwelled &mdash; the pace of someone actually reading). The centre shows the deep-read rate: the share of reading visits that were immersed.</p>
+								<div class="compass-donut-row">
+									<canvas id="tempo-donut" width="180" height="180"></canvas>
+									<div id="tempo-legend" class="compass-legend"></div>
+								</div>
+							</div>
+
+							<div class="admin-card">
+								<h3>Most Immersive Pages</h3>
+								<p class="hint">Pages ranked by average reading pace &mdash; the slowest (most dwelt-on) at the top. A slow pace here is the good outcome: it means visitors are taking their time with that page&rsquo;s content rather than scrolling straight past.</p>
+								<div id="tempo-pages"></div>
+							</div>
+
+							<div class="admin-card">
+								<h3>Where Readers Slow Down</h3>
+								<p class="hint">The average time visitors spend crossing each quarter of a page, landing to bottom. A longer bar means readers naturally linger in that stretch; a short one means they race through it. Read top-to-bottom, it&rsquo;s the rhythm of a typical scroll down the portfolio.</p>
+								<div id="tempo-segments"></div>
+							</div>
+
+							<div class="admin-card">
+								<h3>Recent Reads</h3>
+								<p class="hint">The latest reading visits, newest first &mdash; each tagged <strong>SKIM</strong> / <strong>STEADY</strong> / <strong>IMMERSED</strong> with the page, how deep they got, and the pace they held.</p>
+								<div id="tempo-recent"></div>
+							</div>
+
+						</div>
+
 		</div><!-- /#admin-dash -->
 		<input type="file" id="img-file-input" accept="image/*" style="display:none" />
 
@@ -3360,6 +3414,9 @@ document.addEventListener('click', function(e){
   }
   if (e.target.dataset && e.target.dataset.tab === 'loom') {
     renderLoomTab();
+  }
+  if (e.target.dataset && e.target.dataset.tab === 'tempo') {
+    renderTempoTab();
   }
 });
 
@@ -8204,6 +8261,241 @@ document.getElementById('loom-export-btn').addEventListener('click', function() 
   var url  = URL.createObjectURL(blob);
   var a    = document.createElement('a');
   a.href = url; a.download = 'loom-' + cur.sid + '-' + Date.now() + '.json'; a.click();
+  URL.revokeObjectURL(url);
+});
+
+/* ================================================================
+   TEMPO TAB — Reading Pace & Scroll Velocity
+   Depth reports how FAR a visitor scrolls; Latch reports how FAST
+   they first act. Tempo reports the velocity BETWEEN scroll
+   milestones — the pace at which a reader travels down a page.
+   For each (session, page) it reads the timestamps analytics.js
+   already stamps on the 25/50/75/100% scroll events, derives a
+   pace (seconds to cross a quarter of the page), and sorts visits
+   into skim / steady / immersed. Read-only, no new storage key.
+================================================================ */
+
+/* seconds-per-quarter thresholds (a "quarter" = 25% of the page) */
+var TEMPO_SKIM_MAX   = 4;    // < 4s per quarter  = skim  (raced past content)
+var TEMPO_READ_MIN   = 12;   // >= 12s per quarter = immersed (dwelt / read)
+var TEMPO_SPAN_FLOOR = 250;  // ms; clamp so an instant scroll doesn't divide oddly
+
+var TEMPO_COLORS = { immersed: 'rgba(176,122,74,0.92)', steady: 'rgba(201,168,124,0.92)', skim: 'rgba(214,190,150,0.92)' };
+var TEMPO_LABELS = { immersed: 'Immersed', steady: 'Steady', skim: 'Skim' };
+var TEMPO_ORDER  = ['immersed', 'steady', 'skim'];
+
+function tempoTierOf(secPerQuarter) {
+  if (secPerQuarter < TEMPO_SKIM_MAX)  return 'skim';
+  if (secPerQuarter >= TEMPO_READ_MIN) return 'immersed';
+  return 'steady';
+}
+
+/* Human-friendly seconds ("6.4s", "48s", "1m 12s") */
+function tempoFmtSec(sec) {
+  if (sec == null) return '—';
+  if (sec < 10) return (Math.round(sec * 10) / 10) + 's';
+  if (sec < 60) return Math.round(sec) + 's';
+  var m = Math.floor(sec / 60), rs = Math.round(sec % 60);
+  return m + 'm' + (rs ? ' ' + rs + 's' : '');
+}
+
+function buildTempo() {
+  var events = CommissionData.getAnalytics();
+
+  /* key = sid +   + page  ->  { sid, page, pvTs, scroll:{depth:earliestTs} } */
+  var byKey = {};
+  events.forEach(function(e) {
+    if (!e.sid || !e.page) return;
+    if (e.type !== 'pv' && e.type !== 'scroll') return;
+    var k = e.sid + ' ' + e.page;
+    var slot = byKey[k] || (byKey[k] = { sid: e.sid, page: e.page, pvTs: null, scroll: {} });
+    if (e.type === 'pv') {
+      if (typeof e.ts === 'number' && (slot.pvTs === null || e.ts < slot.pvTs)) slot.pvTs = e.ts;
+    } else if (typeof e.depth === 'number' && typeof e.ts === 'number') {
+      if (slot.scroll[e.depth] == null || e.ts < slot.scroll[e.depth]) slot.scroll[e.depth] = e.ts;
+    }
+  });
+
+  var reads      = [];
+  var tierCounts = { skim: 0, steady: 0, immersed: 0 };
+  var pageAgg    = {};                       // page -> { paceSum, n }
+  var segSum     = [0, 0, 0, 0];             // land->25, 25->50, 50->75, 75->100
+  var segCnt     = [0, 0, 0, 0];
+  var TIERS      = [25, 50, 75, 100];
+
+  Object.keys(byKey).forEach(function(k) {
+    var slot   = byKey[k];
+    var depths = Object.keys(slot.scroll).map(Number).sort(function(a, b) { return a - b; });
+    if (!depths.length) return;              // never scrolled — not a reading visit
+
+    var maxDepth      = depths[depths.length - 1];
+    var firstScrollTs = slot.scroll[depths[0]];
+    var lastScrollTs  = slot.scroll[maxDepth];
+    var haveLanding   = slot.pvTs !== null && slot.pvTs <= firstScrollTs;
+    var startTs       = haveLanding ? slot.pvTs : firstScrollTs;
+    var spanMs        = Math.max(TEMPO_SPAN_FLOOR, lastScrollTs - startTs);
+    var quarters      = maxDepth / 25;       // 25% -> 1, 100% -> 4
+    var pace          = (spanMs / 1000) / quarters;
+    var tier          = tempoTierOf(pace);
+
+    tierCounts[tier]++;
+    var pa = pageAgg[slot.page] || (pageAgg[slot.page] = { paceSum: 0, n: 0 });
+    pa.paceSum += pace; pa.n++;
+
+    /* per-quarter dwell where consecutive milestones exist (a gap breaks the chain) */
+    var prevTs = haveLanding ? slot.pvTs : null;
+    TIERS.forEach(function(t, i) {
+      if (slot.scroll[t] == null) { prevTs = null; return; }
+      if (prevTs != null) {
+        var dur = slot.scroll[t] - prevTs;
+        if (dur >= 0) { segSum[i] += dur; segCnt[i]++; }
+      }
+      prevTs = slot.scroll[t];
+    });
+
+    reads.push({ sid: slot.sid, page: slot.page, depth: maxDepth, spanMs: spanMs, pace: pace, tier: tier, ts: lastScrollTs });
+  });
+
+  reads.sort(function(a, b) { return b.ts - a.ts; });
+
+  var total  = reads.length;
+  var paces  = reads.map(function(r) { return r.pace; }).sort(function(a, b) { return a - b; });
+  var median = total ? (total % 2 ? paces[(total - 1) / 2] : (paces[total / 2 - 1] + paces[total / 2]) / 2) : 0;
+
+  var pages = Object.keys(pageAgg).map(function(pg) {
+    return { page: pg, avgPace: pageAgg[pg].paceSum / pageAgg[pg].n, reads: pageAgg[pg].n };
+  }).sort(function(a, b) { return b.avgPace - a.avgPace; });
+
+  var segments = [0, 1, 2, 3].map(function(i) {
+    return { i: i, avgMs: segCnt[i] ? segSum[i] / segCnt[i] : 0, n: segCnt[i] };
+  });
+
+  return {
+    total:      total,
+    tierCounts: tierCounts,
+    medianPace: median,
+    skimRate:   total ? Math.round((tierCounts.skim / total) * 100) : 0,
+    deepRate:   total ? Math.round((tierCounts.immersed / total) * 100) : 0,
+    pages:      pages,
+    segments:   segments,
+    reads:      reads
+  };
+}
+
+function drawTempoDonut(t) {
+  var canvas = document.getElementById('tempo-donut');
+  if (!canvas) return;
+  var ctx = canvas.getContext('2d');
+  var W = canvas.width, H = canvas.height;
+  ctx.clearRect(0, 0, W, H);
+  var cx = W / 2, cy = H / 2, rOut = 78, rIn = 46;
+
+  if (!t.total) {
+    ctx.fillStyle = '#444';
+    ctx.font = '12px -apple-system, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('No reads yet.', cx, cy);
+    return;
+  }
+
+  var start = -Math.PI / 2;
+  TEMPO_ORDER.forEach(function(k) {
+    var v = t.tierCounts[k];
+    if (!v) return;
+    var ang = (v / t.total) * Math.PI * 2;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.arc(cx, cy, rOut, start, start + ang);
+    ctx.closePath();
+    ctx.fillStyle = TEMPO_COLORS[k];
+    ctx.fill();
+    start += ang;
+  });
+
+  ctx.globalCompositeOperation = 'destination-out';
+  ctx.beginPath();
+  ctx.arc(cx, cy, rIn, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.globalCompositeOperation = 'source-over';
+
+  ctx.fillStyle = '#c9a87c';
+  ctx.font = 'bold 22px -apple-system, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(t.deepRate + '%', cx, cy - 6);
+  ctx.fillStyle = '#8c887f';
+  ctx.font = '10px "Courier New", monospace';
+  ctx.fillText('DEEP READ', cx, cy + 12);
+}
+
+function renderTempoTab() {
+  var t = buildTempo();
+
+  function chip(num, label) {
+    return '<div class="analytics-stat-chip"><span class="asc-num">' + num +
+      '</span><span class="asc-label">' + label + '</span></div>';
+  }
+  document.getElementById('tempo-stats').innerHTML =
+    chip(t.total,                                     'Reading Sessions') +
+    chip(t.total ? tempoFmtSec(t.medianPace) : '—',   'Median Pace / ¼') +
+    chip(t.skimRate + '%',                            'Skim Rate') +
+    chip(t.deepRate + '%',                            'Deep-Read Rate');
+
+  drawTempoDonut(t);
+
+  document.getElementById('tempo-legend').innerHTML = TEMPO_ORDER.map(function(k) {
+    return '<div class="compass-legend-item">' +
+      '<span class="compass-legend-swatch" style="background:' + TEMPO_COLORS[k] + '"></span>' +
+      TEMPO_LABELS[k] +
+      '<span class="compass-legend-val">' + t.tierCounts[k] + '</span>' +
+    '</div>';
+  }).join('');
+
+  /* Most immersive pages — slowest (most dwelt-on) pace first */
+  var pageRows = t.pages.slice(0, 12).map(function(p) {
+    return { label: jPageLabel(p.page), count: Math.round(p.avgPace * 10) / 10, reads: p.reads };
+  });
+  document.getElementById('tempo-pages').innerHTML = jBarList(pageRows, 0, {
+    suffix: function(r) { return 's / ¼ · ' + r.reads + ' read' + (r.reads === 1 ? '' : 's'); }
+  });
+
+  /* Where readers slow down — average dwell per quarter, kept in top→bottom order */
+  var SEG_LABELS = ['Top quarter · landing → 25%', 'Second quarter · 25 → 50%', 'Third quarter · 50 → 75%', 'Bottom quarter · 75 → 100%'];
+  var segEl = document.getElementById('tempo-segments');
+  if (!t.total) {
+    segEl.innerHTML = '<p style="color:#444;font-size:0.85em;padding:0.5em 0">No reading data yet. Browse the public pages and scroll — pace events populate automatically.</p>';
+  } else {
+    var segRows = t.segments.map(function(s) {
+      return { label: SEG_LABELS[s.i], count: Math.round((s.avgMs / 1000) * 10) / 10, n: s.n };
+    });
+    segEl.innerHTML = jBarList(segRows, 0, {
+      suffix: function(r) { return 's avg · ' + r.n + ' crossing' + (r.n === 1 ? '' : 's'); }
+    });
+  }
+
+  /* Recent reads */
+  var recentEl = document.getElementById('tempo-recent');
+  if (!t.reads.length) {
+    recentEl.innerHTML = '<p style="color:#444;font-size:0.85em;padding:0.5em 0">No reading data yet.</p>';
+  } else {
+    recentEl.innerHTML = '<div class="tempo-recent">' + t.reads.slice(0, 30).map(function(r) {
+      return '<div class="tempo-recent-row">' +
+        '<span class="tempo-tag tempo-tag-' + r.tier + '">' + TEMPO_LABELS[r.tier].toUpperCase() + '</span>' +
+        '<span class="tempo-recent-page" title="' + escHtml(r.page) + '">' + escHtml(jPageLabel(r.page)) + '</span>' +
+        '<span class="tempo-recent-meta">' + r.depth + '% · ' + tempoFmtSec(r.pace) + '/¼</span>' +
+      '</div>';
+    }).join('') + '</div>';
+  }
+}
+
+document.getElementById('tempo-refresh-btn').addEventListener('click', renderTempoTab);
+
+document.getElementById('tempo-export-btn').addEventListener('click', function() {
+  var t = buildTempo();
+  var blob = new Blob([JSON.stringify(t, null, 2)], { type: 'application/json' });
+  var url  = URL.createObjectURL(blob);
+  var a    = document.createElement('a');
+  a.href = url; a.download = 'tempo-' + Date.now() + '.json'; a.click();
   URL.revokeObjectURL(url);
 });
 </script>
