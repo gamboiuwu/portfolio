@@ -203,6 +203,7 @@ Password-protected (SHA-256 hash in localStorage, 5-attempt lockout). Session tr
 | Muse        | Artwork-to-conversion attribution — joins artwork viewport events with commission-goal events per session: which pieces interested visitors view, conversion lift per artwork, cold pieces (attention without intent) |
 | Ripple      | Cohort retention & return decay — weekly acquisition cohorts (by first-seen week via persistent `vid`), retention triangle grid, average return-decay curve, best-retained cohorts, cohort sizes |
 | Loom        | Session replay & event timeline — reconstructs a single visit as an ordered event stream (joins analytics + spotlight by `sid`): session picker, summary header, chronological replay timeline, recent-sessions directory |
+| Tempo       | Reading pace & scroll velocity — time between scroll milestones per visit: skim/steady/immersed pace mix, most-immersive pages, per-quarter dwell, recent reads |
 
 ---
 
@@ -967,6 +968,45 @@ Answers the one thing the entire analytics family structurally cannot: **what di
 
 ---
 
+## Tempo — Reading Pace & Scroll Velocity (Admin → Tempo tab) — NEW TOOL
+
+Answers a question no other tool measures: **how fast do visitors travel down a page once they start reading?** Depth reports how *far* a visitor scrolls (reach); Latch reports how *fast* they take their *first* action (activation latency); none reports the *velocity between scroll milestones* — the pace of the read itself. Tempo is that missing axis: a fast pace means the visitor **skimmed** and blew past the content, a slow pace means they **lingered** and actually read. It's the clearest read on whether a page's content holds a reader or just gets scrolled past.
+
+**Why it's genuinely new:** it's a *rate*, not a reach or a first-touch. Depth measures the *distance* a scroll travels; Latch measures the *delay* before the first interaction; Tempo measures *distance ÷ time between the scroll thresholds* — reading velocity. No existing tool computes the time *between* scroll events (verified against every tool above: Depth = furthest depth only, Latch = time to first action only, Ember folds raw scroll depth into a magnitude score, Loom shows one session's raw stream without aggregating pace).
+
+**No new storage key** — derived live from `_gam_analytics_v1`, using the `ts` timestamps already stamped on every `pv` and `scroll` event (the 25 / 50 / 75 / 100 % thresholds `analytics.js` already records). Same read-only pattern as Depth/Latch. No `analytics.js` change.
+
+**How it works:**
+1. `buildTempo()` groups events by `(sid, page)`, capturing the earliest `pv` timestamp (landing) and the earliest timestamp each scroll depth was reached.
+2. A `(sid, page)` with no scroll event is **not a reading visit** and is skipped.
+3. Per reading visit it derives the **span** (landing → deepest milestone reached, clamped to a `TEMPO_SPAN_FLOOR` of 250 ms), the **quarters** covered (`maxDepth / 25`), and the **pace** = `seconds ÷ quarters` (seconds to cross one 25 % quarter of the page).
+4. `tempoTierOf(pace)` sorts it: **Skim** (`< TEMPO_SKIM_MAX` = 4 s/quarter), **Immersed** (`≥ TEMPO_READ_MIN` = 12 s/quarter), else **Steady**.
+5. It also accumulates per-quarter dwell (landing→25, 25→50, 50→75, 75→100) where consecutive milestones exist — a gap breaks the chain — for the "where readers slow down" rhythm.
+
+**Admin tab sections:**
+- **Stats**: Reading Sessions, Median Pace / ¼, Skim Rate %, Deep-Read Rate %
+- **Pace Mix**: canvas donut + legend (Immersed / Steady / Skim); centre shows the deep-read rate %
+- **Most Immersive Pages**: pages ranked by average pace, slowest (most dwelt-on) first — a slow pace is the *good* outcome
+- **Where Readers Slow Down**: average time to cross each quarter of a page (landing→25→50→75→100), in top-to-bottom order — the natural rhythm of a scroll
+- **Recent Reads**: latest reading visits tagged `SKIM` / `STEADY` / `IMMERSED` with page, depth reached, and pace held
+
+**Derived schema (for export):**
+```js
+{ total, tierCounts:{skim,steady,immersed}, medianPace, skimRate, deepRate,
+  pages:[{page, avgPace, reads}], segments:[{i, avgMs, n}],
+  reads:[{sid, page, depth, spanMs, pace, tier, ts}] }
+```
+
+**Technical notes:**
+- Donut + tier swatches use the warm amber/sand ramp (`rgba(176,122,74…)` immersed → `rgba(214,190,150…)` skim) — no blue/pink. New `.tempo-*` CSS classes; reuses `jBarList()`, `analytics-stat-chip`, `compass-legend`/`compass-donut-row`, `jPageLabel()`, `escHtml()`.
+- Pace is a **proxy**: scroll events fire at fixed thresholds via a debounced handler, so a short page that fits the viewport can register `100%` instantly and read as an instant skim (noted in the tab hint) — consistent with Depth's reach caveat.
+- Pace is per `(sid, page)`, so one visitor across several tabs may count more than once (consistent with the rest of the family).
+- Tab renders lazily on click, same pattern as Loom/Ripple/Muse/etc.
+
+**API:** none new on `CommissionData` — uses `CommissionData.getAnalytics()`. Logic lives in `renderTempoTab()` / `buildTempo()` inside `admin/index.html`.
+
+---
+
 ## Commission System
 
 ### Pages
@@ -1044,4 +1084,4 @@ Stored in `_gam_prices_v1`. Three sections: `digital`, `stickers`, `animation`. 
 
 ---
 
-*Last updated: 2026-08-03*
+*Last updated: 2026-08-06*
