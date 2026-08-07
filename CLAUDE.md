@@ -203,6 +203,7 @@ Password-protected (SHA-256 hash in localStorage, 5-attempt lockout). Session tr
 | Muse        | Artwork-to-conversion attribution — joins artwork viewport events with commission-goal events per session: which pieces interested visitors view, conversion lift per artwork, cold pieces (attention without intent) |
 | Ripple      | Cohort retention & return decay — weekly acquisition cohorts (by first-seen week via persistent `vid`), retention triangle grid, average return-decay curve, best-retained cohorts, cohort sizes |
 | Loom        | Session replay & event timeline — reconstructs a single visit as an ordered event stream (joins analytics + spotlight by `sid`): session picker, summary header, chronological replay timeline, recent-sessions directory |
+| Tempo       | Interaction rhythm & hesitation — inter-action gap analysis per visit: cadence mix (gap buckets), visit pace trend (accel/steady/decel), deliberation hotspots, per-page rhythm, longest hesitations |
 
 ---
 
@@ -967,6 +968,51 @@ Answers the one thing the entire analytics family structurally cannot: **what di
 
 ---
 
+## Tempo — Interaction Rhythm & Hesitation (Admin → Tempo tab) — NEW TOOL
+
+Answers a pacing question no other tool measures: **how fast does a visit move from one action to the next, and where does it pause?** Latch clocks the gap before a visitor's *first* interaction (a single latency, at the start); Ember scores the *amount* of engagement (counts + dwell, no rhythm); Loom replays one visit qualitatively; Pulse times *when* visits arrive across the week. None measures the **rhythm between actions across a whole visit** — the gap from each action to the next, aggregated. Tempo is that signal: fast gaps read as decisive, fluid browsing; long gaps as hesitation or deliberation. It's the aggregate, whole-visit companion to Latch's first-action-only latency.
+
+**Why it's genuinely new:** it's an *inter-action-gap* view. Latch measures one latency per session (arrival → first action) and stops; Tempo measures *every* gap between consecutive actions across the entire visit, then aggregates the distribution, the intra-visit pace change, and where the pauses land. Ember's per-session score uses raw click/scroll *counts* and total dwell — never the spacing between events. No existing tool looks at the time *between* actions as a distribution.
+
+**No new storage key** — derived live from `_gam_analytics_v1` using the `ts` timestamps already stamped on every `pv` / `click` / `scroll` / `goal` event, the same read-only pattern as Latch/Journey. No `analytics.js` change.
+
+**Action model:** the four discrete, meaningful action types (`pv`, `click`, `scroll`, `goal`) are the rhythm steps; `exit` (terminal) and `tile_hover` (passive) are excluded. A **gap** is the ms between two consecutive actions in a session. Gaps longer than `TEMPO_MAXGAP` (90s) are treated as the visitor stepping away (idle tab) and excluded from the rhythm entirely, so an abandoned tab can't masquerade as a long think.
+
+**Gap buckets** (`TEMPO_MIX`, warm amber→clay ramp): Snap (`<1s`), Brisk (`1–3s`), Considered (`3–8s`), Hesitant (`8–20s`), Stalled (`20–90s`). A gap ≥ `TEMPO_HESITATE` (8s) counts as a **hesitation pause**; a session whose median gap `< TEMPO_DECISIVE` (2.5s) is a **decisive visit**.
+
+**How it works:**
+1. `buildTempo()` groups the four action types by `sid`, sorts each session by `ts`, and walks consecutive pairs to collect in-window gaps (≤ 90s).
+2. Each gap increments its bucket, is attributed to the page of the *earlier* action (for per-page rhythm & hotspots), and — if ≥ 8s — records a hesitation pause with before/after action context.
+3. **Pace trend** (sessions with ≥ 4 gaps): the mean of the first half of gaps vs the second half — accelerating if it sped up by ≥ `TEMPO_PACE_MARGIN` (1.25×), decelerating if it slowed by the same, else steady.
+4. Aggregates the overall median gap, per-session actions-per-minute (over the capped span), the decisive rate, deliberation hotspots by page, per-page median rhythm, and the biggest single pauses.
+
+**Admin tab sections:**
+- **Stats**: Median Action Gap, Actions / Min, Hesitation Rate (% of all gaps that are ≥ 8s), Decisive Visits (% of visits with a sub-2.5s median gap)
+- **Cadence Mix**: canvas donut + legend across the five gap buckets; centre shows the median gap
+- **Visit Pace Trend**: accelerating / steady / decelerating share of paced visits
+- **Deliberation Hotspots**: pages ranked by how many hesitation pauses happened on them (where visitors stop to think)
+- **Rhythm by Page**: pages ranked by median action gap, snappiest first (inverse-scaled bar, capped at `TEMPO_RHYTHM_CAP` = 15s)
+- **Longest Hesitations**: the biggest single pauses with page + before→after action context, tagged `STALL` (≥20s) / `HESITANT` (8–20s)
+
+**Derived schema (for export):**
+```js
+{ medianGapMs, totalGaps, avgActionsPerMin, hesitationRate, decisiveRate,
+  sessionCount, rhythmicSessions,
+  cadenceMix:[{bucket,count}], pace:{accel,steady,decel},
+  deliberationHotspots:[{label,count}], rhythmByPage:[{label,avg,count}],
+  longestPauses:[{ms,page,before,after,ts}] }
+```
+
+**Technical notes:**
+- Donut, bars and tags use the warm amber/sand/clay palette (`rgba(176,122,74…)` snap → `rgba(120,116,108…)` stalled) — no blue/pink. New `.tempo-*` CSS classes; reuses `jBarList()` (with a custom `suffix`), the `spotlight-board`/`sp-*` bar styles, `analytics-stat-chip`, `compass-legend`/`compass-donut-row`, `escHtml()`, `fmtDate()`, `jFmtDur()`, `jPageLabel()`.
+- Rhythm-by-page bars are *inverse-scaled* (bar width = faster rhythm), mirroring Latch's speed bars, so a shorter gap reads as a longer bar.
+- Rhythm is per session (`sid`), so one visitor across several tabs may count more than once (consistent with the rest of the family).
+- Tab renders lazily on click, same pattern as Loom/Latch/Ember/etc.
+
+**API:** none new on `CommissionData` — uses `CommissionData.getAnalytics()`. Logic lives in `renderTempoTab()` / `buildTempo()` inside `admin/index.html`.
+
+---
+
 ## Commission System
 
 ### Pages
@@ -1044,4 +1090,4 @@ Stored in `_gam_prices_v1`. Three sections: `digital`, `stickers`, `animation`. 
 
 ---
 
-*Last updated: 2026-08-03*
+*Last updated: 2026-08-07*

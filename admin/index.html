@@ -940,6 +940,20 @@
 		.loom-dir-meta { flex: 0 0 auto; font-size: 0.7em; color: #8c887f; font-family: 'Courier New', monospace; }
 		.loom-dir-glyphs { flex: 0 0 auto; font-size: 0.66em; color: #a49f96; font-family: 'Courier New', monospace; }
 
+		/* Tempo tab — interaction rhythm & hesitation (warm amber, no blue/pink) */
+		.tempo-hz { display: flex; align-items: center; gap: 0.6em; padding: 0.5em 0.2em;
+			border-bottom: 1px solid rgba(255,255,255,0.05); }
+		.tempo-hz:last-child { border-bottom: none; }
+		.tempo-hz-tag { flex: 0 0 auto; font-family: 'Courier New', monospace; font-size: 0.58em;
+			letter-spacing: 0.06em; text-transform: uppercase; padding: 0.1em 0.45em; border-radius: 3px; }
+		.tempo-hz-stall { background: rgba(150,104,62,0.28); color: #d09a6a; border: 1px solid rgba(150,104,62,0.5); }
+		.tempo-hz-hesitant { background: rgba(201,168,124,0.2); color: #d6b98a; border: 1px solid rgba(201,168,124,0.4); }
+		.tempo-hz-dur { flex: 0 0 3.6em; font-family: 'Courier New', monospace; font-size: 0.8em; color: #d6a878; text-align: right; }
+		.tempo-hz-body { flex: 1 1 auto; min-width: 0; font-size: 0.82em; color: #cfc9bf; }
+		.tempo-hz-page { font-family: 'Courier New', monospace; font-size: 0.9em; color: #b79b6f; }
+		.tempo-hz-move { color: #8c887f; }
+		.tempo-hz-meta { flex: 0 0 auto; font-size: 0.68em; color: #8c887f; font-family: 'Courier New', monospace; }
+
 		/* Tide tab — trends & momentum (reuses spotlight bars) */
 		#tide-canvas { display: block; }
 		.tide-win { display: flex; align-items: center; gap: 0.6em; flex-wrap: wrap; margin-bottom: 1em; }
@@ -1073,6 +1087,7 @@
 				<button class="admin-tab" data-tab="muse">Muse</button>
 				<button class="admin-tab" data-tab="ripple">Ripple</button>
 				<button class="admin-tab" data-tab="loom">Loom</button>
+				<button class="admin-tab" data-tab="tempo">Tempo</button>
 			</div>
 
 			<!-- ============ GALLERY TAB ============ -->
@@ -2322,6 +2337,53 @@
 
 						</div>
 
+						<div id="tab-tempo" class="tab-content">
+
+							<div class="admin-card">
+								<h3>Tempo — Interaction Rhythm &amp; Hesitation</h3>
+								<p class="hint">Latch clocks the gap before a visitor&rsquo;s <em>first</em> action; Ember scores the <em>amount</em> of engagement; Loom replays a single visit. None measures the <strong>rhythm between actions across a whole visit</strong> &mdash; how quickly someone moves from one thing to the next, where they pause to deliberate, and whether the visit speeds up or slows down. Tempo is that pacing signal. For every visit it walks the ordered stream of meaningful actions (pageviews, clicks, scroll milestones, goals) and measures the gap between each one: fast gaps read as decisive browsing, long gaps as hesitation or deliberation. It surfaces the overall cadence, where the longest pauses happen, which pages feel snappy versus sluggish, and the single biggest hesitations. Derived live from <code>_gam_analytics_v1</code> (event <code>ts</code> timestamps already recorded) &mdash; no new storage key, read-only, no <code>analytics.js</code> change. Gaps longer than 90s are treated as the visitor stepping away (idle tab) and excluded from the rhythm, so an abandoned tab can&rsquo;t masquerade as a long think.</p>
+								<div id="tempo-stats" class="analytics-stats" style="margin-bottom:1em"></div>
+								<div style="display:flex;gap:0.5em;flex-wrap:wrap">
+									<button class="button small" id="tempo-refresh-btn">Refresh</button>
+									<button class="button small" id="tempo-export-btn">Export JSON</button>
+								</div>
+							</div>
+
+							<div class="admin-card">
+								<h3>Cadence Mix</h3>
+								<p class="hint">Every gap between two consecutive actions, bucketed by how long it lasted: <strong>Snap</strong> (&lt;1s), <strong>Brisk</strong> (1&ndash;3s), <strong>Considered</strong> (3&ndash;8s), <strong>Hesitant</strong> (8&ndash;20s), and <strong>Stalled</strong> (20&ndash;90s). The donut centre shows the median gap across all visits. A rhythm weighted toward Snap/Brisk is confident, fluid browsing; a heavy Hesitant/Stalled tail means visitors are stopping to think &mdash; sometimes deliberation over a piece, sometimes confusion about where to go next.</p>
+								<div class="compass-donut-row">
+									<div class="heatmap-wrap"><canvas id="tempo-donut" width="200" height="200"></canvas></div>
+									<div id="tempo-legend" class="compass-legend"></div>
+								</div>
+							</div>
+
+							<div class="admin-card">
+								<h3>Visit Pace Trend</h3>
+								<p class="hint">For visits with enough actions to tell, whether the pace <strong>accelerated</strong> (the second half of the visit was faster than the first &mdash; a visitor getting drawn in), stayed <strong>steady</strong>, or <strong>decelerated</strong> (slowing down &mdash; either savouring the work or losing momentum before leaving). Accelerating visits are the ones the portfolio is winning.</p>
+								<div id="tempo-pace"></div>
+							</div>
+
+							<div class="admin-card">
+								<h3>Deliberation Hotspots</h3>
+								<p class="hint">Pages ranked by how many long pauses (a gap of 8s or more before the next action) happened while the visitor was on them. These are the spots where people stop and think most &mdash; a strong signal of either an engaging piece worth dwelling on or a decision point where visitors hesitate about where to go next.</p>
+								<div id="tempo-hotspots"></div>
+							</div>
+
+							<div class="admin-card">
+								<h3>Rhythm by Page</h3>
+								<p class="hint">Pages ranked by their median action gap, snappiest first (fuller bar = quicker rhythm, inverse-scaled). A page where visitors move quickly from action to action feels fluid; a sluggish one is where the visit slows to a crawl &mdash; worth a look at whether that&rsquo;s absorption or friction.</p>
+								<div id="tempo-rhythm"></div>
+							</div>
+
+							<div class="admin-card">
+								<h3>Longest Hesitations</h3>
+								<p class="hint">The single biggest pauses recorded, newest first &mdash; the exact moment a visitor stopped, the page they were on, and what they did before and after the pause. The clearest qualitative read on where attention (or indecision) concentrates. <span class="tempo-hz-tag tempo-hz-stall">STALL</span> marks a pause of 20s+, <span class="tempo-hz-tag tempo-hz-hesitant">HESITANT</span> an 8&ndash;20s one.</p>
+								<div id="tempo-pauses"></div>
+							</div>
+
+						</div>
+
 		</div><!-- /#admin-dash -->
 		<input type="file" id="img-file-input" accept="image/*" style="display:none" />
 
@@ -3360,6 +3422,9 @@ document.addEventListener('click', function(e){
   }
   if (e.target.dataset && e.target.dataset.tab === 'loom') {
     renderLoomTab();
+  }
+  if (e.target.dataset && e.target.dataset.tab === 'tempo') {
+    renderTempoTab();
   }
 });
 
@@ -8204,6 +8269,306 @@ document.getElementById('loom-export-btn').addEventListener('click', function() 
   var url  = URL.createObjectURL(blob);
   var a    = document.createElement('a');
   a.href = url; a.download = 'loom-' + cur.sid + '-' + Date.now() + '.json'; a.click();
+  URL.revokeObjectURL(url);
+});
+
+/* ================================================================
+   TEMPO TAB — interaction rhythm & hesitation
+   Latch measures time-to-FIRST action; Ember scores the AMOUNT of
+   engagement; Loom replays one visit. None measures the rhythm
+   BETWEEN actions across a whole visit — the gap from one action to
+   the next: fast = decisive browsing, long = hesitation/deliberation.
+   Tempo aggregates those inter-action gaps across all sessions.
+   Read-only, over _gam_analytics_v1 — no new storage key,
+   no analytics.js change.
+   ================================================================ */
+
+/* Gap-bucket thresholds (ms) and rhythm constants. */
+var TEMPO_SNAP = 1000, TEMPO_BRISK = 3000, TEMPO_CONSIDER = 8000, TEMPO_HESITANT = 20000;
+var TEMPO_MAXGAP  = 90000;   /* gaps > 90s = visitor stepped away (idle tab), excluded from rhythm */
+var TEMPO_HESITATE = 8000;   /* a gap ≥ 8s counts as a hesitation pause */
+var TEMPO_DECISIVE = 2500;   /* session median gap < 2.5s = decisive visit */
+var TEMPO_PACE_MARGIN = 1.25;/* half-vs-half ratio beyond which pace is accel/decel */
+var TEMPO_RHYTHM_CAP = 15000;/* rhythm-by-page bars: 0ms → full, 15s+ → empty (inverse) */
+
+/* Cadence-mix colours — warm amber/sand/clay, no blue/pink. */
+var TEMPO_MIX = [
+  { key: 'snap',      label: 'Snap · <1s',        color: 'rgba(176,122,74,0.92)' },
+  { key: 'brisk',     label: 'Brisk · 1–3s',      color: 'rgba(201,168,124,0.9)' },
+  { key: 'considered',label: 'Considered · 3–8s', color: 'rgba(214,190,150,0.85)' },
+  { key: 'hesitant',  label: 'Hesitant · 8–20s',  color: 'rgba(150,104,62,0.7)' },
+  { key: 'stalled',   label: 'Stalled · 20–90s',  color: 'rgba(120,116,108,0.55)' }
+];
+
+/* Action types that count as a discrete, meaningful step in a visit. */
+var TEMPO_ACTIONS = { pv: 1, click: 1, scroll: 1, goal: 1 };
+
+function tempoMedian(arr) {
+  if (!arr.length) return 0;
+  var s = arr.slice().sort(function(a, b){ return a - b; });
+  var m = Math.floor(s.length / 2);
+  return s.length % 2 ? s[m] : Math.round((s[m - 1] + s[m]) / 2);
+}
+
+function tempoBucket(ms) {
+  if (ms < TEMPO_SNAP)      return 'snap';
+  if (ms < TEMPO_BRISK)     return 'brisk';
+  if (ms < TEMPO_CONSIDER)  return 'considered';
+  if (ms < TEMPO_HESITANT)  return 'hesitant';
+  return 'stalled';
+}
+
+function tempoActionDesc(e) {
+  if (!e) return 'an action';
+  switch (e.type) {
+    case 'pv':     return 'viewed ' + jPageLabel(e.page);
+    case 'click':  return 'clicked ' + (e.text ? '“' + String(e.text).slice(0, 40) + '”' : (e.el || 'an element'));
+    case 'scroll': return 'scrolled to ' + (e.depth || 0) + '%';
+    case 'goal':   return 'hit goal ' + (e.goal || '');
+    default:       return e.type || 'an action';
+  }
+}
+
+function buildTempo() {
+  var events = CommissionData.getAnalytics() || [];
+  var bySid = {};
+  events.forEach(function(e) {
+    if (!e || !e.sid || e.ts == null || !TEMPO_ACTIONS[e.type]) return;
+    (bySid[e.sid] = bySid[e.sid] || []).push(e);
+  });
+
+  var buckets = { snap: 0, brisk: 0, considered: 0, hesitant: 0, stalled: 0 };
+  var allGaps = [];                 /* every in-window gap, for the overall median */
+  var pace = { accel: 0, steady: 0, decel: 0 };
+  var hotspots = {};                /* page -> count of hesitation pauses on it */
+  var pageGaps = {};                /* page -> [gaps] for rhythm-by-page (gap attributed to page of the earlier action) */
+  var pauses = [];                  /* biggest single pauses, with context */
+  var sessionCount = 0, rhythmicSessions = 0;
+  var apmVals = [];                 /* per-session actions-per-minute */
+  var sessionMedians = [];          /* per-session median gap, for decisive rate */
+
+  Object.keys(bySid).forEach(function(sid) {
+    var evts = bySid[sid].slice().sort(function(a, b){ return (a.ts || 0) - (b.ts || 0); });
+    sessionCount++;
+    if (evts.length < 2) return;
+
+    var gaps = [];                  /* in-window gaps for this session */
+    var spanGaps = [];              /* all gaps (capped) for actions/min span */
+    for (var i = 1; i < evts.length; i++) {
+      var raw = evts[i].ts - evts[i - 1].ts;
+      if (raw < 0) raw = 0;
+      spanGaps.push(Math.min(raw, TEMPO_MAXGAP));
+      if (raw > TEMPO_MAXGAP) continue;   /* stepped away — not part of the rhythm */
+      gaps.push(raw);
+      allGaps.push(raw);
+      buckets[tempoBucket(raw)]++;
+
+      var onPage = evts[i - 1].page || '/';
+      (pageGaps[onPage] = pageGaps[onPage] || []).push(raw);
+
+      if (raw >= TEMPO_HESITATE) {
+        hotspots[onPage] = (hotspots[onPage] || 0) + 1;
+        pauses.push({
+          ms: raw, page: onPage,
+          before: tempoActionDesc(evts[i - 1]),
+          after:  tempoActionDesc(evts[i]),
+          ts: evts[i].ts
+        });
+      }
+    }
+    if (!gaps.length) return;
+    rhythmicSessions++;
+    sessionMedians.push(tempoMedian(gaps));
+
+    /* actions per minute over the (capped) session span */
+    var span = spanGaps.reduce(function(s, g){ return s + g; }, 0);
+    if (span > 0) apmVals.push((evts.length / (span / 60000)));
+
+    /* pace trend — needs ≥ 4 actions (≥ 2 gaps per half) */
+    if (gaps.length >= 4) {
+      var mid = Math.floor(gaps.length / 2);
+      var firstHalf = gaps.slice(0, mid);
+      var secondHalf = gaps.slice(mid);
+      var avg = function(a){ return a.reduce(function(s, g){ return s + g; }, 0) / a.length; };
+      var f = avg(firstHalf), s2 = avg(secondHalf);
+      if (s2 > 0 && f / s2 >= TEMPO_PACE_MARGIN)      pace.accel++;   /* got faster */
+      else if (f > 0 && s2 / f >= TEMPO_PACE_MARGIN)  pace.decel++;   /* got slower */
+      else                                            pace.steady++;
+    }
+  });
+
+  var medianGap = tempoMedian(allGaps);
+  var totalGaps = allGaps.length;
+  var hesitationCount = buckets.hesitant + buckets.stalled;
+  var decisiveSessions = sessionMedians.filter(function(m){ return m < TEMPO_DECISIVE; }).length;
+  var avgApm = apmVals.length ? (apmVals.reduce(function(s, v){ return s + v; }, 0) / apmVals.length) : 0;
+
+  var bucketRows = TEMPO_MIX.map(function(m){ return { key: m.key, label: m.label, count: buckets[m.key] }; })
+                            .filter(function(r){ return r.count > 0; });
+
+  var paceRows = [
+    { key: 'accel',  label: 'Accelerating — sped up',  count: pace.accel },
+    { key: 'steady', label: 'Steady',                  count: pace.steady },
+    { key: 'decel',  label: 'Decelerating — slowed',   count: pace.decel }
+  ].filter(function(r){ return r.count > 0; });
+  var paceTotal = pace.accel + pace.steady + pace.decel;
+
+  var hotspotRows = Object.keys(hotspots).map(function(p){
+    return { label: jPageLabel(p), count: hotspots[p] };
+  }).sort(function(a, b){ return b.count - a.count; });
+
+  var rhythmRows = Object.keys(pageGaps).map(function(p){
+    return { label: jPageLabel(p), avg: tempoMedian(pageGaps[p]), count: pageGaps[p].length };
+  }).filter(function(r){ return r.count >= 2; })
+    .sort(function(a, b){ return a.avg - b.avg; });
+
+  pauses.sort(function(a, b){ return b.ms - a.ms; });
+
+  return {
+    buckets: bucketRows, totalGaps: totalGaps, medianGap: medianGap,
+    hesitationCount: hesitationCount,
+    hesitationRate: totalGaps ? Math.round((hesitationCount / totalGaps) * 100) : 0,
+    sessionCount: sessionCount, rhythmicSessions: rhythmicSessions,
+    decisiveRate: rhythmicSessions ? Math.round((decisiveSessions / rhythmicSessions) * 100) : 0,
+    avgApm: avgApm,
+    pace: paceRows, paceTotal: paceTotal, paceRaw: pace,
+    hotspots: hotspotRows, rhythm: rhythmRows,
+    pauses: pauses.slice(0, 30),
+    mixCounts: buckets
+  };
+}
+
+function drawTempoDonut(t) {
+  var canvas = document.getElementById('tempo-donut');
+  if (!canvas) return;
+  var ctx = canvas.getContext('2d');
+  var W = canvas.width, H = canvas.height;
+  ctx.clearRect(0, 0, W, H);
+  var cx = W / 2, cy = H / 2, rOut = 78, rIn = 46;
+
+  if (!t.totalGaps) {
+    ctx.fillStyle = '#444';
+    ctx.font = '12px -apple-system, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('No rhythm data yet.', cx, cy);
+    return;
+  }
+
+  var start = -Math.PI / 2;
+  TEMPO_MIX.forEach(function(m) {
+    var v = t.mixCounts[m.key] || 0;
+    if (!v) return;
+    var ang = (v / t.totalGaps) * Math.PI * 2;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.arc(cx, cy, rOut, start, start + ang);
+    ctx.closePath();
+    ctx.fillStyle = m.color;
+    ctx.fill();
+    start += ang;
+  });
+
+  ctx.globalCompositeOperation = 'destination-out';
+  ctx.beginPath();
+  ctx.arc(cx, cy, rIn, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.globalCompositeOperation = 'source-over';
+
+  ctx.fillStyle = '#c9a87c';
+  ctx.font = 'bold 20px -apple-system, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(jFmtDur(t.medianGap), cx, cy - 6);
+  ctx.fillStyle = '#8c887f';
+  ctx.font = '10px "Courier New", monospace';
+  ctx.fillText('MEDIAN GAP', cx, cy + 12);
+}
+
+function tempoRhythmBars(rows) {
+  if (!rows.length) return '<p class="tide-empty">Not enough multi-action visits yet.</p>';
+  return '<div class="spotlight-board">' + rows.map(function(r) {
+    var w = Math.max(4, Math.round(100 * (1 - Math.min(r.avg, TEMPO_RHYTHM_CAP) / TEMPO_RHYTHM_CAP)));
+    return '<div class="spotlight-row">' +
+      '<div class="sp-info">' +
+        '<div class="sp-label" title="' + escHtml(r.label) + '">' + escHtml(r.label) + '</div>' +
+        '<div class="sp-bar-wrap"><div class="sp-bar" style="width:' + w + '%"></div></div>' +
+      '</div>' +
+      '<div class="sp-meta">' +
+        '<span class="sp-time">' + jFmtDur(r.avg) + '</span>' +
+        '<span class="sp-views">' + r.count + ' gaps</span>' +
+      '</div>' +
+    '</div>';
+  }).join('') + '</div>';
+}
+
+function tempoPauseList(rows) {
+  if (!rows.length) return '<p class="tide-empty">No hesitations recorded yet — visitors are moving briskly, or there isn’t enough traffic yet.</p>';
+  return rows.map(function(p) {
+    var stall = p.ms >= TEMPO_HESITANT;
+    return '<div class="tempo-hz">' +
+      '<span class="tempo-hz-tag ' + (stall ? 'tempo-hz-stall' : 'tempo-hz-hesitant') + '">' +
+        (stall ? 'STALL' : 'HESITANT') + '</span>' +
+      '<span class="tempo-hz-dur">' + jFmtDur(p.ms) + '</span>' +
+      '<span class="tempo-hz-body">on <span class="tempo-hz-page">' + escHtml(p.page) + '</span> — ' +
+        '<span class="tempo-hz-move">' + escHtml(p.before) + ' → ' + escHtml(p.after) + '</span></span>' +
+      '<span class="tempo-hz-meta">' + escHtml(fmtDate(p.ts)) + '</span>' +
+    '</div>';
+  }).join('');
+}
+
+function renderTempoTab() {
+  var t = buildTempo();
+
+  function chip(num, label) {
+    return '<div class="analytics-stat-chip"><span class="asc-num">' + num +
+      '</span><span class="asc-label">' + label + '</span></div>';
+  }
+  document.getElementById('tempo-stats').innerHTML =
+    chip(t.totalGaps ? jFmtDur(t.medianGap) : '—', 'Median Action Gap') +
+    chip(t.avgApm ? t.avgApm.toFixed(1) : '—',     'Actions / Min') +
+    chip(t.hesitationRate + '%',                   'Hesitation Rate') +
+    chip(t.decisiveRate + '%',                     'Decisive Visits');
+
+  drawTempoDonut(t);
+  var legendEl = document.getElementById('tempo-legend');
+  legendEl.innerHTML = TEMPO_MIX.map(function(m) {
+    var v = t.mixCounts[m.key] || 0;
+    var share = t.totalGaps ? Math.round((v / t.totalGaps) * 100) : 0;
+    return '<div class="compass-legend-item">' +
+      '<span class="compass-legend-swatch" style="background:' + m.color + '"></span>' +
+      '<span>' + m.label + '</span>' +
+      '<span class="compass-legend-val">' + v + ' · ' + share + '%</span>' +
+    '</div>';
+  }).join('');
+
+  document.getElementById('tempo-pace').innerHTML = jBarList(t.pace, t.paceTotal, {
+    suffix: function(r, share){ return share + '% of paced visits'; }
+  });
+  document.getElementById('tempo-hotspots').innerHTML = jBarList(t.hotspots, t.hesitationCount, {
+    suffix: function(r, share){ return r.count + (r.count === 1 ? ' pause' : ' pauses'); }
+  });
+  document.getElementById('tempo-rhythm').innerHTML  = tempoRhythmBars(t.rhythm);
+  document.getElementById('tempo-pauses').innerHTML  = tempoPauseList(t.pauses);
+}
+
+document.getElementById('tempo-refresh-btn').addEventListener('click', renderTempoTab);
+
+document.getElementById('tempo-export-btn').addEventListener('click', function() {
+  var t = buildTempo();
+  var out = {
+    medianGapMs: t.medianGap, totalGaps: t.totalGaps, avgActionsPerMin: t.avgApm,
+    hesitationRate: t.hesitationRate, decisiveRate: t.decisiveRate,
+    sessionCount: t.sessionCount, rhythmicSessions: t.rhythmicSessions,
+    cadenceMix: t.buckets.map(function(b){ return { bucket: b.key, count: b.count }; }),
+    pace: t.paceRaw,
+    deliberationHotspots: t.hotspots,
+    rhythmByPage: t.rhythm,
+    longestPauses: t.pauses
+  };
+  var blob = new Blob([JSON.stringify(out, null, 2)], { type: 'application/json' });
+  var url  = URL.createObjectURL(blob);
+  var a    = document.createElement('a');
+  a.href = url; a.download = 'tempo-' + Date.now() + '.json'; a.click();
   URL.revokeObjectURL(url);
 });
 </script>
