@@ -203,6 +203,7 @@ Password-protected (SHA-256 hash in localStorage, 5-attempt lockout). Session tr
 | Muse        | Artwork-to-conversion attribution — joins artwork viewport events with commission-goal events per session: which pieces interested visitors view, conversion lift per artwork, cold pieces (attention without intent) |
 | Ripple      | Cohort retention & return decay — weekly acquisition cohorts (by first-seen week via persistent `vid`), retention triangle grid, average return-decay curve, best-retained cohorts, cohort sizes |
 | Loom        | Session replay & event timeline — reconstructs a single visit as an ordered event stream (joins analytics + spotlight by `sid`): session picker, summary header, chronological replay timeline, recent-sessions directory |
+| Prism       | Visitor segments & behavioral personas — classifies each session into a categorical persona (Prospect / Art Gazer / Deep Reader / Explorer / Skimmer / Casual Browser / Bouncer) from the shape of its behavior: persona mix donut, per-persona behavioral fingerprints, and a per-segment acquisition explorer |
 
 ---
 
@@ -967,6 +968,53 @@ Answers the one thing the entire analytics family structurally cannot: **what di
 
 ---
 
+## Prism — Visitor Segments & Behavioral Personas (Admin → Prism tab) — NEW TOOL
+
+Answers a question no other tab asks: **what *kind* of visit was this?** Ember scores every session on a single axis — *how good*, 0–100 — and tiers by magnitude. Prism reads the same per-session signals but instead of a score assigns each session a **categorical behavioral persona** from the *shape* of its activity. This is the classic behavioral-segmentation lens (the "personas" view standard in real analytics suites) that the rest of the family — all magnitude, timing, flow, or retention aggregates — structurally lacks. Knowing the audience is 40% Art Gazers vs. 40% Bouncers is actionable in a way an average engagement score never is.
+
+**Why it's genuinely new:** it is *categorical clustering*, not another single-signal aggregate or a magnitude score. Ember answers "how engaged?" along one continuous dimension and buckets by *quality*; Prism answers "engaged *how*?" and buckets by *behavior type* — two orthogonal questions. Journey's bounce is a single boolean; Prism's Bouncer is one of seven mutually-exclusive shapes derived from six signals at once.
+
+**No new storage key** — derived live from `_gam_analytics_v1` (`pv` / `click` / `scroll` / `exit` / `goal`) and `_gam_spotlight_v1` (artwork viewport ms), matched by session id, the same read-only pattern as Ember/Muse. No `analytics.js` change.
+
+**Personas (priority order — first matching rule wins, warm amber→clay→sand ramp):**
+1. **Commission Prospect** — fired any commission-intent `goal` (CTA / form). Business-defining, so it wins first.
+2. **Art Gazer** — `artMs ≥ 18 s` of artwork held in view. Came for the work itself.
+3. **Deep Reader** — `scroll ≥ 70%` **and** `dwell ≥ 40 s`. Read a page through.
+4. **Explorer** — `pv ≥ 4` pages. Wandered the whole portfolio.
+5. **Skimmer** — `pv ≥ 2`, `scroll < 50%`, `dwell < 22 s`. Shallow surface scan.
+6. **Casual Browser** — moderate engagement that fits no sharper shape (catch-all).
+7. **Bouncer** — single page, `dwell < 12 s`, no clicks, `scroll < 50%`. The drive-by.
+
+Thresholds are constants (`PRISM_BOUNCE_MS`, `PRISM_ART_STRONG`, `PRISM_EXPLORE_PV`, `PRISM_READ_SCROLL`, `PRISM_READ_MS`, `PRISM_SKIM_MS`) at the top of the Prism block.
+
+**How it works:**
+1. `buildPrism()` groups events by `sid`, totals spotlight ms per `sid`, and derives each session's six signals (pages, dwell = max of event-span & longest `exit.ms`, max scroll, clicks, artwork ms, goal flag) — the same derivation Ember uses.
+2. `prismClassify(session)` assigns a persona by the priority rules above.
+3. It aggregates per-persona counts, per-persona average signal fingerprints, the dominant persona, and prospect share, keeping each session's persona + entry page + acquisition channel (`compassClassify`) for the explorer.
+
+**Admin tab sections:**
+- **Stats**: Sessions Segmented, Personas Present, Dominant Persona, Prospect Share %
+- **Persona Mix**: canvas donut + legend across the seven personas; centre shows total sessions segmented
+- **Persona Profiles**: each present persona's size (share bar) + its average behavioral fingerprint (avg pages · time on site · scroll % · clicks · artwork time) — the diagnostic behind the mix
+- **Segment Explorer**: pick a persona → its top entry pages and top acquisition channels (which source delivers Prospects, which landing page produces Bouncers)
+
+**Derived schema (for export):**
+```js
+{ total, activePersonas, dominant, prospectShare, counts:{persona:count},
+  profiles:[{persona,label,count,share,avgPages,avgDwellMs,avgScroll,avgClicks,avgArtMs}],
+  sessions:[{persona,pv,clicks,scroll,dwellMs,artMs,goal,entry,refHost,channel,ts}] }
+```
+
+**Technical notes:**
+- Donut + swatches + fingerprint accents use the warm amber/clay/sand ramp (`rgba(176,122,74…)` prospect → `rgba(120,116,108,0.5)` bouncer) — no blue/pink. New `.prism-*` CSS classes; reuses `jBarList()`, `analytics-stat-chip`, `compass-legend`/donut styles, `jFmtDur()`, `jPageLabel()`, `compassClassify()`, `escHtml()`.
+- Personas are per session (`sid`), so one visitor across several tabs may count more than once (consistent with the rest of the family).
+- Classification is mutually exclusive and priority-ordered — every session lands in exactly one persona.
+- Tab renders lazily on click, same pattern as Loom/Muse/Thread/etc.
+
+**API:** none new on `CommissionData` — uses `CommissionData.getAnalytics()` + `.getSpotlight()`. Logic lives in `renderPrismTab()` / `buildPrism()` / `prismClassify()` inside `admin/index.html`.
+
+---
+
 ## Commission System
 
 ### Pages
@@ -1044,4 +1092,4 @@ Stored in `_gam_prices_v1`. Three sections: `digital`, `stickers`, `animation`. 
 
 ---
 
-*Last updated: 2026-08-03*
+*Last updated: 2026-08-10*
