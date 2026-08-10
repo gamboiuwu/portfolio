@@ -940,6 +940,24 @@
 		.loom-dir-meta { flex: 0 0 auto; font-size: 0.7em; color: #8c887f; font-family: 'Courier New', monospace; }
 		.loom-dir-glyphs { flex: 0 0 auto; font-size: 0.66em; color: #a49f96; font-family: 'Courier New', monospace; }
 
+		/* Prism tab — visitor segments & behavioral personas (warm amber, no blue/pink) */
+		.prism-donut-row { display: flex; gap: 1.4em; align-items: center; flex-wrap: wrap; }
+		#prism-donut { display: block; flex-shrink: 0; }
+		.prism-profile { padding: 0.7em 0; border-bottom: 1px solid rgba(255,255,255,0.06); }
+		.prism-profile:last-child { border-bottom: none; }
+		.prism-prof-head { display: flex; justify-content: space-between; align-items: baseline; gap: 1em; margin-bottom: 0.35em; }
+		.prism-prof-name { font-size: 0.94em; color: #e7e4de; display: flex; align-items: center; gap: 0.55em; }
+		.prism-prof-swatch { width: 0.85em; height: 0.85em; border-radius: 2px; flex-shrink: 0; }
+		.prism-prof-meta { font-family: 'Courier New', monospace; font-size: 0.78em; color: #c9a87c; white-space: nowrap; }
+		.prism-prof-bar-wrap { height: 0.85em; background: rgba(255,255,255,0.05); border-radius: 3px; overflow: hidden; margin-bottom: 0.4em; }
+		.prism-prof-bar { height: 100%; border-radius: 3px; transition: width 0.4s ease; }
+		.prism-prof-desc { font-size: 0.8em; color: #a49f96; margin-bottom: 0.4em; }
+		.prism-fingerprint { display: flex; gap: 0.4em; flex-wrap: wrap; }
+		.prism-fp-cell { font-family: 'Courier New', monospace; font-size: 0.68em; color: #b7b1a6;
+			background: rgba(255,255,255,0.03); border: 1px solid rgba(201,201,201,0.08);
+			border-radius: 3px; padding: 0.18em 0.5em; }
+		.prism-fp-cell b { color: #d6a878; font-weight: 600; }
+
 		/* Tide tab — trends & momentum (reuses spotlight bars) */
 		#tide-canvas { display: block; }
 		.tide-win { display: flex; align-items: center; gap: 0.6em; flex-wrap: wrap; margin-bottom: 1em; }
@@ -1073,6 +1091,7 @@
 				<button class="admin-tab" data-tab="muse">Muse</button>
 				<button class="admin-tab" data-tab="ripple">Ripple</button>
 				<button class="admin-tab" data-tab="loom">Loom</button>
+				<button class="admin-tab" data-tab="prism">Prism</button>
 			</div>
 
 			<!-- ============ GALLERY TAB ============ -->
@@ -2322,6 +2341,45 @@
 
 						</div>
 
+						<div id="tab-prism" class="tab-content">
+
+							<div class="admin-card">
+								<h3>Prism — Visitor Segments &amp; Behavioral Personas</h3>
+								<p class="hint">Ember scores every visit on one axis &mdash; <em>how good</em> was it, 0&ndash;100. Prism asks a different question: <strong>what kind</strong> of visit was it? It reads the same signals (pages, dwell, scroll, clicks, artwork attention, commission intent) but instead of a magnitude it assigns each session a <strong>behavioral persona</strong> from the <em>shape</em> of its activity &mdash; the classic behavioral-segmentation lens no other tab provides. A <strong>Prospect</strong> fired a commission goal; an <strong>Art Gazer</strong> came to dwell on the work; a <strong>Deep Reader</strong> scrolled and read a page through; an <strong>Explorer</strong> wandered many pages; a <strong>Skimmer</strong> scanned the surface; a <strong>Bouncer</strong> landed and left. Knowing your audience is 40% Art Gazers vs. 40% Bouncers tells you something an average score never can. Read-only over <code>_gam_analytics_v1</code> + <code>_gam_spotlight_v1</code> &mdash; no new storage key, no <code>analytics.js</code> change. Personas are per session (<code>sid</code>), so one visitor across several tabs may count more than once.</p>
+								<div id="prism-stats" class="analytics-stats" style="margin-bottom:1em"></div>
+								<div style="display:flex;gap:0.5em;flex-wrap:wrap">
+									<button class="button small" id="prism-refresh-btn">Refresh</button>
+									<button class="button small" id="prism-export-btn">Export JSON</button>
+								</div>
+							</div>
+
+							<div class="admin-card">
+								<h3>Persona Mix</h3>
+								<p class="hint">The whole audience split into behavioral personas. The donut centre shows how many sessions were segmented. A front door that mostly delivers Bouncers and Skimmers is pulling the wrong traffic (or losing it in the first seconds); a healthy mix of Art Gazers, Readers and Prospects means people are arriving <em>ready to engage</em>. Each persona is assigned by priority &mdash; commission intent wins first, then artwork dwell, deep reading, breadth of pages, and so on down to the drive-by bounce.</p>
+								<div class="prism-donut-row">
+									<canvas id="prism-donut" width="180" height="180"></canvas>
+									<div id="prism-legend" class="compass-legend"></div>
+								</div>
+							</div>
+
+							<div class="admin-card">
+								<h3>Persona Profiles</h3>
+								<p class="hint">Each persona&rsquo;s size and its average behavioral fingerprint &mdash; the typical pages viewed, time on site, scroll reach, clicks, and artwork attention for a visit of that kind. This is the diagnostic behind the mix: it shows not just <em>how many</em> of each persona, but <em>what a visit of that persona actually looks like</em>.</p>
+								<div id="prism-profiles"></div>
+							</div>
+
+							<div class="admin-card">
+								<h3>Segment Explorer — Where a Persona Comes From</h3>
+								<p class="hint">Pick a persona to see the entry pages and acquisition channels that deliver it. Use it to answer questions Compass can&rsquo;t: which source sends the most Prospects, which landing page produces Bouncers, where the Art Gazers arrive from. Acquisition channel is classified the same way Compass does it (direct / social / search / referral).</p>
+								<select id="prism-explore-select" class="journey-select" style="margin-bottom:0.9em"></select>
+								<h4 style="font-size:0.72em;letter-spacing:0.08em;color:#8c887f;font-family:'Courier New',monospace;text-transform:uppercase;margin:0.6em 0 0.4em">Top Entry Pages</h4>
+								<div id="prism-explore-entry"></div>
+								<h4 style="font-size:0.72em;letter-spacing:0.08em;color:#8c887f;font-family:'Courier New',monospace;text-transform:uppercase;margin:1em 0 0.4em">Top Sources</h4>
+								<div id="prism-explore-source"></div>
+							</div>
+
+						</div>
+
 		</div><!-- /#admin-dash -->
 		<input type="file" id="img-file-input" accept="image/*" style="display:none" />
 
@@ -3360,6 +3418,9 @@ document.addEventListener('click', function(e){
   }
   if (e.target.dataset && e.target.dataset.tab === 'loom') {
     renderLoomTab();
+  }
+  if (e.target.dataset && e.target.dataset.tab === 'prism') {
+    renderPrismTab();
   }
 });
 
@@ -8204,6 +8265,290 @@ document.getElementById('loom-export-btn').addEventListener('click', function() 
   var url  = URL.createObjectURL(blob);
   var a    = document.createElement('a');
   a.href = url; a.download = 'loom-' + cur.sid + '-' + Date.now() + '.json'; a.click();
+  URL.revokeObjectURL(url);
+});
+
+/* ================================================================
+   PRISM TAB — visitor segments & behavioral personas
+   Reads the same per-session signals Ember scores, but assigns each
+   session a categorical *persona* from the shape of its behaviour
+   instead of a 0–100 magnitude. Read-only over _gam_analytics_v1 +
+   _gam_spotlight_v1 — no new storage key, no analytics.js change.
+   ================================================================ */
+
+/* Classification thresholds (ms except scroll % / page counts). */
+var PRISM_BOUNCE_MS   = 12000;   /* ≤12s + single page = drive-by bounce */
+var PRISM_ART_STRONG  = 18000;   /* ≥18s of artwork in view = came for the art */
+var PRISM_EXPLORE_PV  = 4;       /* ≥4 pages in one visit = wandering */
+var PRISM_READ_SCROLL = 70;      /* ≥70% scroll depth ... */
+var PRISM_READ_MS     = 40000;   /* ... plus ≥40s dwell = deep read */
+var PRISM_SKIM_MS     = 22000;   /* 2+ pages, shallow, <22s = surface scan */
+
+/* Personas in canonical (priority) order — warm amber/clay/sand ramp, no blue/pink. */
+var PRISM_PERSONAS = [
+  { key: 'prospect', label: 'Commission Prospect', color: 'rgba(176,122,74,0.95)',
+    desc: 'Fired a commission-intent goal — clicked a CTA or engaged the inquiry form. The visits that matter most to the business.' },
+  { key: 'gazer', label: 'Art Gazer', color: 'rgba(201,168,124,0.9)',
+    desc: 'Held the artwork in view for real time. Here to look at the work itself, not to read copy or hop around.' },
+  { key: 'reader', label: 'Deep Reader', color: 'rgba(214,190,150,0.85)',
+    desc: 'Scrolled a page through and lingered — reading the bio, the process notes, the detail beneath the images.' },
+  { key: 'explorer', label: 'Explorer', color: 'rgba(150,104,62,0.72)',
+    desc: 'Moved across several pages in one visit. Curious, navigating the whole portfolio rather than settling on one.' },
+  { key: 'skimmer', label: 'Skimmer', color: 'rgba(190,170,140,0.62)',
+    desc: 'Touched a couple of pages but shallow and fast — a surface scan that never settled into anything.' },
+  { key: 'browser', label: 'Casual Browser', color: 'rgba(170,150,120,0.52)',
+    desc: 'Moderate, undifferentiated engagement that doesn’t fall cleanly into a sharper persona.' },
+  { key: 'bouncer', label: 'Bouncer', color: 'rgba(120,116,108,0.5)',
+    desc: 'Landed on one page, barely interacted, and left within seconds. The drive-by that never took hold.' }
+];
+var PRISM_PMAP = {};
+PRISM_PERSONAS.forEach(function(p){ PRISM_PMAP[p.key] = p; });
+
+/* Rule-based persona from a session's derived signals. Priority order:
+   intent → bounce → art dwell → deep read → breadth → skim → catch-all. */
+function prismClassify(s) {
+  if (s.goal) return 'prospect';
+  if (s.pv <= 1 && s.dwell < PRISM_BOUNCE_MS && s.clicks === 0 && s.scroll < 50) return 'bouncer';
+  if (s.artMs >= PRISM_ART_STRONG) return 'gazer';
+  if (s.scroll >= PRISM_READ_SCROLL && s.dwell >= PRISM_READ_MS) return 'reader';
+  if (s.pv >= PRISM_EXPLORE_PV) return 'explorer';
+  if (s.pv >= 2 && s.scroll < 50 && s.dwell < PRISM_SKIM_MS) return 'skimmer';
+  return 'browser';
+}
+
+function buildPrism() {
+  var events = CommissionData.getAnalytics() || [];
+  var spot   = CommissionData.getSpotlight() || [];
+
+  var bySid = {};
+  events.forEach(function(e){ if (e.sid) (bySid[e.sid] = bySid[e.sid] || []).push(e); });
+  var artMsBySid = {};
+  spot.forEach(function(e){ if (e.sid) artMsBySid[e.sid] = (artMsBySid[e.sid] || 0) + (e.ms || 0); });
+
+  var sessions = [];
+  Object.keys(bySid).forEach(function(sid) {
+    var evts = bySid[sid];
+    var pv = 0, clicks = 0, maxScroll = 0, exitMs = 0;
+    var firstTs = null, lastTs = null, goal = false, entry = null, refHost = 'direct';
+
+    evts.forEach(function(e) {
+      if (firstTs === null || e.ts < firstTs) firstTs = e.ts;
+      if (lastTs  === null || e.ts > lastTs)  lastTs  = e.ts;
+      if (e.type === 'pv') {
+        pv++;
+        if (entry === null) { entry = e.page || '/'; refHost = e.refHost || 'direct'; }
+      } else if (e.type === 'click')  { clicks++; }
+      else if (e.type === 'scroll') { if ((e.depth || 0) > maxScroll) maxScroll = e.depth; }
+      else if (e.type === 'exit')   { if ((e.ms || 0) > exitMs) exitMs = e.ms; }
+      else if (e.type === 'goal')   { goal = true; }
+    });
+    if (pv === 0) return;
+
+    var dwell = Math.max((lastTs || 0) - (firstTs || 0), exitMs);
+    var s = {
+      sid: sid, pv: pv, clicks: clicks, scroll: maxScroll, dwell: dwell,
+      artMs: artMsBySid[sid] || 0, goal: goal,
+      entry: entry || '/', refHost: refHost,
+      channel: compassClassify(refHost || 'direct'), ts: lastTs || 0
+    };
+    s.persona = prismClassify(s);
+    sessions.push(s);
+  });
+
+  var total = sessions.length;
+  var counts = {}, agg = {};
+  PRISM_PERSONAS.forEach(function(p){ counts[p.key] = 0; agg[p.key] = { pv: 0, dwell: 0, scroll: 0, clicks: 0, artMs: 0 }; });
+  sessions.forEach(function(s) {
+    counts[s.persona]++;
+    var a = agg[s.persona];
+    a.pv += s.pv; a.dwell += s.dwell; a.scroll += s.scroll; a.clicks += s.clicks; a.artMs += s.artMs;
+  });
+
+  var profiles = PRISM_PERSONAS.map(function(p) {
+    var n = counts[p.key], a = agg[p.key];
+    return {
+      key: p.key, label: p.label, color: p.color, desc: p.desc, count: n,
+      share:    total ? Math.round((n / total) * 100) : 0,
+      avgPv:    n ? (a.pv / n)      : 0,
+      avgDwell: n ? (a.dwell / n)   : 0,
+      avgScroll:n ? Math.round(a.scroll / n) : 0,
+      avgClicks:n ? (a.clicks / n)  : 0,
+      avgArtMs: n ? (a.artMs / n)   : 0
+    };
+  });
+
+  var present = profiles.filter(function(p){ return p.count > 0; })
+                        .sort(function(a, b){ return b.count - a.count; });
+
+  return {
+    sessions: sessions, total: total, counts: counts, profiles: profiles, present: present,
+    dominant: present.length ? present[0].label : '—',
+    prospectShare: total ? Math.round((counts.prospect / total) * 100) : 0,
+    activePersonas: present.length
+  };
+}
+
+function drawPrismDonut(pm) {
+  var canvas = document.getElementById('prism-donut');
+  if (!canvas) return;
+  var ctx = canvas.getContext('2d');
+  var W = canvas.width, H = canvas.height;
+  ctx.clearRect(0, 0, W, H);
+  var cx = W / 2, cy = H / 2, rOut = 78, rIn = 46;
+
+  if (!pm.total) {
+    ctx.fillStyle = '#444';
+    ctx.font = '12px -apple-system, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('No sessions yet.', cx, cy);
+    return;
+  }
+
+  var start = -Math.PI / 2;
+  PRISM_PERSONAS.forEach(function(p) {
+    var v = pm.counts[p.key] || 0;
+    if (!v) return;
+    var ang = (v / pm.total) * Math.PI * 2;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.arc(cx, cy, rOut, start, start + ang);
+    ctx.closePath();
+    ctx.fillStyle = p.color;
+    ctx.fill();
+    start += ang;
+  });
+
+  ctx.globalCompositeOperation = 'destination-out';
+  ctx.beginPath();
+  ctx.arc(cx, cy, rIn, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.globalCompositeOperation = 'source-over';
+
+  ctx.fillStyle = '#c9a87c';
+  ctx.font = 'bold 22px -apple-system, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(pm.total, cx, cy - 6);
+  ctx.fillStyle = '#8c887f';
+  ctx.font = '10px "Courier New", monospace';
+  ctx.fillText('SESSIONS', cx, cy + 12);
+}
+
+function prismProfilesHtml(present) {
+  if (!present.length) return '<p class="tide-empty">No sessions segmented yet. Browse the public pages and personas will populate automatically.</p>';
+  var maxCount = present[0].count || 1;
+  return present.map(function(p) {
+    var w   = Math.max(3, Math.round((p.count / maxCount) * 100));
+    var art = p.avgArtMs >= 1000 ? jFmtDur(p.avgArtMs) : '0s';
+    return '<div class="prism-profile">' +
+      '<div class="prism-prof-head">' +
+        '<div class="prism-prof-name">' +
+          '<span class="prism-prof-swatch" style="background:' + p.color + '"></span>' +
+          escHtml(p.label) +
+        '</div>' +
+        '<div class="prism-prof-meta">' + p.count + ' · ' + p.share + '%</div>' +
+      '</div>' +
+      '<div class="prism-prof-bar-wrap"><div class="prism-prof-bar" style="width:' + w + '%;background:' + p.color + '"></div></div>' +
+      '<div class="prism-prof-desc">' + escHtml(p.desc) + '</div>' +
+      '<div class="prism-fingerprint">' +
+        '<span class="prism-fp-cell"><b>' + p.avgPv.toFixed(1) + '</b> pages</span>' +
+        '<span class="prism-fp-cell"><b>' + jFmtDur(p.avgDwell) + '</b> on site</span>' +
+        '<span class="prism-fp-cell"><b>' + p.avgScroll + '%</b> scroll</span>' +
+        '<span class="prism-fp-cell"><b>' + p.avgClicks.toFixed(1) + '</b> clicks</span>' +
+        '<span class="prism-fp-cell"><b>' + art + '</b> artwork</span>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+}
+
+function renderPrismTab() {
+  var pm = buildPrism();
+
+  function chip(num, label) {
+    return '<div class="analytics-stat-chip"><span class="asc-num">' + num +
+      '</span><span class="asc-label">' + label + '</span></div>';
+  }
+  document.getElementById('prism-stats').innerHTML =
+    chip(pm.total,                   'Sessions Segmented') +
+    chip(pm.activePersonas,          'Personas Present') +
+    chip(escHtml(pm.dominant),       'Dominant Persona') +
+    chip(pm.prospectShare + '%',     'Prospect Share');
+
+  drawPrismDonut(pm);
+  document.getElementById('prism-legend').innerHTML = PRISM_PERSONAS.filter(function(p){
+    return (pm.counts[p.key] || 0) > 0;
+  }).map(function(p) {
+    var v = pm.counts[p.key] || 0;
+    var share = pm.total ? Math.round((v / pm.total) * 100) : 0;
+    return '<div class="compass-legend-item">' +
+      '<span class="compass-legend-swatch" style="background:' + p.color + '"></span>' +
+      '<span>' + escHtml(p.label) + '</span>' +
+      '<span class="compass-legend-val">' + v + ' · ' + share + '%</span>' +
+    '</div>';
+  }).join('') || '<p class="tide-empty">No sessions yet.</p>';
+
+  document.getElementById('prism-profiles').innerHTML = prismProfilesHtml(pm.present);
+
+  /* ── Segment Explorer ── */
+  var sel = document.getElementById('prism-explore-select');
+  var prev = sel.value;
+  sel.innerHTML = pm.present.map(function(p) {
+    return '<option value="' + escHtml(p.key) + '">' + escHtml(p.label) + ' (' + p.count + ')</option>';
+  }).join('');
+  if (prev && pm.present.some(function(p){ return p.key === prev; })) sel.value = prev;
+
+  function drawExplore() {
+    var key = sel.value;
+    var entryEl  = document.getElementById('prism-explore-entry');
+    var sourceEl = document.getElementById('prism-explore-source');
+    var subset = pm.sessions.filter(function(s){ return s.persona === key; });
+    if (!subset.length) {
+      var empty = '<p class="tide-empty">Pick a persona to see where it comes from.</p>';
+      entryEl.innerHTML = empty; sourceEl.innerHTML = empty;
+      return;
+    }
+    var entryMap = {}, srcMap = {};
+    subset.forEach(function(s) {
+      var el = jPageLabel(s.entry); entryMap[el] = (entryMap[el] || 0) + 1;
+      var ch = s.channel || 'direct';  srcMap[ch] = (srcMap[ch] || 0) + 1;
+    });
+    var entryRows = Object.keys(entryMap).map(function(k){ return { label: k, count: entryMap[k] }; })
+      .sort(function(a, b){ return b.count - a.count; });
+    var srcRows = Object.keys(srcMap).map(function(k){ return { label: k, count: srcMap[k] }; })
+      .sort(function(a, b){ return b.count - a.count; });
+    entryEl.innerHTML  = jBarList(entryRows, subset.length, {
+      suffix: function(r, share){ return share + '% of this persona'; } });
+    sourceEl.innerHTML = jBarList(srcRows, subset.length, {
+      suffix: function(r, share){ return share + '% of this persona'; } });
+  }
+  sel.onchange = drawExplore;
+  drawExplore();
+}
+
+document.getElementById('prism-refresh-btn').addEventListener('click', renderPrismTab);
+
+document.getElementById('prism-export-btn').addEventListener('click', function() {
+  var pm = buildPrism();
+  var out = {
+    total: pm.total, activePersonas: pm.activePersonas,
+    dominant: pm.dominant, prospectShare: pm.prospectShare,
+    counts: pm.counts,
+    profiles: pm.profiles.map(function(p) {
+      return { persona: p.key, label: p.label, count: p.count, share: p.share,
+               avgPages: +p.avgPv.toFixed(2), avgDwellMs: Math.round(p.avgDwell),
+               avgScroll: p.avgScroll, avgClicks: +p.avgClicks.toFixed(2),
+               avgArtMs: Math.round(p.avgArtMs) };
+    }),
+    sessions: pm.sessions.map(function(s) {
+      return { persona: s.persona, pv: s.pv, clicks: s.clicks, scroll: s.scroll,
+               dwellMs: s.dwell, artMs: s.artMs, goal: s.goal,
+               entry: s.entry, refHost: s.refHost, channel: s.channel, ts: s.ts };
+    })
+  };
+  var blob = new Blob([JSON.stringify(out, null, 2)], { type: 'application/json' });
+  var url  = URL.createObjectURL(blob);
+  var a    = document.createElement('a');
+  a.href = url; a.download = 'prism-' + Date.now() + '.json'; a.click();
   URL.revokeObjectURL(url);
 });
 </script>
