@@ -958,6 +958,37 @@
 			border-radius: 3px; padding: 0.18em 0.5em; }
 		.prism-fp-cell b { color: #d6a878; font-weight: 600; }
 
+		/* Reprise tab — returning-visitor journey evolution (warm amber, no blue/pink) */
+		#reprise-curve { display: block; max-width: 100%; }
+		.reprise-curve-wrap { display: flex; flex-direction: column; gap: 0.5em; }
+		.reprise-curve-cap { font-family: 'Courier New', monospace; font-size: 0.72em; color: #8c887f; letter-spacing: 0.04em; }
+		.reprise-row { padding: 0.7em 0; border-bottom: 1px solid rgba(255,255,255,0.06); }
+		.reprise-row:last-child { border-bottom: none; }
+		.reprise-row-head { display: flex; justify-content: space-between; align-items: baseline; gap: 1em; margin-bottom: 0.35em; }
+		.reprise-row-name { font-size: 0.9em; color: #e7e4de; display: flex; align-items: center; gap: 0.55em; }
+		.reprise-badge { font-family: 'Courier New', monospace; font-size: 0.7em; color: #1a1815; background: #c9a87c;
+			border-radius: 3px; padding: 0.12em 0.5em; font-weight: 600; }
+		.reprise-row-meta { font-family: 'Courier New', monospace; font-size: 0.78em; color: #c9a87c; white-space: nowrap; }
+		.reprise-bar-wrap { height: 0.85em; background: rgba(255,255,255,0.05); border-radius: 3px; overflow: hidden; margin-bottom: 0.4em; }
+		.reprise-bar { height: 100%; border-radius: 3px; background: rgba(201,168,124,0.9); transition: width 0.4s ease; }
+		.reprise-fp { display: flex; gap: 0.4em; flex-wrap: wrap; }
+		.reprise-fp-cell { font-family: 'Courier New', monospace; font-size: 0.68em; color: #b7b1a6;
+			background: rgba(255,255,255,0.03); border: 1px solid rgba(201,201,201,0.08);
+			border-radius: 3px; padding: 0.18em 0.5em; }
+		.reprise-fp-cell b { color: #d6a878; font-weight: 600; }
+		.reprise-cmp { display: flex; gap: 1em; flex-wrap: wrap; }
+		.reprise-cmp-col { flex: 1 1 200px; background: rgba(255,255,255,0.02); border: 1px solid rgba(201,201,201,0.09);
+			border-radius: 5px; padding: 0.9em 1em; }
+		.reprise-cmp-title { font-family: 'Courier New', monospace; font-size: 0.72em; letter-spacing: 0.07em;
+			text-transform: uppercase; color: #c9a87c; margin-bottom: 0.65em; display: flex; align-items: center; gap: 0.5em; }
+		.reprise-cmp-title .rc-n { color: #8c887f; font-weight: 400; }
+		.reprise-cmp-metric { display: flex; justify-content: space-between; align-items: baseline;
+			padding: 0.32em 0; border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 0.82em; color: #a49f96; }
+		.reprise-cmp-metric:last-child { border-bottom: none; }
+		.reprise-cmp-metric b { color: #e7e4de; font-weight: 600; font-family: 'Courier New', monospace; }
+		.reprise-cmp-metric .rc-up { color: #d6a878; }
+		.reprise-cmp-metric .rc-down { color: #96683e; }
+
 		/* Tide tab — trends & momentum (reuses spotlight bars) */
 		#tide-canvas { display: block; }
 		.tide-win { display: flex; align-items: center; gap: 0.6em; flex-wrap: wrap; margin-bottom: 1em; }
@@ -1092,6 +1123,7 @@
 				<button class="admin-tab" data-tab="ripple">Ripple</button>
 				<button class="admin-tab" data-tab="loom">Loom</button>
 				<button class="admin-tab" data-tab="prism">Prism</button>
+				<button class="admin-tab" data-tab="reprise">Reprise</button>
 			</div>
 
 			<!-- ============ GALLERY TAB ============ -->
@@ -2380,6 +2412,47 @@
 
 						</div>
 
+						<div id="tab-reprise" class="tab-content">
+
+							<div class="admin-card">
+								<h3>Reprise &mdash; Returning-Visitor Journey Evolution</h3>
+								<p class="hint">Orbit counts <em>how many</em> visitors come back; Ripple tracks calendar-week cohorts; Beacon reports a per-session funnel. None of them answers the question Reprise does: <strong>how does a visitor&rsquo;s behaviour change from their 1st visit to their 2nd, 3rd, and beyond</strong> &mdash; and does familiarity deepen toward a commission? It groups every session by its <strong>visit number</strong> (<code>vnum</code>, stamped on each pageview since Orbit) and reads how pages, artwork attention, scroll, clicks and, above all, <strong>commission-intent rate</strong> evolve across repeat visits. The single clearest read on whether returning matters &mdash; whether people warm up to reaching out the more they come back. Read-only over <code>_gam_analytics_v1</code> + <code>_gam_spotlight_v1</code> &mdash; no new storage key, no <code>analytics.js</code> change. Sessions without a <code>vnum</code> (pre-Orbit legacy events) are excluded from the visit-ordinal analysis.</p>
+								<div id="reprise-stats" class="analytics-stats" style="margin-bottom:1em"></div>
+								<div style="display:flex;gap:0.5em;flex-wrap:wrap">
+									<button class="button small" id="reprise-refresh-btn">Refresh</button>
+									<button class="button small" id="reprise-export-btn">Export JSON</button>
+								</div>
+							</div>
+
+							<div class="admin-card">
+								<h3>Commission-Intent Curve by Visit Number</h3>
+								<p class="hint">The money question, drawn as a line: for each visit ordinal, the share of visits that fired a commission-intent goal (a CTA click or inquiry-form engagement). A curve that climbs to the right means people warm up &mdash; they browse first, then come back ready to reach out; a flat or falling curve means repeat visits aren&rsquo;t converting and the nudge to commission needs to arrive sooner. Each point aggregates every session at that visit number.</p>
+								<div class="reprise-curve-wrap">
+									<canvas id="reprise-curve" width="620" height="200"></canvas>
+									<div class="reprise-curve-cap" id="reprise-curve-cap"></div>
+								</div>
+							</div>
+
+							<div class="admin-card">
+								<h3>Per-Visit-Number Breakdown</h3>
+								<p class="hint">Each visit ordinal as a row: how many sessions landed at that visit number (bar), and the average behavioural fingerprint of a visit of that kind &mdash; pages seen, time on site, scroll reach, clicks, artwork attention, and the commission-intent rate. This is the diagnostic behind the curve: it shows not just <em>whether</em> intent rises, but <em>what a first, second, or fifth visit actually looks like</em>.</p>
+								<div id="reprise-breakdown"></div>
+							</div>
+
+							<div class="admin-card">
+								<h3>Visit-Depth Funnel &mdash; Ordinal Retention</h3>
+								<p class="hint">Of everyone who visited at least once, how many came back for a 2nd visit, a 3rd, a 4th? Unlike Ripple&rsquo;s calendar cohorts, this is <em>ordinal</em> retention &mdash; the raw drop-off from one visit to the next, pooled across all visitors (keyed by the persistent <code>vid</code>, so a return in a new tab counts as the same person). The shape of the decline tells you how sticky the portfolio really is.</p>
+								<div id="reprise-funnel"></div>
+							</div>
+
+							<div class="admin-card">
+								<h3>First Visit vs. Returning Visits</h3>
+								<p class="hint">The clearest single readout of whether familiarity changes behaviour: the average first-visit (visit&nbsp;1) fingerprint set beside the average returning-visit (visit&nbsp;2+) fingerprint, metric for metric. Arrows mark where returning visits pull ahead. If returning visits show more artwork attention and a higher intent rate, coming back is doing its job.</p>
+								<div id="reprise-compare" class="reprise-cmp"></div>
+							</div>
+
+						</div>
+
 		</div><!-- /#admin-dash -->
 		<input type="file" id="img-file-input" accept="image/*" style="display:none" />
 
@@ -3421,6 +3494,9 @@ document.addEventListener('click', function(e){
   }
   if (e.target.dataset && e.target.dataset.tab === 'prism') {
     renderPrismTab();
+  }
+  if (e.target.dataset && e.target.dataset.tab === 'reprise') {
+    renderRepriseTab();
   }
 });
 
@@ -8549,6 +8625,343 @@ document.getElementById('prism-export-btn').addEventListener('click', function()
   var url  = URL.createObjectURL(blob);
   var a    = document.createElement('a');
   a.href = url; a.download = 'prism-' + Date.now() + '.json'; a.click();
+  URL.revokeObjectURL(url);
+});
+
+/* ================================================================
+   REPRISE TAB — returning-visitor journey evolution
+   Groups sessions by visit number (vnum, stamped on each pv since
+   Orbit) and reports how behaviour — pages, artwork attention,
+   scroll, clicks, and commission-intent rate — evolves across a
+   visitor's 1st, 2nd, 3rd … visit. Read-only over _gam_analytics_v1
+   + _gam_spotlight_v1 — no new storage key, no analytics.js change.
+   ================================================================ */
+
+var REPRISE_CAP = 8;   /* visit numbers ≥ this fold into a "8+" bucket */
+
+/* Derive per-session signals + the session's visit ordinal (vnum). */
+function repriseSessions() {
+  var events = CommissionData.getAnalytics() || [];
+  var spot   = CommissionData.getSpotlight() || [];
+
+  var bySid = {};
+  events.forEach(function(e){ if (e.sid) (bySid[e.sid] = bySid[e.sid] || []).push(e); });
+  var artMsBySid = {};
+  spot.forEach(function(e){ if (e.sid) artMsBySid[e.sid] = (artMsBySid[e.sid] || 0) + (e.ms || 0); });
+
+  var sessions = [];
+  Object.keys(bySid).forEach(function(sid) {
+    var evts = bySid[sid];
+    var pv = 0, clicks = 0, maxScroll = 0, exitMs = 0;
+    var firstTs = null, lastTs = null, goal = false;
+    var vid = null, vnum = null;
+
+    evts.forEach(function(e) {
+      if (firstTs === null || e.ts < firstTs) firstTs = e.ts;
+      if (lastTs  === null || e.ts > lastTs)  lastTs  = e.ts;
+      if (e.type === 'pv') {
+        pv++;
+        if (vid === null && e.vid) vid = e.vid;
+        if (vnum === null && typeof e.vnum === 'number') vnum = e.vnum;
+      } else if (e.type === 'click')  { clicks++; }
+      else if (e.type === 'scroll') { if ((e.depth || 0) > maxScroll) maxScroll = e.depth; }
+      else if (e.type === 'exit')   { if ((e.ms || 0) > exitMs) exitMs = e.ms; }
+      else if (e.type === 'goal')   { goal = true; if (vid === null && e.vid) vid = e.vid; }
+    });
+    if (pv === 0) return;
+
+    sessions.push({
+      sid: sid, vid: vid, vnum: (typeof vnum === 'number' && vnum >= 1) ? vnum : null,
+      pv: pv, clicks: clicks, scroll: maxScroll,
+      dwell: Math.max((lastTs || 0) - (firstTs || 0), exitMs),
+      artMs: artMsBySid[sid] || 0, goal: goal, ts: lastTs || 0
+    });
+  });
+  return sessions;
+}
+
+/* Aggregate one array of sessions into an average behavioural fingerprint. */
+function repriseAgg(list) {
+  var n = list.length;
+  if (!n) return { count: 0, avgPv: 0, avgDwell: 0, avgScroll: 0, avgClicks: 0, avgArtMs: 0, intentRate: 0 };
+  var pv = 0, dwell = 0, scroll = 0, clicks = 0, art = 0, goals = 0;
+  list.forEach(function(s) {
+    pv += s.pv; dwell += s.dwell; scroll += s.scroll; clicks += s.clicks; art += s.artMs;
+    if (s.goal) goals++;
+  });
+  return {
+    count: n,
+    avgPv: pv / n, avgDwell: dwell / n, avgScroll: Math.round(scroll / n),
+    avgClicks: clicks / n, avgArtMs: art / n,
+    intentRate: Math.round((goals / n) * 100)
+  };
+}
+
+function buildReprise() {
+  var all = repriseSessions();
+  var withVnum = all.filter(function(s){ return s.vnum !== null; });
+
+  /* ── Distinct visitors + their deepest visit reached (ordinal retention) ── */
+  var maxVnumByVid = {};
+  withVnum.forEach(function(s) {
+    var key = s.vid || ('sid:' + s.sid);
+    if (!maxVnumByVid[key] || s.vnum > maxVnumByVid[key]) maxVnumByVid[key] = s.vnum;
+  });
+  var vids = Object.keys(maxVnumByVid);
+  var visitorCount = vids.length;
+  var deepest = vids.reduce(function(m, k){ return Math.max(m, maxVnumByVid[k]); }, 0);
+  var returnCount = vids.filter(function(k){ return maxVnumByVid[k] >= 2; }).length;
+
+  /* ── Bucket sessions by visit ordinal (folding ≥ CAP into one bucket) ── */
+  var buckets = {};   /* bucketKey -> { ord, label, sessions:[] } */
+  withVnum.forEach(function(s) {
+    var ord = s.vnum >= REPRISE_CAP ? REPRISE_CAP : s.vnum;
+    if (!buckets[ord]) {
+      buckets[ord] = {
+        ord: ord,
+        label: ord >= REPRISE_CAP ? ('Visit ' + REPRISE_CAP + '+') : ('Visit ' + ord),
+        sessions: []
+      };
+    }
+    buckets[ord].sessions.push(s);
+  });
+  var breakdown = Object.keys(buckets).map(function(k) {
+    var b = buckets[k];
+    var a = repriseAgg(b.sessions);
+    a.ord = b.ord; a.label = b.label;
+    return a;
+  }).sort(function(a, b){ return a.ord - b.ord; });
+
+  /* ── Ordinal retention funnel: visitors who reached visit ≥ k ── */
+  var funnel = [];
+  var funCap = Math.min(Math.max(deepest, 1), REPRISE_CAP);
+  for (var k = 1; k <= funCap; k++) {
+    var reached = vids.filter(function(key){ return maxVnumByVid[key] >= k; }).length;
+    funnel.push({ label: (k >= REPRISE_CAP ? ('Visit ' + REPRISE_CAP + '+') : ('Visit ' + k)), count: reached, ord: k });
+  }
+
+  /* ── First (vnum=1) vs returning (vnum≥2) comparison ── */
+  var firstAgg  = repriseAgg(withVnum.filter(function(s){ return s.vnum === 1; }));
+  var returnAgg = repriseAgg(withVnum.filter(function(s){ return s.vnum >= 2; }));
+
+  var intentLift = firstAgg.intentRate > 0
+    ? (returnAgg.intentRate / firstAgg.intentRate)
+    : (returnAgg.intentRate > 0 ? null : 1);   /* null = 0→positive (undefined ratio) */
+
+  return {
+    sessionCount: withVnum.length,
+    legacyExcluded: all.length - withVnum.length,
+    visitorCount: visitorCount,
+    returnCount: returnCount,
+    returnRate: visitorCount ? Math.round((returnCount / visitorCount) * 100) : 0,
+    avgVisits: visitorCount ? (withVnum.length / visitorCount) : 0,
+    deepest: deepest,
+    breakdown: breakdown,
+    funnel: funnel,
+    firstAgg: firstAgg, returnAgg: returnAgg, intentLift: intentLift
+  };
+}
+
+function drawRepriseCurve(rp) {
+  var canvas = document.getElementById('reprise-curve');
+  if (!canvas) return;
+  var ctx = canvas.getContext('2d');
+  var W = canvas.width, H = canvas.height;
+  ctx.clearRect(0, 0, W, H);
+  var pad = { t: 16, r: 14, b: 26, l: 34 };
+  var cW = W - pad.l - pad.r, cH = H - pad.t - pad.b;
+  var pts = rp.breakdown;
+
+  if (!pts.length) {
+    ctx.fillStyle = '#444'; ctx.font = '12px -apple-system, sans-serif';
+    ctx.textAlign = 'center'; ctx.fillText('No visit data yet.', W / 2, H / 2);
+    return;
+  }
+
+  var maxY = Math.max(10, pts.reduce(function(m, p){ return Math.max(m, p.intentRate); }, 0));
+  maxY = Math.ceil(maxY / 10) * 10;
+  var n = pts.length;
+  var xOf = function(i){ return n === 1 ? pad.l + cW / 2 : pad.l + (i / (n - 1)) * cW; };
+  var yOf = function(v){ return pad.t + cH * (1 - v / maxY); };
+
+  /* gridlines + y labels (intent %) */
+  [0, 0.5, 1].forEach(function(f) {
+    var y = pad.t + cH * (1 - f);
+    ctx.strokeStyle = 'rgba(201,201,201,0.06)'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(pad.l, y); ctx.lineTo(pad.l + cW, y); ctx.stroke();
+    ctx.fillStyle = '#3a3a3a'; ctx.font = '9px monospace'; ctx.textAlign = 'right';
+    ctx.fillText(Math.round(maxY * f) + '%', pad.l - 5, y + 3);
+  });
+
+  if (n > 1) {
+    /* area fill */
+    ctx.beginPath();
+    pts.forEach(function(p, i){ i === 0 ? ctx.moveTo(xOf(i), yOf(p.intentRate)) : ctx.lineTo(xOf(i), yOf(p.intentRate)); });
+    ctx.lineTo(xOf(n - 1), pad.t + cH); ctx.lineTo(xOf(0), pad.t + cH); ctx.closePath();
+    var g = ctx.createLinearGradient(0, pad.t, 0, pad.t + cH);
+    g.addColorStop(0, 'rgba(201,168,124,0.22)'); g.addColorStop(1, 'rgba(201,168,124,0.02)');
+    ctx.fillStyle = g; ctx.fill();
+
+    /* line */
+    ctx.beginPath();
+    pts.forEach(function(p, i){ i === 0 ? ctx.moveTo(xOf(i), yOf(p.intentRate)) : ctx.lineTo(xOf(i), yOf(p.intentRate)); });
+    ctx.strokeStyle = 'rgba(201,168,124,0.95)'; ctx.lineWidth = 2; ctx.stroke();
+  }
+
+  /* point dots + value labels + x labels */
+  ctx.textAlign = 'center';
+  pts.forEach(function(p, i) {
+    var x = xOf(i), y = yOf(p.intentRate);
+    ctx.beginPath(); ctx.arc(x, y, 3.2, 0, Math.PI * 2);
+    ctx.fillStyle = '#d6a878'; ctx.fill();
+    ctx.fillStyle = '#c9a87c'; ctx.font = 'bold 9px monospace';
+    ctx.fillText(p.intentRate + '%', x, y - 8);
+    ctx.fillStyle = '#6a665f'; ctx.font = '8px monospace';
+    ctx.fillText('V' + (p.ord >= REPRISE_CAP ? p.ord + '+' : p.ord), x, H - 5);
+  });
+}
+
+function repriseBreakdownHtml(breakdown) {
+  if (!breakdown.length) {
+    return '<p class="tide-empty">No visit-numbered sessions yet. Once visitors return, each visit ordinal will appear here.</p>';
+  }
+  var maxCount = breakdown.reduce(function(m, b){ return Math.max(m, b.count); }, 1);
+  return breakdown.map(function(b) {
+    var w   = Math.max(3, Math.round((b.count / maxCount) * 100));
+    var art = b.avgArtMs >= 1000 ? jFmtDur(b.avgArtMs) : '0s';
+    return '<div class="reprise-row">' +
+      '<div class="reprise-row-head">' +
+        '<div class="reprise-row-name"><span class="reprise-badge">' + escHtml(b.label) + '</span></div>' +
+        '<div class="reprise-row-meta">' + b.count + ' session' + (b.count === 1 ? '' : 's') + ' · ' + b.intentRate + '% intent</div>' +
+      '</div>' +
+      '<div class="reprise-bar-wrap"><div class="reprise-bar" style="width:' + w + '%"></div></div>' +
+      '<div class="reprise-fp">' +
+        '<span class="reprise-fp-cell"><b>' + b.avgPv.toFixed(1) + '</b> pages</span>' +
+        '<span class="reprise-fp-cell"><b>' + jFmtDur(b.avgDwell) + '</b> on site</span>' +
+        '<span class="reprise-fp-cell"><b>' + b.avgScroll + '%</b> scroll</span>' +
+        '<span class="reprise-fp-cell"><b>' + b.avgClicks.toFixed(1) + '</b> clicks</span>' +
+        '<span class="reprise-fp-cell"><b>' + art + '</b> artwork</span>' +
+        '<span class="reprise-fp-cell"><b>' + b.intentRate + '%</b> intent</span>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+}
+
+function repriseCompareHtml(first, ret) {
+  function col(title, sub, a) {
+    if (!a.count) {
+      return '<div class="reprise-cmp-col"><div class="reprise-cmp-title">' + title +
+        ' <span class="rc-n">' + sub + '</span></div><p class="tide-empty" style="margin:0">No sessions.</p></div>';
+    }
+    var art = a.avgArtMs >= 1000 ? jFmtDur(a.avgArtMs) : '0s';
+    function row(label, val, arrow) {
+      return '<div class="reprise-cmp-metric"><span>' + label + '</span><b>' + val + (arrow || '') + '</b></div>';
+    }
+    return '<div class="reprise-cmp-col">' +
+      '<div class="reprise-cmp-title">' + title + ' <span class="rc-n">' + sub + '</span></div>' +
+      row('Sessions', a.count) +
+      row('Avg pages', a.avgPv.toFixed(1)) +
+      row('Avg time on site', jFmtDur(a.avgDwell)) +
+      row('Avg scroll depth', a.avgScroll + '%') +
+      row('Avg clicks', a.avgClicks.toFixed(1)) +
+      row('Avg artwork time', art) +
+      row('Commission intent', a.intentRate + '%') +
+    '</div>';
+  }
+
+  /* arrow markers on the returning column where it beats the first-visit average */
+  function retCol() {
+    if (!ret.count) {
+      return '<div class="reprise-cmp-col"><div class="reprise-cmp-title">Returning Visits <span class="rc-n">visit 2+</span></div><p class="tide-empty" style="margin:0">No returning visits yet.</p></div>';
+    }
+    var art = ret.avgArtMs >= 1000 ? jFmtDur(ret.avgArtMs) : '0s';
+    function cmpRow(label, val, retVal, firstVal) {
+      var arrow = '';
+      if (first.count) {
+        if (retVal > firstVal)      arrow = ' <span class="rc-up">&#9650;</span>';
+        else if (retVal < firstVal) arrow = ' <span class="rc-down">&#9660;</span>';
+      }
+      return '<div class="reprise-cmp-metric"><span>' + label + '</span><b>' + val + arrow + '</b></div>';
+    }
+    return '<div class="reprise-cmp-col">' +
+      '<div class="reprise-cmp-title">Returning Visits <span class="rc-n">visit 2+</span></div>' +
+      cmpRow('Sessions', ret.count, ret.count, first.count) +
+      cmpRow('Avg pages', ret.avgPv.toFixed(1), ret.avgPv, first.avgPv) +
+      cmpRow('Avg time on site', jFmtDur(ret.avgDwell), ret.avgDwell, first.avgDwell) +
+      cmpRow('Avg scroll depth', ret.avgScroll + '%', ret.avgScroll, first.avgScroll) +
+      cmpRow('Avg clicks', ret.avgClicks.toFixed(1), ret.avgClicks, first.avgClicks) +
+      cmpRow('Avg artwork time', art, ret.avgArtMs, first.avgArtMs) +
+      cmpRow('Commission intent', ret.intentRate + '%', ret.intentRate, first.intentRate) +
+    '</div>';
+  }
+
+  return col('First Visit', 'visit 1', first) + retCol();
+}
+
+function renderRepriseTab() {
+  var rp = buildReprise();
+
+  function chip(num, label) {
+    return '<div class="analytics-stat-chip"><span class="asc-num">' + num +
+      '</span><span class="asc-label">' + label + '</span></div>';
+  }
+  var liftStr = rp.intentLift === null ? 'new' : (rp.intentLift ? '×' + rp.intentLift.toFixed(1) : '—');
+  document.getElementById('reprise-stats').innerHTML =
+    chip(rp.visitorCount,             'Tracked Visitors')   +
+    chip(rp.avgVisits.toFixed(1),     'Avg Visits / Visitor') +
+    chip(rp.returnRate + '%',         'Return Rate')        +
+    chip(liftStr,                     'Intent Lift (return vs 1st)');
+
+  drawRepriseCurve(rp);
+  var cap = document.getElementById('reprise-curve-cap');
+  if (rp.breakdown.length) {
+    var first = rp.firstAgg.intentRate, last = rp.breakdown[rp.breakdown.length - 1].intentRate;
+    cap.textContent = 'First-visit intent ' + first + '% · deepest-visit intent ' + last +
+      '% · ' + rp.sessionCount + ' visit-numbered sessions' +
+      (rp.legacyExcluded ? ' · ' + rp.legacyExcluded + ' legacy excluded' : '');
+  } else {
+    cap.textContent = '';
+  }
+
+  document.getElementById('reprise-breakdown').innerHTML = repriseBreakdownHtml(rp.breakdown);
+
+  document.getElementById('reprise-funnel').innerHTML = rp.funnel.length
+    ? jBarList(rp.funnel, rp.visitorCount, {
+        suffix: function(r, share){ return share + '% of visitors reached'; } })
+    : '<p class="tide-empty">No visitors tracked yet.</p>';
+
+  document.getElementById('reprise-compare').innerHTML = repriseCompareHtml(rp.firstAgg, rp.returnAgg);
+}
+
+document.getElementById('reprise-refresh-btn').addEventListener('click', renderRepriseTab);
+
+document.getElementById('reprise-export-btn').addEventListener('click', function() {
+  var rp = buildReprise();
+  var out = {
+    visitorCount: rp.visitorCount, returnCount: rp.returnCount, returnRate: rp.returnRate,
+    avgVisits: +rp.avgVisits.toFixed(2), deepest: rp.deepest,
+    sessionCount: rp.sessionCount, legacyExcluded: rp.legacyExcluded,
+    intentLift: rp.intentLift,
+    breakdown: rp.breakdown.map(function(b) {
+      return { visit: b.ord, label: b.label, sessions: b.count,
+               avgPages: +b.avgPv.toFixed(2), avgDwellMs: Math.round(b.avgDwell),
+               avgScroll: b.avgScroll, avgClicks: +b.avgClicks.toFixed(2),
+               avgArtMs: Math.round(b.avgArtMs), intentRate: b.intentRate };
+    }),
+    funnel: rp.funnel.map(function(f){ return { visit: f.ord, label: f.label, visitorsReached: f.count }; }),
+    firstVisit:     { sessions: rp.firstAgg.count, avgPages: +rp.firstAgg.avgPv.toFixed(2),
+                      avgDwellMs: Math.round(rp.firstAgg.avgDwell), avgScroll: rp.firstAgg.avgScroll,
+                      avgClicks: +rp.firstAgg.avgClicks.toFixed(2), avgArtMs: Math.round(rp.firstAgg.avgArtMs),
+                      intentRate: rp.firstAgg.intentRate },
+    returningVisits:{ sessions: rp.returnAgg.count, avgPages: +rp.returnAgg.avgPv.toFixed(2),
+                      avgDwellMs: Math.round(rp.returnAgg.avgDwell), avgScroll: rp.returnAgg.avgScroll,
+                      avgClicks: +rp.returnAgg.avgClicks.toFixed(2), avgArtMs: Math.round(rp.returnAgg.avgArtMs),
+                      intentRate: rp.returnAgg.intentRate }
+  };
+  var blob = new Blob([JSON.stringify(out, null, 2)], { type: 'application/json' });
+  var url  = URL.createObjectURL(blob);
+  var a    = document.createElement('a');
+  a.href = url; a.download = 'reprise-' + Date.now() + '.json'; a.click();
   URL.revokeObjectURL(url);
 });
 </script>
