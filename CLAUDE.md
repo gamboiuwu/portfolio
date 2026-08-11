@@ -204,6 +204,7 @@ Password-protected (SHA-256 hash in localStorage, 5-attempt lockout). Session tr
 | Ripple      | Cohort retention & return decay — weekly acquisition cohorts (by first-seen week via persistent `vid`), retention triangle grid, average return-decay curve, best-retained cohorts, cohort sizes |
 | Loom        | Session replay & event timeline — reconstructs a single visit as an ordered event stream (joins analytics + spotlight by `sid`): session picker, summary header, chronological replay timeline, recent-sessions directory |
 | Prism       | Visitor segments & behavioral personas — classifies each session into a categorical persona (Prospect / Art Gazer / Deep Reader / Explorer / Skimmer / Casual Browser / Bouncer) from the shape of its behavior: persona mix donut, per-persona behavioral fingerprints, and a per-segment acquisition explorer |
+| Reprise     | Returning-visitor journey evolution — groups sessions by visit ordinal (`vnum`): commission-intent curve by visit number, per-visit-number behavioral breakdown, ordinal-retention visit-depth funnel, and a first-visit vs. returning-visit fingerprint comparison |
 
 ---
 
@@ -1015,6 +1016,48 @@ Thresholds are constants (`PRISM_BOUNCE_MS`, `PRISM_ART_STRONG`, `PRISM_EXPLORE_
 
 ---
 
+## Reprise — Returning-Visitor Journey Evolution (Admin → Reprise tab) — NEW TOOL
+
+Answers the one longitudinal question no other tab asks: **how does a single visitor's behavior change from their 1st visit to their 2nd, 3rd, and beyond — and does familiarity deepen toward a commission?** Orbit counts *how many* visitors return (an all-time loyalty snapshot); Ripple triangulates *calendar-week* cohort retention; Beacon reports a *per-session* conversion funnel; Prism/Ember score a session in isolation. **None groups behavior by *visit ordinal*.** Reprise is the first view keyed on *which visit this is* — it buckets every session by its visit number and reads how engagement matures with repeat exposure, culminating in the commission-intent curve: does a visitor warm up to reaching out the more they come back?
+
+**Why it's genuinely new:** it's a *visit-ordinal* longitudinal view, not another all-time aggregate or a per-session score. Orbit's "returning %" is one number mixing every era; Ripple's cohorts are grouped by *when a visitor first arrived* (calendar); Reprise groups by *how many times they've now visited* (ordinal), so it can show the escalation curve — 1st-visit intent vs. 2nd- vs. 5th-visit intent — that no calendar cohort or single-session tool expresses.
+
+**No new storage key** — derived live from `_gam_analytics_v1` (`pv` carries `vnum`, `vid`; plus `click`/`scroll`/`exit`/`goal`) and `_gam_spotlight_v1` (artwork viewport ms), matched by session id, the same read-only pattern as Prism/Ember/Muse. It reuses the visit-number (`vnum`) and persistent-visitor-id (`vid`) fields `analytics.js` already stamps for Orbit — **no `analytics.js` change**.
+
+**Visit-ordinal model:** each session's **visit number** is the `vnum` stamped on its first pageview (1 = first-ever visit, incremented once per new session). Sessions are bucketed by that ordinal, folding visit numbers ≥ `REPRISE_CAP` (8) into a single `Visit 8+` bucket. Sessions without a `vnum` (pre-Orbit legacy events) are **excluded** from the ordinal analysis and reported as a legacy-excluded count.
+
+**How it works:**
+1. `repriseSessions()` groups events by `sid` and derives per session: `vid`, `vnum`, pages, clicks, max scroll, dwell (max of event-span & longest `exit.ms`), artwork ms (from spotlight), and a commission-intent flag (any `goal`).
+2. `buildReprise()` buckets the `vnum`-bearing sessions by ordinal, aggregates each bucket's average fingerprint via `repriseAgg()`, and computes the commission-intent rate per ordinal.
+3. For **ordinal retention** it takes each visitor's deepest `vnum` reached (keyed by persistent `vid`, so a return in a new tab counts as the same person) and counts how many visitors reached visit ≥ k for each k.
+4. It splits sessions into first-visit (`vnum === 1`) vs. returning (`vnum ≥ 2`) aggregates and computes an **intent lift** (returning intent rate ÷ first-visit intent rate; shown as `new` when first-visit intent is 0 but returning is positive).
+
+**Admin tab sections:**
+- **Stats**: Tracked Visitors, Avg Visits / Visitor, Return Rate %, Intent Lift (return vs 1st)
+- **Commission-Intent Curve by Visit Number**: canvas line chart — intent rate (0–100%) per visit ordinal, with point-value labels and `V1…Vn` x-axis; a rising curve means repeat visits convert
+- **Per-Visit-Number Breakdown**: each ordinal as a row — session-count bar + the average behavioral fingerprint (pages · time on site · scroll · clicks · artwork time · intent %)
+- **Visit-Depth Funnel — Ordinal Retention**: visitors who reached visit ≥ 1, 2, 3… as ranked bars (% of all visitors retained) — the raw visit-to-visit drop-off
+- **First Visit vs. Returning Visits**: two fingerprint columns (visit 1 vs. visit 2+) compared metric for metric, with ▲/▼ arrows where returning visits pull ahead
+
+**Derived schema (for export):**
+```js
+{ visitorCount, returnCount, returnRate, avgVisits, deepest, sessionCount, legacyExcluded, intentLift,
+  breakdown:[{visit, label, sessions, avgPages, avgDwellMs, avgScroll, avgClicks, avgArtMs, intentRate}],
+  funnel:[{visit, label, visitorsReached}],
+  firstVisit:{sessions, avgPages, avgDwellMs, avgScroll, avgClicks, avgArtMs, intentRate},
+  returningVisits:{…same shape…} }
+```
+
+**Technical notes:**
+- Curve line/area, point dots, retention bars and the returning-column ▲ use the warm amber/clay palette (`rgba(201,168,124…)` line/area, `#d6a878` points, `#96683e` ▼) — no blue/pink. New `.reprise-*` CSS classes; reuses `jBarList()`, `analytics-stat-chip`, `jFmtDur()`, `escHtml()`, and the canvas-line pattern from Tide.
+- Ordinal buckets are per session (`sid`), but visit-depth retention is per persistent visitor (`vid`) — so returning in a new tab is correctly the *same* person for retention, matching Orbit/Ripple.
+- Visit numbers ≥ `REPRISE_CAP` (8) fold into a single `Visit 8+` bucket to keep the tail readable; the curve/funnel cap at the same bound.
+- Tab renders lazily on click, same pattern as Prism/Loom/Muse/etc.
+
+**API:** none new on `CommissionData` — uses `CommissionData.getAnalytics()` + `.getSpotlight()`. Logic lives in `renderRepriseTab()` / `buildReprise()` / `repriseSessions()` / `repriseAgg()` inside `admin/index.html`.
+
+---
+
 ## Commission System
 
 ### Pages
@@ -1092,4 +1135,4 @@ Stored in `_gam_prices_v1`. Three sections: `digital`, `stickers`, `animation`. 
 
 ---
 
-*Last updated: 2026-08-10*
+*Last updated: 2026-08-11*
