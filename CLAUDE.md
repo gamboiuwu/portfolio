@@ -204,6 +204,7 @@ Password-protected (SHA-256 hash in localStorage, 5-attempt lockout). Session tr
 | Ripple      | Cohort retention & return decay — weekly acquisition cohorts (by first-seen week via persistent `vid`), retention triangle grid, average return-decay curve, best-retained cohorts, cohort sizes |
 | Loom        | Session replay & event timeline — reconstructs a single visit as an ordered event stream (joins analytics + spotlight by `sid`): session picker, summary header, chronological replay timeline, recent-sessions directory |
 | Prism       | Visitor segments & behavioral personas — classifies each session into a categorical persona (Prospect / Art Gazer / Deep Reader / Explorer / Skimmer / Casual Browser / Bouncer) from the shape of its behavior: persona mix donut, per-persona behavioral fingerprints, and a per-segment acquisition explorer |
+| Facet       | Cross-device experience comparison — the first *comparative* view: cuts the audience by device class (desktop/mobile/tablet) and lines the same engagement metrics up side by side (bounce, pages, scroll, dwell, clicks, artwork attention, conversion), with a direction-aware best/lag scorecard, biggest-gap ranking, and conversion-by-device |
 
 ---
 
@@ -1015,6 +1016,48 @@ Thresholds are constants (`PRISM_BOUNCE_MS`, `PRISM_ART_STRONG`, `PRISM_EXPLORE_
 
 ---
 
+## Facet — Cross-Device Experience Comparison (Admin → Facet tab) — NEW TOOL
+
+Answers a question the entire analytics family structurally cannot: **do visitors on different devices actually behave differently?** Every one of the other 18 tools reports a single lens over the *whole* audience — Compass counts how many visits arrive from desktop, mobile, and tablet, but it never asks whether those segments *engage* differently. Facet is the family's first **comparative** view: it cuts the audience by device class and lines the same engagement metrics up **side by side**, so an underperforming mobile experience reveals itself at a glance. For an artist whose reach lives on Instagram, TikTok, and X — overwhelmingly mobile traffic — a scroll depth or conversion rate that collapses on small screens is a direct, fixable leak that no all-audience average would ever surface.
+
+**Why it's genuinely new:** it is a *cross-segment comparison matrix*, not another single-lens aggregate. Compass's "Device Mix" section merely *counts* devices (segment size); Prism/Ember score sessions on one axis over the whole audience; Journey/Depth report page/scroll behavior undifferentiated by device. Facet is the only tool that holds the segmentation dimension fixed (device) and **compares every behavioral metric across the cuts**, flagging which device wins and which lags on each.
+
+**No new storage key** — derived live from `_gam_analytics_v1` (`pv` carries `dev`; plus `click` / `scroll` / `exit` / `goal`) and `_gam_spotlight_v1` (artwork viewport ms), the same read-only pattern as Prism/Ember. No `analytics.js` change — the `dev` field has been recorded on every `pv` since analytics launched.
+
+**How it works:**
+1. `buildFacet()` groups events by `sid`; a session's **device** is taken from its first `pv` (`dev`, one of `desktop` / `mobile` / `tablet`, else `unknown`), which is stable across a tab-session.
+2. Per session it derives pages (`pv`), bounce (`pv ≤ 1`), max scroll, dwell (`max(event-span, longest exit.ms)`), clicks, artwork ms (Σ spotlight by `sid`), and a commission-goal flag, then accumulates each into its device bucket.
+3. Per **metric × device** it computes the averaged value, then assigns a **direction-aware** best/lag: for bounce rate *lower* wins, for every other metric *higher* wins. Session count is context-only (no best/lag, excluded from gaps).
+4. **Gap ranking** = for each comparable metric, the relative spread `(max − min) / max` between the best and worst device, ranked descending — where the experience is least consistent across screens.
+
+**Metrics compared:** Sessions (context), Bounce Rate, Pages / Visit, Scroll Depth, Time on Site, Clicks / Visit, Artwork Attention, Conversion Rate.
+
+**Admin tab sections:**
+- **Stats**: Sessions Compared, Device Classes, Mobile Share %, Biggest Gap (the metric with the widest cross-device spread)
+- **Audience by Device**: canvas donut + legend of session share per device class; centre shows total sessions
+- **Experience Scorecard**: the centerpiece matrix — one row per metric, one column per device, each cell showing the value + an in-row-scaled bar, with the strongest device tagged `BEST` and the weakest `LAG` (direction-aware)
+- **Biggest Experience Gaps**: comparable metrics ranked by relative best-vs-worst spread, each annotated `Desktop <val> vs Mobile <val>`
+- **Conversion by Device**: share of each device's sessions that fired a commission-intent goal — the business cut on its own
+
+**Derived schema (for export):**
+```js
+{ total, mobileShare, biggestGap,
+  devices:[{device,label,sessions,share}],
+  metrics:[{metric,label,higherBetter,best,lag,values:{device:value}}],
+  gaps:[{metric,label,gapPct,best,bestVal,worst,worstVal}],
+  conversion:[{device,label,sessions,inquiries,rate}] }
+```
+
+**Technical notes:**
+- Donut, scorecard bars, tags, and gap bars use the warm amber/sand/clay palette (`rgba(176,122,74…)` desktop, `rgba(201,168,124…)` mobile, `rgba(214,190,150…)` tablet; `BEST` amber, `LAG` clay) — no blue/pink. New `.facet-*` CSS classes; reuses `jBarList()`, `jFmtDur()`, `analytics-stat-chip`, `compass-legend`, and `escHtml()`.
+- Scorecard bars are scaled **within each metric row** (bar = value ÷ row-max), so a short mobile bar against a full desktop bar is exactly the gap to close; the direction of "good" is carried by the `BEST`/`LAG` tags and the metric note, not the bar length.
+- Comparison is per session (`sid`), so one visitor across several tabs may count more than once (consistent with the rest of the family). A session's device is fixed at first pageview.
+- Tab renders lazily on click, same pattern as Prism/Loom/Muse/etc.
+
+**API:** none new on `CommissionData` — uses `CommissionData.getAnalytics()` + `.getSpotlight()`. Logic lives in `renderFacetTab()` / `buildFacet()` inside `admin/index.html`.
+
+---
+
 ## Commission System
 
 ### Pages
@@ -1092,4 +1135,4 @@ Stored in `_gam_prices_v1`. Three sections: `digital`, `stickers`, `animation`. 
 
 ---
 
-*Last updated: 2026-08-10*
+*Last updated: 2026-08-12*
