@@ -958,6 +958,32 @@
 			border-radius: 3px; padding: 0.18em 0.5em; }
 		.prism-fp-cell b { color: #d6a878; font-weight: 600; }
 
+		/* Facet tab — cross-device experience comparison (warm amber, no blue/pink) */
+		.facet-donut-row { display: flex; gap: 1.4em; align-items: center; flex-wrap: wrap; }
+		#facet-donut { display: block; flex-shrink: 0; }
+		.facet-scorecard { width: 100%; border-collapse: collapse; font-size: 0.82em; }
+		.facet-scorecard th, .facet-scorecard td { padding: 0.55em 0.6em; text-align: left; vertical-align: middle; }
+		.facet-scorecard thead th { font-family: 'Courier New', monospace; font-size: 0.72em; letter-spacing: 0.07em;
+			text-transform: uppercase; color: #8c887f; border-bottom: 1px solid rgba(255,255,255,0.12); }
+		.facet-scorecard tbody tr { border-bottom: 1px solid rgba(255,255,255,0.05); }
+		.facet-scorecard tbody tr:last-child { border-bottom: none; }
+		.facet-metric-name { color: #e7e4de; font-weight: 500; white-space: nowrap; }
+		.facet-metric-note { display: block; font-family: 'Courier New', monospace; font-size: 0.68em; color: #6f6b63; margin-top: 0.15em; text-transform: none; letter-spacing: 0; }
+		.facet-cell { min-width: 5.5em; }
+		.facet-cell-val { font-family: 'Courier New', monospace; font-size: 0.9em; color: #d6a878; }
+		.facet-cell-bar-wrap { height: 0.42em; background: rgba(255,255,255,0.05); border-radius: 3px; overflow: hidden; margin-top: 0.28em; }
+		.facet-cell-bar { height: 100%; border-radius: 3px; background: linear-gradient(to right, rgba(201,168,124,0.4), #c9a87c); transition: width 0.4s ease; }
+		.facet-cell.facet-best .facet-cell-val { color: #e6c07a; font-weight: 700; }
+		.facet-cell.facet-lag  .facet-cell-val { color: #9a8f80; }
+		.facet-cell.facet-lag  .facet-cell-bar { background: linear-gradient(to right, rgba(150,104,62,0.3), #96683e); }
+		.facet-tag { font-family: 'Courier New', monospace; font-size: 0.6em; letter-spacing: 0.05em; padding: 0.05em 0.35em;
+			border-radius: 2px; margin-left: 0.4em; vertical-align: middle; }
+		.facet-tag-best { background: rgba(201,168,124,0.18); color: #d6a878; }
+		.facet-tag-lag  { background: rgba(150,104,62,0.18); color: #b08a5e; }
+		.facet-gap-lbl { display: flex; align-items: baseline; gap: 0.5em; flex-wrap: wrap; }
+		.facet-gap-detail { font-family: 'Courier New', monospace; font-size: 0.72em; color: #8c887f; }
+		.facet-scorecard-wrap { overflow-x: auto; }
+
 		/* Tide tab — trends & momentum (reuses spotlight bars) */
 		#tide-canvas { display: block; }
 		.tide-win { display: flex; align-items: center; gap: 0.6em; flex-wrap: wrap; margin-bottom: 1em; }
@@ -1092,6 +1118,7 @@
 				<button class="admin-tab" data-tab="ripple">Ripple</button>
 				<button class="admin-tab" data-tab="loom">Loom</button>
 				<button class="admin-tab" data-tab="prism">Prism</button>
+				<button class="admin-tab" data-tab="facet">Facet</button>
 			</div>
 
 			<!-- ============ GALLERY TAB ============ -->
@@ -2380,6 +2407,49 @@
 
 						</div>
 
+						<div id="tab-facet" class="tab-content">
+
+							<div class="admin-card">
+								<h3>Facet — Cross-Device Experience Comparison</h3>
+								<p class="hint">Every other analytics tab reports one lens over the <em>whole</em> audience. Compass counts how many visits come from desktop, mobile, and tablet &mdash; but never asks whether those visitors <strong>behave differently</strong>. Facet is the first <strong>comparative</strong> view: it cuts the audience by device class and lines the same engagement metrics up side by side, so you can see at a glance whether the mobile experience is quietly underperforming the desktop one. For an artist whose reach lives on Instagram, TikTok and X &mdash; overwhelmingly mobile traffic &mdash; a scroll depth or conversion rate that collapses on small screens is a direct, fixable leak. Read-only over <code>_gam_analytics_v1</code> + <code>_gam_spotlight_v1</code> &mdash; no new storage key, no <code>analytics.js</code> change. Sessions are keyed by <code>sid</code> (per tab); a session&rsquo;s device is taken from its first pageview.</p>
+								<div id="facet-stats" class="analytics-stats" style="margin-bottom:1em"></div>
+								<div style="display:flex;gap:0.5em;flex-wrap:wrap">
+									<button class="button small" id="facet-refresh-btn">Refresh</button>
+									<button class="button small" id="facet-export-btn">Export JSON</button>
+								</div>
+							</div>
+
+							<div class="admin-card">
+								<h3>Audience by Device</h3>
+								<p class="hint">Session share across device classes &mdash; the size of each segment being compared below. The donut centre shows total sessions segmented. A portfolio fed by social traffic usually skews mobile; if it doesn&rsquo;t, the desktop-only visitors may be a narrower, more deliberate audience worth reading separately.</p>
+								<div class="facet-donut-row">
+									<canvas id="facet-donut" width="180" height="180"></canvas>
+									<div id="facet-legend" class="compass-legend"></div>
+								</div>
+							</div>
+
+							<div class="admin-card">
+								<h3>Experience Scorecard</h3>
+								<p class="hint">The heart of Facet: every key engagement metric, one row per metric, one column per device class. The strongest device in each row is flagged <span class="facet-tag facet-tag-best">BEST</span> and the weakest <span class="facet-tag facet-tag-lag">LAG</span> &mdash; direction-aware, so for bounce rate <em>lower</em> wins. Bars are scaled within each row, so a short bar in the mobile column against a full desktop bar is exactly the gap you want to close. Only device classes with at least one session appear.</p>
+								<div class="facet-scorecard-wrap">
+									<table class="facet-scorecard"><thead id="facet-score-head"></thead><tbody id="facet-score-body"></tbody></table>
+								</div>
+							</div>
+
+							<div class="admin-card">
+								<h3>Biggest Experience Gaps</h3>
+								<p class="hint">The scorecard metrics ranked by how unevenly they play out across devices &mdash; the relative spread between the best and worst device on each metric. The top of this list is where your experience is least consistent from one screen to the next, and usually where a responsive-design fix pays off most.</p>
+								<div id="facet-gaps"></div>
+							</div>
+
+							<div class="admin-card">
+								<h3>Conversion by Device</h3>
+								<p class="hint">The business cut on its own: the share of sessions on each device that fired a commission-intent goal (CTA click or inquiry-form engagement). If mobile carries most of the traffic but converts at a fraction of desktop, the commission funnel &mdash; not the artwork &mdash; is where would-be clients are being lost on small screens.</p>
+								<div id="facet-conv"></div>
+							</div>
+
+						</div>
+
 		</div><!-- /#admin-dash -->
 		<input type="file" id="img-file-input" accept="image/*" style="display:none" />
 
@@ -3421,6 +3491,9 @@ document.addEventListener('click', function(e){
   }
   if (e.target.dataset && e.target.dataset.tab === 'prism') {
     renderPrismTab();
+  }
+  if (e.target.dataset && e.target.dataset.tab === 'facet') {
+    renderFacetTab();
   }
 });
 
@@ -8549,6 +8622,301 @@ document.getElementById('prism-export-btn').addEventListener('click', function()
   var url  = URL.createObjectURL(blob);
   var a    = document.createElement('a');
   a.href = url; a.download = 'prism-' + Date.now() + '.json'; a.click();
+  URL.revokeObjectURL(url);
+});
+
+/* ================================================================
+   FACET TAB — cross-device experience comparison
+   The first *comparative* analytics view: cuts the audience by
+   device class and lines the same engagement metrics up side by
+   side, so an underperforming mobile experience shows itself.
+   Compass merely counts devices; Facet compares behaviour across
+   them. Read-only over _gam_analytics_v1 + _gam_spotlight_v1 —
+   no new storage key, no analytics.js change.
+   ================================================================ */
+
+/* Device classes in display order — warm amber/sand ramp, no blue/pink. */
+var FACET_DEVICES = [
+  { key: 'desktop', label: 'Desktop', color: 'rgba(176,122,74,0.92)' },
+  { key: 'mobile',  label: 'Mobile',  color: 'rgba(201,168,124,0.9)' },
+  { key: 'tablet',  label: 'Tablet',  color: 'rgba(214,190,150,0.82)' },
+  { key: 'unknown', label: 'Unknown', color: 'rgba(150,140,124,0.5)' }
+];
+var FACET_DMAP = {};
+FACET_DEVICES.forEach(function(d){ FACET_DMAP[d.key] = d; });
+
+/* Metrics compared per device. compare:false = context only (no best/lag, no gap). */
+var FACET_METRICS = [
+  { key: 'sessions', label: 'Sessions',          note: 'total visits',              higherBetter: true,  compare: false, fmt: function(v){ return String(Math.round(v)); } },
+  { key: 'bounce',   label: 'Bounce Rate',        note: 'single-page · lower better', higherBetter: false, compare: true,  fmt: function(v){ return Math.round(v) + '%'; } },
+  { key: 'pages',    label: 'Pages / Visit',      note: 'avg pageviews',             higherBetter: true,  compare: true,  fmt: function(v){ return v.toFixed(1); } },
+  { key: 'scroll',   label: 'Scroll Depth',       note: 'avg furthest reach',        higherBetter: true,  compare: true,  fmt: function(v){ return Math.round(v) + '%'; } },
+  { key: 'dwell',    label: 'Time on Site',       note: 'avg session span',          higherBetter: true,  compare: true,  fmt: function(v){ return jFmtDur(v); } },
+  { key: 'clicks',   label: 'Clicks / Visit',     note: 'avg interactions',          higherBetter: true,  compare: true,  fmt: function(v){ return v.toFixed(1); } },
+  { key: 'art',      label: 'Artwork Attention',  note: 'avg viewport time',         higherBetter: true,  compare: true,  fmt: function(v){ return v >= 1000 ? jFmtDur(v) : '0s'; } },
+  { key: 'conv',     label: 'Conversion Rate',    note: 'commission-goal visits',    higherBetter: true,  compare: true,  fmt: function(v){ return (Math.round(v * 10) / 10) + '%'; } }
+];
+
+function buildFacet() {
+  var events = CommissionData.getAnalytics() || [];
+  var spot   = CommissionData.getSpotlight() || [];
+
+  var bySid = {};
+  events.forEach(function(e){ if (e.sid) (bySid[e.sid] = bySid[e.sid] || []).push(e); });
+  var artMsBySid = {};
+  spot.forEach(function(e){ if (e.sid) artMsBySid[e.sid] = (artMsBySid[e.sid] || 0) + (e.ms || 0); });
+
+  /* Per-device accumulators. */
+  var acc = {};
+  FACET_DEVICES.forEach(function(d){
+    acc[d.key] = { n: 0, bounce: 0, pages: 0, scroll: 0, dwell: 0, clicks: 0, art: 0, conv: 0 };
+  });
+
+  Object.keys(bySid).forEach(function(sid) {
+    var evts = bySid[sid];
+    var pv = 0, clicks = 0, maxScroll = 0, exitMs = 0;
+    var firstTs = null, lastTs = null, goal = false, dev = null;
+
+    evts.forEach(function(e) {
+      if (firstTs === null || e.ts < firstTs) firstTs = e.ts;
+      if (lastTs  === null || e.ts > lastTs)  lastTs  = e.ts;
+      if (e.type === 'pv') {
+        pv++;
+        if (dev === null) dev = e.dev || 'unknown';
+      } else if (e.type === 'click')  { clicks++; }
+      else if (e.type === 'scroll') { if ((e.depth || 0) > maxScroll) maxScroll = e.depth; }
+      else if (e.type === 'exit')   { if ((e.ms || 0) > exitMs) exitMs = e.ms; }
+      else if (e.type === 'goal')   { goal = true; }
+    });
+    if (pv === 0) return;
+    if (!FACET_DMAP[dev]) dev = 'unknown';
+
+    var dwell = Math.max((lastTs || 0) - (firstTs || 0), exitMs);
+    var a = acc[dev];
+    a.n++;
+    if (pv <= 1) a.bounce++;
+    a.pages  += pv;
+    a.scroll += maxScroll;
+    a.dwell  += dwell;
+    a.clicks += clicks;
+    a.art    += (artMsBySid[sid] || 0);
+    if (goal) a.conv++;
+  });
+
+  var total = FACET_DEVICES.reduce(function(s, d){ return s + acc[d.key].n; }, 0);
+  var present = FACET_DEVICES.filter(function(d){ return acc[d.key].n > 0; })
+    .map(function(d){ return { key: d.key, label: d.label, color: d.color, n: acc[d.key].n,
+                               share: total ? Math.round((acc[d.key].n / total) * 100) : 0 }; })
+    .sort(function(a, b){ return b.n - a.n; });
+
+  /* Per-metric, per-device values + direction-aware best/lag. */
+  function valOf(metricKey, dkey) {
+    var a = acc[dkey], n = a.n || 1;
+    switch (metricKey) {
+      case 'sessions': return a.n;
+      case 'bounce':   return (a.bounce / n) * 100;
+      case 'pages':    return a.pages / n;
+      case 'scroll':   return a.scroll / n;
+      case 'dwell':    return a.dwell / n;
+      case 'clicks':   return a.clicks / n;
+      case 'art':      return a.art / n;
+      case 'conv':     return (a.conv / n) * 100;
+    }
+    return 0;
+  }
+
+  var metrics = FACET_METRICS.map(function(m) {
+    var cells = {}, vals = [];
+    present.forEach(function(d){ var v = valOf(m.key, d.key); cells[d.key] = v; vals.push({ key: d.key, v: v }); });
+    var maxVal = vals.reduce(function(x, o){ return Math.max(x, o.v); }, 0);
+    var minVal = vals.length ? vals.reduce(function(x, o){ return Math.min(x, o.v); }, Infinity) : 0;
+    var bestKey = null, lagKey = null;
+    if (m.compare && present.length >= 2 && maxVal !== minVal) {
+      vals.forEach(function(o) {
+        if (m.higherBetter) {
+          if (o.v === maxVal && bestKey === null) bestKey = o.key;
+          if (o.v === minVal) lagKey = o.key;
+        } else {
+          if (o.v === minVal && bestKey === null) bestKey = o.key;
+          if (o.v === maxVal) lagKey = o.key;
+        }
+      });
+    }
+    return { key: m.key, label: m.label, note: m.note, higherBetter: m.higherBetter,
+             compare: m.compare, fmt: m.fmt, cells: cells, maxVal: maxVal, minVal: minVal,
+             bestKey: bestKey, lagKey: lagKey };
+  });
+
+  /* Gap ranking — relative spread between best & worst device, compare metrics only. */
+  var gaps = metrics.filter(function(m){ return m.compare && present.length >= 2 && m.maxVal > 0 && m.maxVal !== m.minVal; })
+    .map(function(m) {
+      var bestV  = m.cells[m.bestKey];
+      var worstV = m.cells[m.lagKey];
+      return { metricKey: m.key, label: m.label, fmt: m.fmt,
+               gapPct: Math.round(((m.maxVal - m.minVal) / m.maxVal) * 100),
+               bestLabel: FACET_DMAP[m.bestKey].label, bestVal: bestV,
+               worstLabel: FACET_DMAP[m.lagKey].label, worstVal: worstV };
+    })
+    .sort(function(a, b){ return b.gapPct - a.gapPct; });
+
+  var conv = present.map(function(d) {
+    var a = acc[d.key];
+    return { key: d.key, label: d.label, n: a.n, conv: a.conv,
+             rate: a.n ? (a.conv / a.n) * 100 : 0 };
+  }).sort(function(a, b){ return b.rate - a.rate; });
+
+  var mobileShare = total ? Math.round((acc.mobile.n / total) * 100) : 0;
+
+  return { total: total, present: present, metrics: metrics, gaps: gaps, conv: conv,
+           mobileShare: mobileShare, biggestGap: gaps.length ? gaps[0].label : '—' };
+}
+
+function drawFacetDonut(fm) {
+  var canvas = document.getElementById('facet-donut');
+  if (!canvas) return;
+  var ctx = canvas.getContext('2d');
+  var W = canvas.width, H = canvas.height;
+  ctx.clearRect(0, 0, W, H);
+  var cx = W / 2, cy = H / 2, rOut = 78, rIn = 46;
+
+  if (!fm.total) {
+    ctx.fillStyle = '#444';
+    ctx.font = '12px -apple-system, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('No sessions yet.', cx, cy);
+    return;
+  }
+
+  var start = -Math.PI / 2;
+  fm.present.forEach(function(d) {
+    var ang = (d.n / fm.total) * Math.PI * 2;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.arc(cx, cy, rOut, start, start + ang);
+    ctx.closePath();
+    ctx.fillStyle = d.color;
+    ctx.fill();
+    start += ang;
+  });
+
+  ctx.globalCompositeOperation = 'destination-out';
+  ctx.beginPath();
+  ctx.arc(cx, cy, rIn, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.globalCompositeOperation = 'source-over';
+
+  ctx.fillStyle = '#c9a87c';
+  ctx.font = 'bold 22px -apple-system, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(fm.total, cx, cy - 6);
+  ctx.fillStyle = '#8c887f';
+  ctx.font = '10px "Courier New", monospace';
+  ctx.fillText('SESSIONS', cx, cy + 12);
+}
+
+function facetScorecardHtml(fm) {
+  if (!fm.present.length) {
+    return { head: '', body: '<tr><td>No sessions segmented yet. Browse the public pages and device comparison will populate automatically.</td></tr>' };
+  }
+  var head = '<tr><th>Metric</th>' + fm.present.map(function(d) {
+    return '<th><span class="compass-legend-swatch" style="display:inline-block;width:0.7em;height:0.7em;border-radius:2px;background:' +
+      d.color + ';margin-right:0.4em;vertical-align:middle"></span>' + escHtml(d.label) +
+      ' <span style="color:#6f6b63">(' + d.n + ')</span></th>';
+  }).join('') + '</tr>';
+
+  var body = fm.metrics.map(function(m) {
+    var cells = fm.present.map(function(d) {
+      var v   = m.cells[d.key];
+      var bar = m.maxVal > 0 ? Math.max(3, Math.round((v / m.maxVal) * 100)) : 0;
+      var cls = 'facet-cell';
+      var tag = '';
+      if (m.bestKey === d.key) { cls += ' facet-best'; tag = '<span class="facet-tag facet-tag-best">BEST</span>'; }
+      else if (m.lagKey === d.key) { cls += ' facet-lag'; tag = '<span class="facet-tag facet-tag-lag">LAG</span>'; }
+      return '<td class="' + cls + '">' +
+        '<span class="facet-cell-val">' + m.fmt(v) + '</span>' + tag +
+        '<div class="facet-cell-bar-wrap"><div class="facet-cell-bar" style="width:' + bar + '%"></div></div>' +
+      '</td>';
+    }).join('');
+    return '<tr><td><span class="facet-metric-name">' + escHtml(m.label) + '</span>' +
+      '<span class="facet-metric-note">' + escHtml(m.note) + '</span></td>' + cells + '</tr>';
+  }).join('');
+
+  return { head: head, body: body };
+}
+
+function renderFacetTab() {
+  var fm = buildFacet();
+
+  function chip(num, label) {
+    return '<div class="analytics-stat-chip"><span class="asc-num">' + num +
+      '</span><span class="asc-label">' + label + '</span></div>';
+  }
+  document.getElementById('facet-stats').innerHTML =
+    chip(fm.total,                 'Sessions Compared') +
+    chip(fm.present.length,        'Device Classes')    +
+    chip(fm.mobileShare + '%',     'Mobile Share')      +
+    chip(escHtml(fm.biggestGap),   'Biggest Gap');
+
+  drawFacetDonut(fm);
+  document.getElementById('facet-legend').innerHTML = fm.present.map(function(d) {
+    return '<div class="compass-legend-item">' +
+      '<span class="compass-legend-swatch" style="background:' + d.color + '"></span>' +
+      '<span>' + escHtml(d.label) + '</span>' +
+      '<span class="compass-legend-val">' + d.n + ' · ' + d.share + '%</span>' +
+    '</div>';
+  }).join('') || '<p class="tide-empty">No sessions yet.</p>';
+
+  var sc = facetScorecardHtml(fm);
+  document.getElementById('facet-score-head').innerHTML = sc.head;
+  document.getElementById('facet-score-body').innerHTML = sc.body;
+
+  /* Biggest gaps */
+  var gapRows = fm.gaps.map(function(g) {
+    return { label: g.label, count: g.gapPct,
+             detail: g.bestLabel + ' ' + g.fmt(g.bestVal) + ' vs ' + g.worstLabel + ' ' + g.fmt(g.worstVal) };
+  });
+  document.getElementById('facet-gaps').innerHTML = gapRows.length
+    ? jBarList(gapRows, 0, { suffix: function(r){ return escHtml(r.detail); } })
+    : '<p class="tide-empty">Need at least two device classes with traffic to compare gaps.</p>';
+
+  /* Conversion by device */
+  var convRows = fm.conv.map(function(c) {
+    return { label: c.label, count: c.conv, rate: c.rate, n: c.n };
+  });
+  var anyConv = fm.conv.some(function(c){ return c.conv > 0; });
+  document.getElementById('facet-conv').innerHTML = (fm.present.length && anyConv)
+    ? jBarList(convRows, 0, { suffix: function(r){
+        return (Math.round(r.rate * 10) / 10) + '% of ' + r.n + ' visits'; } })
+    : '<p class="tide-empty">No commission-goal events recorded yet — conversion by device will populate once visitors engage a CTA or the inquiry form.</p>';
+}
+
+document.getElementById('facet-refresh-btn').addEventListener('click', renderFacetTab);
+
+document.getElementById('facet-export-btn').addEventListener('click', function() {
+  var fm = buildFacet();
+  var out = {
+    total: fm.total, mobileShare: fm.mobileShare, biggestGap: fm.biggestGap,
+    devices: fm.present.map(function(d){ return { device: d.key, label: d.label, sessions: d.n, share: d.share }; }),
+    metrics: fm.metrics.map(function(m) {
+      var vals = {};
+      fm.present.forEach(function(d){ vals[d.key] = +(m.cells[d.key]).toFixed(2); });
+      return { metric: m.key, label: m.label, higherBetter: m.higherBetter,
+               best: m.bestKey, lag: m.lagKey, values: vals };
+    }),
+    gaps: fm.gaps.map(function(g) {
+      return { metric: g.metricKey, label: g.label, gapPct: g.gapPct,
+               best: g.bestLabel, bestVal: +g.bestVal.toFixed(2),
+               worst: g.worstLabel, worstVal: +g.worstVal.toFixed(2) };
+    }),
+    conversion: fm.conv.map(function(c) {
+      return { device: c.key, label: c.label, sessions: c.n, inquiries: c.conv, rate: +c.rate.toFixed(2) };
+    })
+  };
+  var blob = new Blob([JSON.stringify(out, null, 2)], { type: 'application/json' });
+  var url  = URL.createObjectURL(blob);
+  var a    = document.createElement('a');
+  a.href = url; a.download = 'facet-' + Date.now() + '.json'; a.click();
   URL.revokeObjectURL(url);
 });
 </script>
