@@ -205,6 +205,7 @@ Password-protected (SHA-256 hash in localStorage, 5-attempt lockout). Session tr
 | Loom        | Session replay & event timeline — reconstructs a single visit as an ordered event stream (joins analytics + spotlight by `sid`): session picker, summary header, chronological replay timeline, recent-sessions directory |
 | Prism       | Visitor segments & behavioral personas — classifies each session into a categorical persona (Prospect / Art Gazer / Deep Reader / Explorer / Skimmer / Casual Browser / Bouncer) from the shape of its behavior: persona mix donut, per-persona behavioral fingerprints, and a per-segment acquisition explorer |
 | Facet       | Cross-device experience comparison — the first *comparative* view: cuts the audience by device class (desktop/mobile/tablet) and lines the same engagement metrics up side by side (bounce, pages, scroll, dwell, clicks, artwork attention, conversion), with a direction-aware best/lag scorecard, biggest-gap ranking, and conversion-by-device |
+| Fuse        | Conversion latency & sales-cycle — the missing *time* dimension of Beacon: joins persistent-visitor identity (`vid`/`vfirst`) with `goal` events to measure how long and how many visits it takes a visitor to reach their first commission-intent signal; conversion-speed donut (Instant→7 days+), visits-before-converting distribution, first-intent-signal mix, and a recent-conversions feed |
 
 ---
 
@@ -1058,6 +1059,46 @@ Answers a question the entire analytics family structurally cannot: **do visitor
 
 ---
 
+## Fuse — Conversion Latency & Sales-Cycle (Admin → Fuse tab) — NEW TOOL
+
+Answers the question the conversion tools structurally leave open: **once a visitor becomes a would-be client, how long did it take — and how many visits?** Beacon reports *how many* sessions travel the funnel and *where* they leak, but it is a per-session snapshot with no sense of elapsed time; Orbit and Ripple measure *return* behaviour but not conversion; Muse attributes intent to *artworks*, not to a *clock*. Fuse is the missing **time dimension of conversion** — the sales-cycle length. For every visitor who ever fires a commission-intent signal, it clocks the gap between their **first-ever visit** and that **first signal** (the "burn time" from spark to ignition) and counts how many separate visits it took. That tells the artist whether a commission decision is impulsive (optimise the first impression) or considered (a returning-visitor nurture is worth building), and how patient a slow lead is really being.
+
+**Why it's genuinely new:** it is a *latency* view keyed on the persistent visitor, not another funnel count or attention aggregate. Beacon counts funnel stages within a session; Fuse measures the *duration and visit-count* between first touch and first intent across sessions. No existing tool computes time-to-conversion or visits-to-conversion.
+
+**No new storage key, no `analytics.js` change** — derived live from `_gam_analytics_v1`, joining the `vid` (persistent visitor id) + `vfirst` (first-ever-seen) fields `analytics.js` already stamps on every `pv` (added for Orbit) with the `goal` events `analytics.js`/the commission form already record for Beacon. The same read-only pattern as Ripple/Muse.
+
+**How it works:**
+1. `buildFuse()` groups `pv` events by `vid` (fallback `legacy:<sid>`), capturing each visitor's **first-seen** time (min of `vfirst` and earliest `pv` `ts`) and the earliest `ts` of each distinct session (`sid`).
+2. It finds each visitor's **earliest `goal` event** (any commission-intent signal: `cta_commission` / `form_open` / `form_step3` / `form_submit`). Visitors with ≥ 1 goal are **converters**.
+3. Per converter it derives `latency` (`firstGoalTs − firstSeen`, clamped ≥ 0) and `visits` (distinct sessions whose earliest pageview is at or before the goal, min 1). `visits ≤ 1` ⇒ a **same-visit** conversion.
+4. Aggregates the conversion count, visitor→intent rate (converters ÷ unique visitors), median latency, same-visit share, a latency-bucket distribution, a visits-to-convert distribution, the first-intent-signal mix, and a recent-conversions feed (newest first).
+
+**Latency buckets:** Instant (`<1 min`), Same visit (`1–30 min`), Same day (`30 min–24 h`), Within a week (`1–7 days`), Long consideration (`7 days+`). Thresholds live in `FUSE_BUCKETS` at the top of the Fuse block.
+
+**Admin tab sections:**
+- **Stats**: Converters, Visitor→Intent Rate %, Median Time-to-Convert, Same-Visit Conversion %
+- **Conversion Speed Mix**: canvas donut + legend across the five latency buckets; centre shows the median time-to-convert
+- **Visits Before Converting**: converters bucketed by how many visits it took (1 / 2 / 3–5 / 6+)
+- **First Intent Signal**: which `goal` type each visitor fires *first* (the spark), friendly-named and ranked
+- **Recent Conversions**: latest converters with time-to-convert, visit count, and the signal fired, tagged `FAST` (same visit) / `SLOW` (came back across days)
+
+**Derived schema (for export):**
+```js
+{ uniqueVisitors, converters, intentRate, medianLatencyMs, sameVisit, sameVisitPct,
+  speedBuckets:[{bucket,label,count}], visitsToConvert:[{bucket,label,count}],
+  firstSignals:[{goal,label,count}], recent:[{vid,latencyMs,visits,firstGoal,ts}] }
+```
+
+**Technical notes:**
+- Donut + swatches use the warm amber→clay ramp (`#c9a87c` instant → `#7c5433` long consideration) — no blue/pink. New `.fuse-*` CSS classes; reuses `jBarList()`, `analytics-stat-chip`, `compass-legend`/`compass-donut-row`, `jFmtDur()`, `escHtml()`, `fmtDate()`.
+- Keyed by the **persistent visitor** (`vid`), so a return in a new tab correctly counts as the same person (the point of a latency view). Legacy pageviews/goals without a `vid` fold in as single-visit visitors keyed by `sid`.
+- Attribution is *association* — a visitor who both arrived and later fired a goal, matched by `vid`; it does not prove the site alone caused the decision.
+- Tab renders lazily on click, same pattern as Facet/Prism/Loom/etc.
+
+**API:** none new on `CommissionData` — uses `CommissionData.getAnalytics()`. Logic lives in `renderFuseTab()` / `buildFuse()` inside `admin/index.html`.
+
+---
+
 ## Commission System
 
 ### Pages
@@ -1135,4 +1176,4 @@ Stored in `_gam_prices_v1`. Three sections: `digital`, `stickers`, `animation`. 
 
 ---
 
-*Last updated: 2026-08-12*
+*Last updated: 2026-08-13*
