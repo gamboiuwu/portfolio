@@ -206,6 +206,7 @@ Password-protected (SHA-256 hash in localStorage, 5-attempt lockout). Session tr
 | Prism       | Visitor segments & behavioral personas — classifies each session into a categorical persona (Prospect / Art Gazer / Deep Reader / Explorer / Skimmer / Casual Browser / Bouncer) from the shape of its behavior: persona mix donut, per-persona behavioral fingerprints, and a per-segment acquisition explorer |
 | Facet       | Cross-device experience comparison — the first *comparative* view: cuts the audience by device class (desktop/mobile/tablet) and lines the same engagement metrics up side by side (bounce, pages, scroll, dwell, clicks, artwork attention, conversion), with a direction-aware best/lag scorecard, biggest-gap ranking, and conversion-by-device |
 | Fuse        | Conversion latency & sales-cycle — the missing *time* dimension of Beacon: joins persistent-visitor identity (`vid`/`vfirst`) with `goal` events to measure how long and how many visits it takes a visitor to reach their first commission-intent signal; conversion-speed donut (Instant→7 days+), visits-before-converting distribution, first-intent-signal mix, and a recent-conversions feed |
+| Arc         | Session engagement lifecycle / intra-visit tempo — lines every event up by its offset from its own session's first event to show *when within a visit* activity crests and when sessions go quiet: activity curve by time-bin (0–15s…5m+), in-visit survival (retention within one visit), event-mix-over-time (early scrolls → mid clicks/intent → late exits), and a longest-sustained-visits feed |
 
 ---
 
@@ -1099,6 +1100,45 @@ Answers the question the conversion tools structurally leave open: **once a visi
 
 ---
 
+## Arc — Session Engagement Lifecycle & Intra-Visit Tempo (Admin → Arc tab) — NEW TOOL
+
+Answers the one question about a visit's *own timeline* that no other tab measures: **what is the shape of a typical visit from second zero to when it goes quiet?** Latch clocks only the *first* interaction (activation latency); Pulse charts the *calendar* hour a visit lands (time-of-week); Loom replays a *single* session end-to-end; Depth measures *spatial* scroll reach; Ember/Prism score/segment the *whole* visit as one unit. None lines events up by **how many seconds into the visit** they fired and aggregates that across every session. Arc is that missing **intra-visit lifecycle**: when activity crests, how fast it decays, and what visitors are doing early vs. late — the difference between a portfolio that holds attention for two minutes and one that loses everyone in the first fifteen seconds.
+
+**Why it's genuinely new:** it is a *time-since-session-start* aggregate, an axis no existing tool computes. Latch reads only the first event's latency; Pulse/Tide bucket by wall-clock/date; Loom is a single-session drill-down, not an aggregate; Journey/Depth are page/scroll views with no temporal-within-visit dimension. Arc is the family's first **engagement-over-the-arc-of-a-visit** view.
+
+**No new storage key, no `analytics.js` change** — derived live from `_gam_analytics_v1` using the `ts` timestamps already stamped on every `pv` / `click` / `scroll` / `tile_hover` / `goal` / `exit` event, the same read-only pattern as Journey/Latch.
+
+**How it works:**
+1. `buildArc()` groups events by `sid`, sorts each session by `ts`, and takes `t0` = the first event's timestamp. Each event's **offset** = `ts − t0`.
+2. Every event is bucketed into a **time-bin** (`ARC_BINS`: 0–15s / 15–30s / 30–60s / 1–2m / 2–5m / 5m+), incrementing that bin's total and its per-event-type tally.
+3. Per session it derives `span` (last event offset, extended to the longest recorded `exit.ms`), the entry page (first `pv`), and event count.
+4. Aggregates: activity per bin, **median visit length**, **in-visit survival** (sessions whose span reaches each of 15s/30s/1m/2m/5m — a monotonic retention curve *within* one visit), **peak activity window** (busiest bin), **late-engagement rate** (% of visits still active past 60s), and the longest-sustained visits.
+
+**Admin tab sections:**
+- **Stats**: Sessions, Median Visit Length, Peak Activity Window, Still Active >60s %
+- **Activity Curve — When a Visit Is Busiest**: canvas bar chart of total events per time-bin (light→deep amber ramp across the bins), each bar annotated with its event count
+- **In-Visit Survival — How Far Visits Get**: the retention curve within a single visit — share of visits still active past each elapsed mark (shared `jBarList` renderer)
+- **What Happens Early vs Late**: per-bin stacked event-type mix bar (pageview / scroll / click / intent / hover / exit), showing scrolls dominating the open, clicks & intent building mid-visit, exits gathering at the tail, with a colour legend
+- **Longest-Sustained Visits**: the visits that stayed alive longest — entry page, active span, and event count (the visits worth studying in Loom)
+
+**Derived schema (for export):**
+```js
+{ total, totalEvents, medianSpanMs, peakWindow, lateRate,
+  bins:[{bin,label,events,types:{type:count}}],
+  survival:[{threshold,count}],
+  longest:[{sid,entry,spanMs,events,ts}] }
+```
+
+**Technical notes:**
+- Activity-curve bars and the event-mix segments use the warm amber/clay/sand ramp (`#d6be96`→`#96683e` across bins; `#c9a87c` pageview → `#7c5433` exit) — no blue/pink. New `.arc-*` CSS classes; reuses `jBarList()`, `jFmtDur()`, `jPageLabel()`, `escHtml()`, `fmtDate()`, `analytics-stat-chip`.
+- Offsets are relative to each session's own first event, so Arc is device- and clock-agnostic; span extends to the longest recorded `exit` dwell so a page-close after a quiet pause still counts toward visit length.
+- Timing is per session (`sid`), so one visitor across several tabs counts as separate visits (consistent with the rest of the family).
+- Tab renders lazily on click, same pattern as Fuse/Facet/Prism/etc.
+
+**API:** none new on `CommissionData` — uses `CommissionData.getAnalytics()`. Logic lives in `renderArcTab()` / `buildArc()` inside `admin/index.html`.
+
+---
+
 ## Commission System
 
 ### Pages
@@ -1176,4 +1216,4 @@ Stored in `_gam_prices_v1`. Three sections: `digital`, `stickers`, `animation`. 
 
 ---
 
-*Last updated: 2026-08-13*
+*Last updated: 2026-08-14*
