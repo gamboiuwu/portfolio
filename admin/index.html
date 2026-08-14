@@ -998,6 +998,24 @@
 		.fuse-tag-slow { background: rgba(150,104,62,0.18); color: #b08a5e; }
 		.fuse-empty { color: #444; font-size: 0.85em; padding: 0.5em 0; }
 
+		/* Arc tab — session engagement lifecycle / intra-visit tempo (warm amber, no blue/pink) */
+		.arc-mix { display: flex; flex-direction: column; gap: 0.55em; }
+		.arc-mix-row { display: flex; align-items: center; gap: 0.7em; }
+		.arc-mix-lbl { font-family: 'Courier New', monospace; font-size: 0.72em; color: #b7b2a8; min-width: 5.2em; text-align: right; }
+		.arc-mix-bar { flex: 1; display: flex; height: 15px; border-radius: 3px; overflow: hidden; background: rgba(255,255,255,0.04); }
+		.arc-seg { height: 100%; }
+		.arc-mix-tot { font-family: 'Courier New', monospace; font-size: 0.68em; color: #6f6b63; min-width: 3.4em; }
+		.arc-legend { display: flex; flex-wrap: wrap; gap: 0.5em 1.1em; margin-top: 0.7em; }
+		.arc-legend-item { display: flex; align-items: center; gap: 0.4em; font-size: 0.72em; color: #b7b2a8; }
+		.arc-legend-swatch { width: 11px; height: 11px; border-radius: 2px; display: inline-block; }
+		.arc-feed { display: flex; flex-direction: column; gap: 0.5em; }
+		.arc-feed-row { display: flex; align-items: baseline; gap: 0.7em; flex-wrap: wrap;
+			padding: 0.5em 0.65em; background: rgba(255,255,255,0.03); border-left: 2px solid #c9a87c; border-radius: 3px; }
+		.arc-feed-dur { font-family: 'Courier New', monospace; font-size: 0.9em; color: #d6a878; min-width: 5em; }
+		.arc-feed-page { color: #e7e4de; font-size: 0.85em; }
+		.arc-feed-meta { font-family: 'Courier New', monospace; font-size: 0.68em; color: #6f6b63; margin-left: auto; }
+		.arc-empty { color: #444; font-size: 0.85em; padding: 0.5em 0; }
+
 		/* Tide tab — trends & momentum (reuses spotlight bars) */
 		#tide-canvas { display: block; }
 		.tide-win { display: flex; align-items: center; gap: 0.6em; flex-wrap: wrap; margin-bottom: 1em; }
@@ -1134,6 +1152,7 @@
 				<button class="admin-tab" data-tab="prism">Prism</button>
 				<button class="admin-tab" data-tab="facet">Facet</button>
 				<button class="admin-tab" data-tab="fuse">Fuse</button>
+				<button class="admin-tab" data-tab="arc">Arc</button>
 			</div>
 
 			<!-- ============ GALLERY TAB ============ -->
@@ -2506,6 +2525,45 @@
 
 						</div>
 
+						<div id="tab-arc" class="tab-content">
+
+							<div class="admin-card">
+								<h3>Arc — Session Engagement Lifecycle</h3>
+								<p class="hint">Latch clocks the <em>first</em> interaction; Pulse charts the <em>calendar</em> hour a visit lands; Loom replays <em>one</em> session. None asks the shape of a <strong>typical visit over its own timeline</strong>. Arc is that missing intra-visit tempo: it lines every event up by how many seconds into the visit it happened, then shows when activity crests and when sessions go quiet &mdash; the difference between a portfolio that holds attention for two minutes and one that loses everyone in the first fifteen seconds. Read-only over <code>_gam_analytics_v1</code> &mdash; no new storage key, no <code>analytics.js</code> change. Each event is offset from its own session&rsquo;s first event; span extends to the longest recorded <code>exit</code> dwell. Keyed by <code>sid</code>, so one visitor across several tabs counts as separate visits (consistent with the rest of the family).</p>
+								<div id="arc-stats" class="analytics-stats" style="margin-bottom:1em"></div>
+								<div style="display:flex;gap:0.5em;flex-wrap:wrap">
+									<button class="button small" id="arc-refresh-btn">Refresh</button>
+									<button class="button small" id="arc-export-btn">Export JSON</button>
+								</div>
+							</div>
+
+							<div class="admin-card">
+								<h3>Activity Curve — When a Visit Is Busiest</h3>
+								<p class="hint">Total events (pageviews, scrolls, clicks, goals) bucketed by how far into the visit they fired. A tall opening bar that collapses means people act on arrival then leave; a curve that holds or builds means the portfolio keeps them working through it.</p>
+								<canvas id="arc-curve" width="640" height="200" style="width:100%;max-width:640px;height:auto"></canvas>
+							</div>
+
+							<div class="admin-card">
+								<h3>In-Visit Survival — How Far Visits Get</h3>
+								<p class="hint">Share of visits still active by each elapsed mark &mdash; the retention curve <em>within</em> a single visit. The drop between two marks is where visits die: a steep fall before 30s is a weak hook; a long flat tail is sustained engagement.</p>
+								<div id="arc-survival"></div>
+							</div>
+
+							<div class="admin-card">
+								<h3>What Happens Early vs Late</h3>
+								<p class="hint">The mix of event types in each window of the visit. Scrolls tend to dominate the opening seconds, clicks and commission intent build in the middle, exits gather at the tail &mdash; the behavioural signature of how a visit matures.</p>
+								<div id="arc-mix"></div>
+								<div id="arc-mix-legend" class="arc-legend"></div>
+							</div>
+
+							<div class="admin-card">
+								<h3>Longest-Sustained Visits</h3>
+								<p class="hint">The visits that stayed alive the longest, newest-weighted by span &mdash; entry page, active span, and how many events they packed in. The visits worth studying in Loom to learn what held them.</p>
+								<div id="arc-long"></div>
+							</div>
+
+						</div>
+
 		</div><!-- /#admin-dash -->
 		<input type="file" id="img-file-input" accept="image/*" style="display:none" />
 
@@ -3553,6 +3611,9 @@ document.addEventListener('click', function(e){
   }
   if (e.target.dataset && e.target.dataset.tab === 'fuse') {
     renderFuseTab();
+  }
+  if (e.target.dataset && e.target.dataset.tab === 'arc') {
+    renderArcTab();
   }
 });
 
@@ -9204,6 +9265,242 @@ document.getElementById('fuse-export-btn').addEventListener('click', function() 
   var url  = URL.createObjectURL(blob);
   var a    = document.createElement('a');
   a.href = url; a.download = 'fuse-' + Date.now() + '.json'; a.click();
+  URL.revokeObjectURL(url);
+});
+
+/* ── Arc — Session Engagement Lifecycle (intra-visit tempo) ──
+   Read-only over _gam_analytics_v1. Lines every event up by its offset from its own
+   session's first event, then aggregates across all sessions to show WHEN in a visit
+   activity crests and when sessions go quiet — the intra-visit lifecycle no other tab
+   measures (Latch = first action only; Pulse = calendar clock; Loom = single-session
+   replay; Depth = spatial scroll). No new storage key, no analytics.js change.
+   Warm amber/clay/sand ramp, no blue/pink. */
+var ARC_BINS = [
+  { key: '0-15s',  label: '0–15s',   start: 0,      max: 15000,    color: '#d6be96' },
+  { key: '15-30s', label: '15–30s',  start: 15000,  max: 30000,    color: '#cbb083' },
+  { key: '30-60s', label: '30–60s',  start: 30000,  max: 60000,    color: '#c9a87c' },
+  { key: '1-2m',   label: '1–2 min', start: 60000,  max: 120000,   color: '#b8935f' },
+  { key: '2-5m',   label: '2–5 min', start: 120000, max: 300000,   color: '#a9814f' },
+  { key: '5m+',    label: '5 min+',  start: 300000, max: Infinity, color: '#96683e' }
+];
+var ARC_TYPES = [
+  { key: 'pv',         label: 'Pageview', color: '#c9a87c' },
+  { key: 'scroll',     label: 'Scroll',   color: '#b08a5e' },
+  { key: 'click',      label: 'Click',    color: '#d6be96' },
+  { key: 'goal',       label: 'Intent',   color: '#e0b877' },
+  { key: 'tile_hover', label: 'Hover',    color: '#8a6f4a' },
+  { key: 'exit',       label: 'Exit',     color: '#7c5433' }
+];
+var ARC_SURVIVAL = [
+  { label: 'Past 15s',    ms: 15000 },
+  { label: 'Past 30s',    ms: 30000 },
+  { label: 'Past 1 min',  ms: 60000 },
+  { label: 'Past 2 min',  ms: 120000 },
+  { label: 'Past 5 min',  ms: 300000 }
+];
+function arcBinIndex(off) {
+  for (var i = 0; i < ARC_BINS.length; i++) { if (off < ARC_BINS[i].max) return i; }
+  return ARC_BINS.length - 1;
+}
+
+function buildArc() {
+  var events = CommissionData.getAnalytics() || [];
+  var bySid = {};
+  events.forEach(function(e) {
+    var sid = e.sid || '?';
+    (bySid[sid] || (bySid[sid] = [])).push(e);
+  });
+
+  var bins = ARC_BINS.map(function(b) {
+    return { key: b.key, label: b.label, color: b.color, events: 0, types: {} };
+  });
+  var sessions = [];
+
+  Object.keys(bySid).forEach(function(sid) {
+    var evs = bySid[sid].slice().sort(function(a, b) { return (a.ts || 0) - (b.ts || 0); });
+    if (!evs.length) return;
+    var t0 = evs[0].ts || 0;
+    var lastTs = evs[evs.length - 1].ts || t0;
+    var span = Math.max(0, lastTs - t0);
+    var entry = '/';
+    var sawPv = false;
+    evs.forEach(function(e) {
+      if (!sawPv && e.type === 'pv') { entry = e.page || '/'; sawPv = true; }
+      if (e.type === 'exit' && e.ms && e.ms > span) span = e.ms;
+      var off = Math.max(0, (e.ts || 0) - t0);
+      var idx = arcBinIndex(off);
+      bins[idx].events++;
+      var t = e.type || 'other';
+      bins[idx].types[t] = (bins[idx].types[t] || 0) + 1;
+    });
+    sessions.push({ sid: sid, entry: entry, span: span, count: evs.length, ts: t0 });
+  });
+
+  var total = sessions.length;
+  var totalEvents = bins.reduce(function(s, b) { return s + b.events; }, 0);
+
+  /* median span */
+  var spans = sessions.map(function(s) { return s.span; }).sort(function(a, b) { return a - b; });
+  var medianSpan = 0;
+  if (spans.length) {
+    medianSpan = (spans.length % 2)
+      ? spans[(spans.length - 1) / 2]
+      : Math.round((spans[spans.length / 2 - 1] + spans[spans.length / 2]) / 2);
+  }
+
+  /* survival: sessions whose span reaches each threshold */
+  var survival = ARC_SURVIVAL.map(function(s) {
+    var c = sessions.filter(function(x) { return x.span >= s.ms; }).length;
+    return { label: s.label, count: c };
+  });
+  var lateRate = total ? Math.round(sessions.filter(function(x) { return x.span >= 60000; }).length / total * 1000) / 10 : 0;
+
+  /* peak activity window */
+  var peakIdx = 0;
+  for (var i = 1; i < bins.length; i++) { if (bins[i].events > bins[peakIdx].events) peakIdx = i; }
+  var peakLabel = totalEvents ? ARC_BINS[peakIdx].label : '—';
+
+  var longest = sessions.slice().sort(function(a, b) { return b.span - a.span; }).slice(0, 12);
+
+  return {
+    total: total, totalEvents: totalEvents, bins: bins, sessions: sessions,
+    medianSpan: medianSpan, survival: survival, lateRate: lateRate,
+    peakLabel: peakLabel, longest: longest
+  };
+}
+
+function drawArcCurve(a) {
+  var canvas = document.getElementById('arc-curve');
+  if (!canvas) return;
+  var ctx = canvas.getContext('2d');
+  var W = canvas.width, H = canvas.height;
+  ctx.clearRect(0, 0, W, H);
+
+  if (!a.totalEvents) {
+    ctx.fillStyle = '#444';
+    ctx.font = '13px -apple-system, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('No activity recorded yet.', W / 2, H / 2);
+    return;
+  }
+
+  var padL = 34, padR = 16, padT = 24, padB = 34;
+  var plotW = W - padL - padR, plotH = H - padT - padB;
+  var n = a.bins.length;
+  var slot = plotW / n;
+  var barW = slot * 0.62;
+  var maxE = a.bins.reduce(function(m, b) { return Math.max(m, b.events); }, 1);
+
+  /* baseline */
+  ctx.strokeStyle = 'rgba(255,255,255,0.12)';
+  ctx.beginPath();
+  ctx.moveTo(padL, padT + plotH);
+  ctx.lineTo(padL + plotW, padT + plotH);
+  ctx.stroke();
+
+  a.bins.forEach(function(b, i) {
+    var h = Math.round((b.events / maxE) * plotH);
+    var x = padL + i * slot + (slot - barW) / 2;
+    var y = padT + plotH - h;
+    ctx.fillStyle = b.color;
+    ctx.fillRect(x, y, barW, h);
+    /* count above */
+    ctx.fillStyle = '#c9a87c';
+    ctx.font = 'bold 11px -apple-system, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'bottom';
+    ctx.fillText(String(b.events), x + barW / 2, y - 3);
+    /* bin label below */
+    ctx.fillStyle = '#8c887f';
+    ctx.font = '10px "Courier New", monospace';
+    ctx.textBaseline = 'top';
+    ctx.fillText(b.label, x + barW / 2, padT + plotH + 6);
+  });
+
+  /* y axis caption */
+  ctx.save();
+  ctx.translate(11, padT + plotH / 2);
+  ctx.rotate(-Math.PI / 2);
+  ctx.fillStyle = '#6f6b63';
+  ctx.font = '9px "Courier New", monospace';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('EVENTS', 0, 0);
+  ctx.restore();
+}
+
+function renderArcTab() {
+  var a = buildArc();
+  function chip(num, label) {
+    return '<div class="analytics-stat-chip"><span class="asc-num">' + num +
+      '</span><span class="asc-label">' + label + '</span></div>';
+  }
+  document.getElementById('arc-stats').innerHTML =
+    chip(a.total,                                'Sessions')            +
+    chip(a.total ? jFmtDur(a.medianSpan) : '—',  'Median Visit Length') +
+    chip(a.peakLabel,                            'Peak Activity Window') +
+    chip(a.total ? a.lateRate + '%' : '—',       'Still Active >60s');
+
+  drawArcCurve(a);
+
+  /* In-visit survival */
+  var srows = a.survival.map(function(s) { return { label: s.label, count: s.count }; });
+  document.getElementById('arc-survival').innerHTML = a.total
+    ? jBarList(srows, a.total, { suffix: function(r, share) { return share + '% of visits'; } })
+    : '<p class="arc-empty">No visits recorded yet. Browse the public pages and Arc populates automatically.</p>';
+
+  /* Event mix over time */
+  var mixBins = a.bins.filter(function(b) { return b.events > 0; });
+  document.getElementById('arc-mix').innerHTML = mixBins.length
+    ? '<div class="arc-mix">' + mixBins.map(function(b) {
+        var segs = ARC_TYPES.map(function(t) {
+          var c = b.types[t.key] || 0;
+          if (!c) return '';
+          var pct = (c / b.events) * 100;
+          return '<span class="arc-seg" style="width:' + pct + '%;background:' + t.color +
+            '" title="' + escHtml(t.label) + ': ' + c + '"></span>';
+        }).join('');
+        return '<div class="arc-mix-row">' +
+          '<span class="arc-mix-lbl">' + escHtml(b.label) + '</span>' +
+          '<span class="arc-mix-bar">' + segs + '</span>' +
+          '<span class="arc-mix-tot">' + b.events + '</span>' +
+        '</div>';
+      }).join('') + '</div>'
+    : '<p class="arc-empty">No activity yet.</p>';
+  document.getElementById('arc-mix-legend').innerHTML = ARC_TYPES.map(function(t) {
+    return '<span class="arc-legend-item"><span class="arc-legend-swatch" style="background:' + t.color +
+      '"></span>' + escHtml(t.label) + '</span>';
+  }).join('');
+
+  /* Longest-sustained visits */
+  document.getElementById('arc-long').innerHTML = a.longest.length && a.longest[0].span > 0
+    ? '<div class="arc-feed">' + a.longest.filter(function(s) { return s.span > 0; }).map(function(s) {
+        return '<div class="arc-feed-row">' +
+          '<span class="arc-feed-dur">' + jFmtDur(s.span) + '</span>' +
+          '<span class="arc-feed-page">' + escHtml(jPageLabel(s.entry)) + '</span>' +
+          '<span class="arc-feed-meta">' + s.count + (s.count === 1 ? ' event' : ' events') + ' · ' + escHtml(fmtDate(s.ts)) + '</span>' +
+        '</div>';
+      }).join('') + '</div>'
+    : '<p class="arc-empty">No sustained visits yet — this fills as visitors stay long enough to register a span.</p>';
+}
+
+document.getElementById('arc-refresh-btn').addEventListener('click', renderArcTab);
+
+document.getElementById('arc-export-btn').addEventListener('click', function() {
+  var a = buildArc();
+  var out = {
+    total: a.total, totalEvents: a.totalEvents, medianSpanMs: a.medianSpan,
+    peakWindow: a.peakLabel, lateRate: a.lateRate,
+    bins: a.bins.map(function(b) { return { bin: b.key, label: b.label, events: b.events, types: b.types }; }),
+    survival: a.survival.map(function(s) { return { threshold: s.label, count: s.count }; }),
+    longest: a.longest.slice(0, 50).map(function(s) {
+      return { sid: s.sid, entry: s.entry, spanMs: s.span, events: s.count, ts: s.ts };
+    })
+  };
+  var blob = new Blob([JSON.stringify(out, null, 2)], { type: 'application/json' });
+  var url  = URL.createObjectURL(blob);
+  var a2   = document.createElement('a');
+  a2.href = url; a2.download = 'arc-' + Date.now() + '.json'; a2.click();
   URL.revokeObjectURL(url);
 });
 </script>
