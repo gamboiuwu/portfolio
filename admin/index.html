@@ -1060,6 +1060,21 @@
 		.latch-main { min-width: 0; flex: 1; }
 		.latch-sub { font-size: 0.72em; color: #8c887f; font-family: 'Courier New', monospace; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 		.latch-meta { text-align: right; flex-shrink: 0; }
+
+		/* Vellum tab — reading pace & scroll velocity (warm amber, no blue/pink) */
+		.vellum-donut-row { display: flex; gap: 1.4em; align-items: center; flex-wrap: wrap; }
+		.vellum-feed { display: flex; flex-direction: column; gap: 0.5em; }
+		.vellum-feed-row { display: flex; align-items: baseline; gap: 0.7em; flex-wrap: wrap;
+			padding: 0.5em 0.65em; background: rgba(255,255,255,0.03); border-left: 2px solid #c9a87c; border-radius: 3px; }
+		.vellum-feed-pace { font-family: 'Courier New', monospace; font-size: 0.9em; color: #d6a878; min-width: 4.5em; }
+		.vellum-feed-page { color: #e7e4de; font-size: 0.85em; }
+		.vellum-feed-meta { font-family: 'Courier New', monospace; font-size: 0.68em; color: #6f6b63; margin-left: auto; }
+		.vellum-tag { font-family: 'Courier New', monospace; font-size: 0.6em; letter-spacing: 0.05em; padding: 0.05em 0.4em;
+			border-radius: 3px; text-transform: uppercase; }
+		.vellum-tag-skim  { background: rgba(214,190,150,0.18); color: #d6be96; }
+		.vellum-tag-read  { background: rgba(201,168,124,0.18); color: #d6a878; }
+		.vellum-tag-study { background: rgba(150,104,62,0.20);  color: #b08a5e; }
+		.vellum-empty { color: #444; font-size: 0.85em; padding: 0.5em 0; }
 	</style>
 </head>
 <body class="is-preload">
@@ -1153,6 +1168,7 @@
 				<button class="admin-tab" data-tab="facet">Facet</button>
 				<button class="admin-tab" data-tab="fuse">Fuse</button>
 				<button class="admin-tab" data-tab="arc">Arc</button>
+				<button class="admin-tab" data-tab="vellum">Vellum</button>
 			</div>
 
 			<!-- ============ GALLERY TAB ============ -->
@@ -2564,6 +2580,53 @@
 
 						</div>
 
+						<div id="tab-vellum" class="tab-content">
+
+							<div class="admin-card">
+								<h3>Vellum — Reading Pace &amp; Scroll Velocity</h3>
+								<p class="hint">Depth measures how <em>far</em> down a page visitors scroll; Arc times events from a visit&rsquo;s start; Latch clocks the <em>first</em> interaction. None measures how <strong>fast</strong> a page actually gets read. Vellum is that missing axis: it times the gaps between the 25&nbsp;/&nbsp;50&nbsp;/&nbsp;75&nbsp;/&nbsp;100&percnt; scroll milestones to reconstruct scroll velocity &mdash; the difference between a visitor <strong>studying</strong> your bio and commission terms and one <strong>racing</strong> past them. Each read is classed <span class="vellum-tag vellum-tag-skim">SKIM</span> (raced), <span class="vellum-tag vellum-tag-read">READ</span>, or <span class="vellum-tag vellum-tag-study">STUDY</span> (lingered), and the tool flags which pages get read slowly and which get skimmed. Read-only over <code>_gam_analytics_v1</code> &mdash; no new storage key, no <code>analytics.js</code> change &mdash; from the <code>scroll</code> events already logged at each milestone. A read is &ldquo;measured&rdquo; once it passes the halfway mark (so at least one band gap exists); the pace excludes the dwell-contaminated first band. A jump-to-bottom logs all milestones at once (near-zero gaps), which correctly reads as an extreme skim. Keyed by <code>sid</code>, so one visitor across several tabs counts as separate reads.</p>
+								<div id="vellum-stats" class="analytics-stats" style="margin-bottom:1em"></div>
+								<div style="display:flex;gap:0.5em;flex-wrap:wrap">
+									<button class="button small" id="vellum-refresh-btn">Refresh</button>
+									<button class="button small" id="vellum-export-btn">Export JSON</button>
+								</div>
+							</div>
+
+							<div class="admin-card">
+								<h3>Reading-Pace Mix</h3>
+								<p class="hint">Every measured read sorted by how fast it moved through the page: <strong>Skimming</strong> (under 2s per quarter &mdash; raced), <strong>Reading</strong> (2&ndash;8s), <strong>Studying</strong> (over 8s &mdash; lingered on the content). The donut centre shows the median band pace. A mass in Skimming means visitors blast past your words; weight toward Studying means the copy is landing.</p>
+								<div class="vellum-donut-row">
+									<canvas id="vellum-donut" width="180" height="180"></canvas>
+									<div id="vellum-legend" class="compass-legend"></div>
+								</div>
+							</div>
+
+							<div class="admin-card">
+								<h3>Band-by-Band Pace — How Reading Speed Changes Down the Page</h3>
+								<p class="hint">Average time to traverse each quarter of the page, top to bottom. The first band (&rarr;&nbsp;25&percnt;) includes the above-the-fold dwell before scrolling begins; the lower bands are purer reading speed. A band that spikes is where visitors slow down and actually read; a flat, tiny bar is where they race through.</p>
+								<canvas id="vellum-bands" width="640" height="200" style="width:100%;max-width:640px;height:auto"></canvas>
+							</div>
+
+							<div class="admin-card">
+								<h3>Slowest-Read Pages — Where Content Gets Studied</h3>
+								<p class="hint">Pages ranked by median band pace, slowest first &mdash; a fuller bar means a slower, more deliberate read. These are the pages whose words are actually being consumed. If your commissions or bio page sits high here, the copy is doing its job.</p>
+								<div id="vellum-slow"></div>
+							</div>
+
+							<div class="admin-card">
+								<h3>Fastest-Skimmed Pages — Raced Through</h3>
+								<p class="hint">Pages ranked by fastest median pace &mdash; inverse-scaled, so a fuller bar means a <em>faster</em> skim. Content here is being blown past: either it&rsquo;s thin and skippable, or an important message isn&rsquo;t catching enough to slow anyone down.</p>
+								<div id="vellum-fast"></div>
+							</div>
+
+							<div class="admin-card">
+								<h3>Recent Reads</h3>
+								<p class="hint">The latest measured reads, newest first &mdash; band pace, the pace class, the page, and how far down the visitor reached. A quick look at the shape of individual visits behind the aggregates above.</p>
+								<div id="vellum-recent"></div>
+							</div>
+
+						</div>
+
 		</div><!-- /#admin-dash -->
 		<input type="file" id="img-file-input" accept="image/*" style="display:none" />
 
@@ -3614,6 +3677,9 @@ document.addEventListener('click', function(e){
   }
   if (e.target.dataset && e.target.dataset.tab === 'arc') {
     renderArcTab();
+  }
+  if (e.target.dataset && e.target.dataset.tab === 'vellum') {
+    renderVellumTab();
   }
 });
 
@@ -9501,6 +9567,308 @@ document.getElementById('arc-export-btn').addEventListener('click', function() {
   var url  = URL.createObjectURL(blob);
   var a2   = document.createElement('a');
   a2.href = url; a2.download = 'arc-' + Date.now() + '.json'; a2.click();
+  URL.revokeObjectURL(url);
+});
+
+/* ── Vellum — Reading Pace & Scroll Velocity ──
+   Read-only over _gam_analytics_v1. Pairs each pageview with the scroll events that
+   followed it on that page, then times the gaps between the 25/50/75/100% milestones
+   to reconstruct how fast content is consumed vertically — an axis no other tab
+   measures (Depth = spatial reach; Arc = event tempo from session start; Latch =
+   first action only). No new storage key, no analytics.js change. Warm amber ramp,
+   no blue/pink. */
+var VELLUM_SKIM_MS  = 2000;    /* mean band gap < 2s  → Skimming (raced) */
+var VELLUM_STUDY_MS = 8000;    /* mean band gap > 8s  → Studying (lingered) */
+var VELLUM_GAP_CAP  = 120000;  /* clamp any single band gap — idle-tab guard */
+var VELLUM_CLASSES = [
+  { key: 'skim',  label: 'Skimming', color: '#d6be96' },
+  { key: 'read',  label: 'Reading',  color: '#c9a87c' },
+  { key: 'study', label: 'Studying', color: '#96683e' }
+];
+var VELLUM_BANDS = [
+  { key: 'b25',  label: '→ 25%',  color: '#d6be96' },
+  { key: 'b50',  label: '25 → 50%',  color: '#cbb083' },
+  { key: 'b75',  label: '50 → 75%',  color: '#b8935f' },
+  { key: 'b100', label: '75 → 100%', color: '#96683e' }
+];
+
+function vellumDur(ms) {
+  var s = (ms || 0) / 1000;
+  if (s < 10) return (Math.round(s * 10) / 10) + 's';
+  return jFmtDur(ms);
+}
+function vellumMedian(arr) {
+  if (!arr.length) return 0;
+  var a = arr.slice().sort(function(x, y) { return x - y; });
+  return (a.length % 2)
+    ? a[(a.length - 1) / 2]
+    : Math.round((a[a.length / 2 - 1] + a[a.length / 2]) / 2);
+}
+
+function buildVellum() {
+  var events = CommissionData.getAnalytics() || [];
+  var bySid = {};
+  events.forEach(function(e) {
+    var sid = e.sid || '?';
+    (bySid[sid] || (bySid[sid] = [])).push(e);
+  });
+
+  /* One "read" per pageview, with the earliest ts each scroll milestone was crossed. */
+  var reads = [];
+  Object.keys(bySid).forEach(function(sid) {
+    var evs = bySid[sid].slice().sort(function(a, b) { return (a.ts || 0) - (b.ts || 0); });
+    var cur = null;
+    evs.forEach(function(e) {
+      if (e.type === 'pv') {
+        if (cur) reads.push(cur);
+        cur = { sid: sid, page: e.page || '/', t0: e.ts || 0, thr: {}, ts: e.ts || 0 };
+      } else if (e.type === 'scroll' && cur && e.page === cur.page) {
+        var d = e.depth;
+        if (d && !cur.thr[d]) cur.thr[d] = e.ts || 0;
+      }
+    });
+    if (cur) reads.push(cur);
+  });
+
+  var CAP = VELLUM_GAP_CAP;
+  function gap(a, b) { var g = b - a; if (g < 0) g = 0; if (g > CAP) g = CAP; return g; }
+
+  var bandAgg = VELLUM_BANDS.map(function(b) {
+    return { key: b.key, label: b.label, color: b.color, sum: 0, count: 0 };
+  });
+  var classCounts = { skim: 0, read: 0, study: 0 };
+  var paces = [];
+  var pagePaces = {};
+  var measuredList = [];
+  var scrolledReads = 0;
+
+  reads.forEach(function(r) {
+    var t = r.thr;
+    var depthReached = 0;
+    [25, 50, 75, 100].forEach(function(d) { if (t[d]) depthReached = d; });
+    if (depthReached >= 25) scrolledReads++;
+
+    /* Down-page band profile (includes the first, dwell-contaminated band) */
+    if (t[25])           { bandAgg[0].sum += gap(r.t0, t[25]);   bandAgg[0].count++; }
+    if (t[25] && t[50])  { bandAgg[1].sum += gap(t[25], t[50]);  bandAgg[1].count++; }
+    if (t[50] && t[75])  { bandAgg[2].sum += gap(t[50], t[75]);  bandAgg[2].count++; }
+    if (t[75] && t[100]) { bandAgg[3].sum += gap(t[75], t[100]); bandAgg[3].count++; }
+
+    /* Pace = mean of the below-the-fold adjacent-milestone gaps (excludes → 25%). */
+    var adj = [];
+    if (t[25] && t[50])  adj.push(gap(t[25], t[50]));
+    if (t[50] && t[75])  adj.push(gap(t[50], t[75]));
+    if (t[75] && t[100]) adj.push(gap(t[75], t[100]));
+    if (!adj.length) return; /* unmeasurable — never got past the halfway mark */
+
+    var pace = adj.reduce(function(s, x) { return s + x; }, 0) / adj.length;
+    paces.push(pace);
+    (pagePaces[r.page] || (pagePaces[r.page] = [])).push(pace);
+
+    var cls = pace < VELLUM_SKIM_MS ? 'skim' : (pace > VELLUM_STUDY_MS ? 'study' : 'read');
+    classCounts[cls]++;
+    measuredList.push({ page: r.page, pace: pace, depth: depthReached, cls: cls, ts: r.ts });
+  });
+
+  var measured = paces.length;
+  var medianPace = vellumMedian(paces);
+  var skimRate  = measured ? Math.round(classCounts.skim  / measured * 1000) / 10 : 0;
+  var studyRate = measured ? Math.round(classCounts.study / measured * 1000) / 10 : 0;
+
+  var bands = bandAgg.map(function(b) {
+    return { key: b.key, label: b.label, color: b.color, avgMs: b.count ? b.sum / b.count : 0, count: b.count };
+  });
+  var pages = Object.keys(pagePaces).map(function(p) {
+    return { page: p, reads: pagePaces[p].length, paceMs: vellumMedian(pagePaces[p]) };
+  });
+  measuredList.sort(function(a, b) { return b.ts - a.ts; });
+
+  return {
+    reads: reads.length, scrolledReads: scrolledReads, measured: measured,
+    classCounts: classCounts, medianPace: medianPace, skimRate: skimRate, studyRate: studyRate,
+    bands: bands, pages: pages, recent: measuredList
+  };
+}
+
+function drawVellumDonut(v) {
+  var canvas = document.getElementById('vellum-donut');
+  if (!canvas) return;
+  var ctx = canvas.getContext('2d');
+  var W = canvas.width, H = canvas.height;
+  ctx.clearRect(0, 0, W, H);
+  var cx = W / 2, cy = H / 2, rOut = 78, rIn = 46;
+
+  if (!v.measured) {
+    ctx.fillStyle = '#444';
+    ctx.font = '12px -apple-system, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('No measured reads yet.', cx, cy);
+    return;
+  }
+
+  var start = -Math.PI / 2;
+  VELLUM_CLASSES.forEach(function(c) {
+    var val = v.classCounts[c.key];
+    if (!val) return;
+    var ang = (val / v.measured) * Math.PI * 2;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.arc(cx, cy, rOut, start, start + ang);
+    ctx.closePath();
+    ctx.fillStyle = c.color;
+    ctx.fill();
+    start += ang;
+  });
+
+  ctx.globalCompositeOperation = 'destination-out';
+  ctx.beginPath();
+  ctx.arc(cx, cy, rIn, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.globalCompositeOperation = 'source-over';
+
+  ctx.fillStyle = '#c9a87c';
+  ctx.font = 'bold 17px -apple-system, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(vellumDur(v.medianPace), cx, cy - 6);
+  ctx.fillStyle = '#8c887f';
+  ctx.font = '9px "Courier New", monospace';
+  ctx.fillText('MEDIAN', cx, cy + 12);
+}
+
+function drawVellumBands(v) {
+  var canvas = document.getElementById('vellum-bands');
+  if (!canvas) return;
+  var ctx = canvas.getContext('2d');
+  var W = canvas.width, H = canvas.height;
+  ctx.clearRect(0, 0, W, H);
+
+  var active = v.bands.filter(function(b) { return b.count > 0; });
+  if (!active.length) {
+    ctx.fillStyle = '#444';
+    ctx.font = '13px -apple-system, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('No scroll traversal recorded yet.', W / 2, H / 2);
+    return;
+  }
+
+  var padL = 40, padR = 16, padT = 24, padB = 34;
+  var plotW = W - padL - padR, plotH = H - padT - padB;
+  var n = v.bands.length;
+  var slot = plotW / n;
+  var barW = slot * 0.62;
+  var maxV = v.bands.reduce(function(m, b) { return Math.max(m, b.avgMs); }, 1);
+
+  ctx.strokeStyle = 'rgba(255,255,255,0.12)';
+  ctx.beginPath();
+  ctx.moveTo(padL, padT + plotH);
+  ctx.lineTo(padL + plotW, padT + plotH);
+  ctx.stroke();
+
+  v.bands.forEach(function(b, i) {
+    var h = b.count ? Math.max(2, Math.round((b.avgMs / maxV) * plotH)) : 0;
+    var x = padL + i * slot + (slot - barW) / 2;
+    var y = padT + plotH - h;
+    ctx.fillStyle = b.color;
+    ctx.fillRect(x, y, barW, h);
+    ctx.fillStyle = '#c9a87c';
+    ctx.font = 'bold 11px -apple-system, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'bottom';
+    ctx.fillText(b.count ? vellumDur(b.avgMs) : '—', x + barW / 2, y - 3);
+    ctx.fillStyle = '#8c887f';
+    ctx.font = '10px "Courier New", monospace';
+    ctx.textBaseline = 'top';
+    ctx.fillText(b.label, x + barW / 2, padT + plotH + 6);
+  });
+
+  ctx.save();
+  ctx.translate(12, padT + plotH / 2);
+  ctx.rotate(-Math.PI / 2);
+  ctx.fillStyle = '#6f6b63';
+  ctx.font = '9px "Courier New", monospace';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('AVG TIME', 0, 0);
+  ctx.restore();
+}
+
+function renderVellumTab() {
+  var v = buildVellum();
+  function chip(num, label) {
+    return '<div class="analytics-stat-chip"><span class="asc-num">' + num +
+      '</span><span class="asc-label">' + label + '</span></div>';
+  }
+  document.getElementById('vellum-stats').innerHTML =
+    chip(v.measured,                                'Measured Reads')    +
+    chip(v.measured ? vellumDur(v.medianPace) : '—', 'Median Band Pace') +
+    chip(v.measured ? v.skimRate + '%'  : '—', 'Skim Rate')         +
+    chip(v.measured ? v.studyRate + '%' : '—', 'Study Rate');
+
+  drawVellumDonut(v);
+  document.getElementById('vellum-legend').innerHTML = v.measured
+    ? VELLUM_CLASSES.filter(function(c) { return v.classCounts[c.key] > 0; }).map(function(c) {
+        var val = v.classCounts[c.key];
+        var share = Math.round(val / v.measured * 100);
+        return '<div class="compass-legend-item">' +
+          '<span class="compass-legend-swatch" style="background:' + c.color + '"></span>' +
+          '<span>' + escHtml(c.label) + '</span>' +
+          '<span class="compass-legend-val">' + val + ' · ' + share + '%</span>' +
+        '</div>';
+      }).join('')
+    : '<p class="vellum-empty">No measured reads yet. Vellum populates once visitors scroll past the halfway mark on a page so it can time the bands.</p>';
+
+  drawVellumBands(v);
+
+  /* Slowest-read pages — bar sized by pace, fuller = slower (more studied) */
+  var withReads = v.pages.filter(function(p) { return p.reads >= 1; });
+  var slowest = withReads.slice().sort(function(a, b) { return b.paceMs - a.paceMs; }).slice(0, 8);
+  document.getElementById('vellum-slow').innerHTML = slowest.length
+    ? jBarList(slowest.map(function(p) { return { label: jPageLabel(p.page), count: p.paceMs, reads: p.reads }; }), 1,
+        { suffix: function(r) { return vellumDur(r.count) + ' / band · ' + r.reads + (r.reads === 1 ? ' read' : ' reads'); } })
+    : '<p class="vellum-empty">No pages measured yet.</p>';
+
+  /* Fastest-skimmed pages — inverse-scaled so the fastest reads fullest */
+  var maxPace = withReads.reduce(function(m, p) { return Math.max(m, p.paceMs); }, 1);
+  var fastest = withReads.slice().sort(function(a, b) { return a.paceMs - b.paceMs; }).slice(0, 8);
+  document.getElementById('vellum-fast').innerHTML = fastest.length
+    ? jBarList(fastest.map(function(p) { return { label: jPageLabel(p.page), count: (maxPace - p.paceMs) + 1, pace: p.paceMs, reads: p.reads }; }), 1,
+        { suffix: function(r) { return vellumDur(r.pace) + ' / band · ' + r.reads + (r.reads === 1 ? ' read' : ' reads'); } })
+    : '<p class="vellum-empty">No pages measured yet.</p>';
+
+  /* Recent reads */
+  var recent = v.recent.slice(0, 12);
+  document.getElementById('vellum-recent').innerHTML = recent.length
+    ? '<div class="vellum-feed">' + recent.map(function(r) {
+        var tag = r.cls === 'skim'  ? '<span class="vellum-tag vellum-tag-skim">SKIM</span>'
+                : r.cls === 'study' ? '<span class="vellum-tag vellum-tag-study">STUDY</span>'
+                : '<span class="vellum-tag vellum-tag-read">READ</span>';
+        return '<div class="vellum-feed-row">' +
+          '<span class="vellum-feed-pace">' + vellumDur(r.pace) + '</span>' +
+          tag +
+          '<span class="vellum-feed-page">' + escHtml(jPageLabel(r.page)) + '</span>' +
+          '<span class="vellum-feed-meta">' + r.depth + '% reached · ' + escHtml(fmtDate(r.ts)) + '</span>' +
+        '</div>';
+      }).join('') + '</div>'
+    : '<p class="vellum-empty">No measured reads yet — this fills as visitors scroll through a page.</p>';
+}
+
+document.getElementById('vellum-refresh-btn').addEventListener('click', renderVellumTab);
+
+document.getElementById('vellum-export-btn').addEventListener('click', function() {
+  var v = buildVellum();
+  var out = {
+    reads: v.reads, scrolledReads: v.scrolledReads, measuredReads: v.measured,
+    medianBandPaceMs: v.medianPace, skimRate: v.skimRate, studyRate: v.studyRate,
+    classes: VELLUM_CLASSES.map(function(c) { return { key: c.key, label: c.label, count: v.classCounts[c.key] }; }),
+    bands: v.bands.map(function(b) { return { band: b.key, label: b.label, avgMs: Math.round(b.avgMs), reads: b.count }; }),
+    pages: v.pages.map(function(p) { return { page: p.page, reads: p.reads, medianBandPaceMs: p.paceMs }; }),
+    recent: v.recent.slice(0, 50).map(function(r) { return { page: r.page, bandPaceMs: Math.round(r.pace), depth: r.depth, klass: r.cls, ts: r.ts }; })
+  };
+  var blob = new Blob([JSON.stringify(out, null, 2)], { type: 'application/json' });
+  var url  = URL.createObjectURL(blob);
+  var a    = document.createElement('a');
+  a.href = url; a.download = 'vellum-' + Date.now() + '.json'; a.click();
   URL.revokeObjectURL(url);
 });
 </script>

@@ -207,6 +207,7 @@ Password-protected (SHA-256 hash in localStorage, 5-attempt lockout). Session tr
 | Facet       | Cross-device experience comparison — the first *comparative* view: cuts the audience by device class (desktop/mobile/tablet) and lines the same engagement metrics up side by side (bounce, pages, scroll, dwell, clicks, artwork attention, conversion), with a direction-aware best/lag scorecard, biggest-gap ranking, and conversion-by-device |
 | Fuse        | Conversion latency & sales-cycle — the missing *time* dimension of Beacon: joins persistent-visitor identity (`vid`/`vfirst`) with `goal` events to measure how long and how many visits it takes a visitor to reach their first commission-intent signal; conversion-speed donut (Instant→7 days+), visits-before-converting distribution, first-intent-signal mix, and a recent-conversions feed |
 | Arc         | Session engagement lifecycle / intra-visit tempo — lines every event up by its offset from its own session's first event to show *when within a visit* activity crests and when sessions go quiet: activity curve by time-bin (0–15s…5m+), in-visit survival (retention within one visit), event-mix-over-time (early scrolls → mid clicks/intent → late exits), and a longest-sustained-visits feed |
+| Vellum      | Reading pace & scroll velocity — times the gaps between the 25/50/75/100% scroll milestones to measure how *fast* a page is consumed vertically (skim vs. read vs. study), not just how far: reading-pace mix donut, band-by-band pace down the page, slowest-read & fastest-skimmed pages, recent-reads feed |
 
 ---
 
@@ -1139,6 +1140,47 @@ Answers the one question about a visit's *own timeline* that no other tab measur
 
 ---
 
+## Vellum — Reading Pace & Scroll Velocity (Admin → Vellum tab) — NEW TOOL
+
+Answers a question no other tab measures: **how *fast* does a visitor actually read a page?** Depth reports how *far* down a page people scroll (spatial reach); Arc times events by their offset from a visit's start (event tempo across the whole session); Latch clocks only the *first* interaction (activation latency). None measures the **velocity** of consumption — the pace at which a reader travels *through* the content once they start scrolling. Vellum is that missing axis: it times the gaps between the 25 / 50 / 75 / 100 % scroll milestones to reconstruct scroll velocity and classify each read as **Skimming** (raced), **Reading**, or **Studying** (lingered). For an artist whose bio, commission terms, and pricing are the copy that turns a browser into a client, knowing whether that text is being *read* or *raced past* is a direct, actionable signal Depth's reach percentage can't give.
+
+**Why it's genuinely new:** it is a *rate* metric, not another reach or count aggregate. Depth measures the furthest point reached; Vellum measures the *time between* points — a first derivative Depth structurally cannot express. Arc buckets *all* events by session-offset (a whole-visit tempo); Vellum isolates the scroll-milestone intervals *within a single pageview* (a per-page reading pace). Prism's "Deep Reader" persona uses a scroll+dwell threshold as one categorical flag; Vellum quantifies the continuous pace and profiles it band-by-band down the page.
+
+**No new storage key, no `analytics.js` change** — derived live from `_gam_analytics_v1` using the `scroll` events already logged at each 25/50/75/100 % threshold (each carrying `depth` and `ts`) paired with the `pv` that preceded them, the same read-only pattern as Depth/Arc.
+
+**How it works:**
+1. `buildVellum()` groups events by `sid`, sorts by `ts`, and walks each session building one **read** per `pv` — capturing the earliest timestamp each scroll milestone (25/50/75/100) was crossed on that page, until the next `pv` closes the read.
+2. **Band gaps** (down-page profile): the elapsed time to traverse each quarter — `→25%` = `ts(25) − ts(pv)`, `25→50%` = `ts(50) − ts(25)`, etc. Each gap is clamped to `[0, VELLUM_GAP_CAP]` (2 min) to neutralise idle-tab outliers.
+3. **Pace** per read = the mean of the *below-the-fold* adjacent-milestone gaps (`25→50`, `50→75`, `75→100`), **excluding** the dwell-contaminated `→25%` band. A read is **measured** only once it passes the halfway mark (so at least one such gap exists); reads that stop at 25% are counted as scrolled but unmeasurable.
+4. Each measured read is classed by its pace: **Skimming** `< VELLUM_SKIM_MS` (2000 ms) · **Reading** 2–8 s · **Studying** `> VELLUM_STUDY_MS` (8000 ms). A jump-to-bottom logs all milestones in one debounced tick (near-zero gaps), which correctly reads as an extreme skim.
+5. Aggregates the pace-class mix, the per-band average traversal time, per-page median pace + read count, and a recent-reads feed.
+
+**Admin tab sections:**
+- **Stats**: Measured Reads, Median Band Pace, Skim Rate %, Study Rate %
+- **Reading-Pace Mix**: canvas donut + legend across the three classes (Skimming / Reading / Studying); centre shows the median band pace
+- **Band-by-Band Pace**: canvas bar chart of average traversal time for each quarter of the page (top→bottom), revealing where reading slows (a spike = people actually reading) vs. races (a flat, tiny bar)
+- **Slowest-Read Pages**: pages ranked by median band pace, slowest first (fuller bar = slower, more studied) — where the copy is being consumed
+- **Fastest-Skimmed Pages**: pages ranked by fastest median pace, inverse-scaled (fuller bar = faster skim) — thin or un-catching content
+- **Recent Reads**: latest measured reads tagged `SKIM` / `READ` / `STUDY` with pace, page, and depth reached
+
+**Derived schema (for export):**
+```js
+{ reads, scrolledReads, measuredReads, medianBandPaceMs, skimRate, studyRate,
+  classes:[{key,label,count}], bands:[{band,label,avgMs,reads}],
+  pages:[{page,reads,medianBandPaceMs}], recent:[{page,bandPaceMs,depth,klass,ts}] }
+```
+
+**Technical notes:**
+- Donut, bands, and tags use the warm amber/sand/clay ramp (`#d6be96` skim → `#c9a87c` read → `#96683e` study) — no blue/pink. New `.vellum-*` CSS classes; reuses `jBarList()`, `analytics-stat-chip`, `compass-legend`/donut styles, `jPageLabel()`, `escHtml()`, `fmtDate()`, and a local `vellumDur()` pace formatter (one-decimal seconds under 10 s).
+- The `→25%` band is shown in the band profile (as a first-impression dwell signal) but deliberately excluded from the pace classification, since it conflates above-the-fold dwell with actual reading speed.
+- Pace is per read (`sid` + `pv`), so one visitor across several tabs — or re-reading a page within a tab — counts as separate reads (consistent with the rest of the family).
+- Because scroll milestones fire in a debounced handler, a fast scroll can log several milestones at nearly the same `ts` (tiny gaps → skim); a deliberate reader crossing them minutes apart yields large gaps → study. The metric is truthful in both directions.
+- Tab renders lazily on click, same pattern as Arc/Fuse/Facet/etc.
+
+**API:** none new on `CommissionData` — uses `CommissionData.getAnalytics()`. Logic lives in `renderVellumTab()` / `buildVellum()` inside `admin/index.html`.
+
+---
+
 ## Commission System
 
 ### Pages
@@ -1216,4 +1258,4 @@ Stored in `_gam_prices_v1`. Three sections: `digital`, `stickers`, `animation`. 
 
 ---
 
-*Last updated: 2026-08-14*
+*Last updated: 2026-08-17*
