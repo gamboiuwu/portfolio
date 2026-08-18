@@ -1016,6 +1016,12 @@
 		.arc-feed-meta { font-family: 'Courier New', monospace; font-size: 0.68em; color: #6f6b63; margin-left: auto; }
 		.arc-empty { color: #444; font-size: 0.85em; padding: 0.5em 0; }
 
+		/* Weave tab — source × landing acquisition matrix (warm amber, no blue/pink) */
+		.weave-grid-wrap { overflow-x: auto; padding-bottom: 0.25em; }
+		#weave-grid { display: block; }
+		.weave-empty { color: #444; font-size: 0.85em; padding: 0.5em 0; }
+		.weave-explore-row { margin-bottom: 0.9em; }
+
 		/* Tide tab — trends & momentum (reuses spotlight bars) */
 		#tide-canvas { display: block; }
 		.tide-win { display: flex; align-items: center; gap: 0.6em; flex-wrap: wrap; margin-bottom: 1em; }
@@ -1153,6 +1159,7 @@
 				<button class="admin-tab" data-tab="facet">Facet</button>
 				<button class="admin-tab" data-tab="fuse">Fuse</button>
 				<button class="admin-tab" data-tab="arc">Arc</button>
+				<button class="admin-tab" data-tab="weave">Weave</button>
 			</div>
 
 			<!-- ============ GALLERY TAB ============ -->
@@ -2564,6 +2571,42 @@
 
 						</div>
 
+						<!-- ============ WEAVE TAB ============ -->
+						<div id="tab-weave" class="tab-content">
+
+							<div class="admin-card">
+								<h3>Weave — Source × Landing Acquisition Matrix</h3>
+								<p class="hint">Compass tells you which <em>channel</em> traffic comes from; Journey tells you which <em>pages</em> people land on; Facet crosses device against metrics; Beacon crosses source against conversion. None crosses <strong>inbound source against landing page</strong> &mdash; which channel actually delivers to which entry page, and how each source&nbsp;&rarr;&nbsp;landing <em>pairing</em> bounces and converts. Post one portfolio link across X, Instagram, and TikTok and Weave shows where each platform&rsquo;s audience lands and which pairings work. Read-only over <code>_gam_analytics_v1</code> &mdash; no new storage key, no <code>analytics.js</code> change. A session&rsquo;s source is its first pageview&rsquo;s referrer (own-site referrals folded into <em>direct</em>); its landing is that first pageview&rsquo;s page. Keyed by <code>sid</code>, so one visitor across several tabs counts as separate sessions (consistent with the rest of the family).</p>
+								<div id="weave-stats" class="analytics-stats" style="margin-bottom:1em"></div>
+								<div style="display:flex;gap:0.5em;flex-wrap:wrap">
+									<button class="button small" id="weave-refresh-btn">Refresh</button>
+									<button class="button small" id="weave-export-btn">Export JSON</button>
+								</div>
+							</div>
+
+							<div class="admin-card">
+								<h3>Source × Landing Matrix</h3>
+								<p class="hint">Rows are acquisition channels, columns are the top landing pages, each cell the count of sessions from that source that landed on that page &mdash; warmer amber means more traffic funnels down that route. A channel whose whole row concentrates on one page is a single-message audience; one spread across pages arrives with mixed intent.</p>
+								<div class="weave-grid-wrap"><canvas id="weave-grid" width="640" height="184" style="max-width:100%"></canvas></div>
+							</div>
+
+							<div class="admin-card">
+								<h3>Top Source → Landing Routes</h3>
+								<p class="hint">Every source&nbsp;&rarr;&nbsp;landing pairing ranked by session volume, each annotated with its bounce rate and any commission inquiries it produced. The route carrying the most traffic isn&rsquo;t always the one that converts &mdash; this is where you see the difference.</p>
+								<div id="weave-routes"></div>
+							</div>
+
+							<div class="admin-card">
+								<h3>Landing Preference by Source</h3>
+								<p class="hint">Pick a channel to see exactly where its visitors land first. If social traffic all hits the homepage but search traffic lands on Commissions, that tells you what each audience is looking for &mdash; and where to point the next post.</p>
+								<div class="weave-explore-row">
+									<select id="weave-explore-select" class="journey-select"></select>
+								</div>
+								<div id="weave-explore-out"></div>
+							</div>
+
+						</div>
+
 		</div><!-- /#admin-dash -->
 		<input type="file" id="img-file-input" accept="image/*" style="display:none" />
 
@@ -3614,6 +3657,9 @@ document.addEventListener('click', function(e){
   }
   if (e.target.dataset && e.target.dataset.tab === 'arc') {
     renderArcTab();
+  }
+  if (e.target.dataset && e.target.dataset.tab === 'weave') {
+    renderWeaveTab();
   }
 });
 
@@ -9501,6 +9547,245 @@ document.getElementById('arc-export-btn').addEventListener('click', function() {
   var url  = URL.createObjectURL(blob);
   var a2   = document.createElement('a');
   a2.href = url; a2.download = 'arc-' + Date.now() + '.json'; a2.click();
+  URL.revokeObjectURL(url);
+});
+
+/* ── Weave — Source × Landing Acquisition Matrix ──
+   Read-only over _gam_analytics_v1. Crosses the two acquisition axes no other tab
+   crosses: inbound source channel (Compass) × landing page (Journey). Per session:
+   channel = first pageview's referrer (own-site folded into direct); landing = that
+   first pageview's page. Reports the source→landing matrix, the top routes annotated
+   with bounce/conversion, and a per-source landing explorer. No new storage key,
+   no analytics.js change. Reuses the Compass warm-amber palette — no blue/pink. */
+var WEAVE_CH_ORDER  = ['direct', 'social', 'search', 'referral'];
+var WEAVE_MAX_COLS  = 6;
+var _weaveData = null;
+
+function weaveShortPage(pg) {
+  if (!pg || pg === '/') return 'home';
+  var p = pg.replace(/^\//, '').replace(/\/$/, '');
+  if (!p) return 'home';
+  var parts = p.split('/');
+  return parts[parts.length - 1] || parts[0];
+}
+
+function buildWeave() {
+  var events = CommissionData.getAnalytics() || [];
+  var bySid = {};
+  events.forEach(function(e) {
+    var sid = e.sid || '?';
+    (bySid[sid] || (bySid[sid] = [])).push(e);
+  });
+
+  var sessions = [];
+  Object.keys(bySid).forEach(function(sid) {
+    var evs = bySid[sid].slice().sort(function(a, b) { return (a.ts || 0) - (b.ts || 0); });
+    var firstPv = null, pvCount = 0, converted = false;
+    evs.forEach(function(e) {
+      if (e.type === 'pv') { pvCount++; if (!firstPv) firstPv = e; }
+      if (e.type === 'goal') converted = true;
+    });
+    if (!firstPv) return;                        /* a session needs a landing */
+    var ch = compassClassify(compassHostOf(firstPv));
+    if (ch === 'internal') ch = 'direct';        /* same visitor moving through the site */
+    sessions.push({
+      sid: sid, channel: ch, landing: firstPv.page || '/',
+      pv: pvCount, bounced: pvCount <= 1, converted: converted, ts: firstPv.ts || 0
+    });
+  });
+
+  var total = sessions.length;
+  var landingTotals = {}, channelTotals = {}, comboMap = {};
+  sessions.forEach(function(s) {
+    landingTotals[s.landing] = (landingTotals[s.landing] || 0) + 1;
+    channelTotals[s.channel] = (channelTotals[s.channel] || 0) + 1;
+    var key = s.channel + '||' + s.landing;
+    var c = comboMap[key] || (comboMap[key] = { channel: s.channel, landing: s.landing, count: 0, bounced: 0, converted: 0 });
+    c.count++;
+    if (s.bounced) c.bounced++;
+    if (s.converted) c.converted++;
+  });
+
+  var cols = Object.keys(landingTotals)
+    .map(function(p) { return { page: p, count: landingTotals[p] }; })
+    .sort(function(a, b) { return b.count - a.count; })
+    .slice(0, WEAVE_MAX_COLS)
+    .map(function(x) { return x.page; });
+  var rows = WEAVE_CH_ORDER.filter(function(ch) { return channelTotals[ch]; });
+
+  var matrix = rows.map(function(ch) {
+    return {
+      channel: ch, total: channelTotals[ch],
+      cells: cols.map(function(pg) {
+        var c = comboMap[ch + '||' + pg];
+        return { page: pg, count: c ? c.count : 0 };
+      })
+    };
+  });
+
+  var combos = Object.keys(comboMap).map(function(k) { return comboMap[k]; })
+    .sort(function(a, b) { return b.count - a.count; });
+
+  return {
+    total: total, sessions: sessions, matrix: matrix, cols: cols, rows: rows,
+    combos: combos, landingTotals: landingTotals, channelTotals: channelTotals,
+    uniqueCombos: combos.length
+  };
+}
+
+function drawWeaveGrid(w) {
+  var canvas = document.getElementById('weave-grid');
+  if (!canvas) return;
+  var ctx = canvas.getContext('2d');
+  var W = canvas.width, H = canvas.height;
+  ctx.clearRect(0, 0, W, H);
+
+  if (!w.rows.length || !w.cols.length) {
+    ctx.fillStyle = '#444';
+    ctx.font = '13px -apple-system, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('No visits recorded yet.', W / 2, H / 2);
+    return;
+  }
+
+  var labelW = 92, headH = 32, cellH = 30, gap = 3;
+  var nCols = w.cols.length;
+  var gridW = W - labelW - 8;
+  var cellW = (gridW - (nCols - 1) * gap) / nCols;
+  var maxCell = 1;
+  w.matrix.forEach(function(r) { r.cells.forEach(function(c) { if (c.count > maxCell) maxCell = c.count; }); });
+
+  /* column headers */
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'bottom';
+  ctx.font = '10px "Courier New", monospace';
+  ctx.fillStyle = '#8c887f';
+  w.cols.forEach(function(pg, ci) {
+    var x = labelW + ci * (cellW + gap) + cellW / 2;
+    ctx.fillText(weaveShortPage(pg).slice(0, 11), x, headH - 5);
+  });
+
+  w.matrix.forEach(function(r, ri) {
+    var y = headH + ri * (cellH + gap);
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'middle';
+    ctx.font = '11px -apple-system, sans-serif';
+    ctx.fillStyle = '#b9b6b0';
+    ctx.fillText(COMPASS_CH_LABELS[r.channel] || r.channel, labelW - 8, y + cellH / 2);
+    r.cells.forEach(function(c, ci) {
+      var x = labelW + ci * (cellW + gap);
+      var alpha = c.count ? (0.16 + 0.72 * (c.count / maxCell)) : 0;
+      ctx.fillStyle = c.count ? 'rgba(201,168,124,' + alpha.toFixed(3) + ')' : 'rgba(255,255,255,0.03)';
+      ctx.fillRect(x, y, cellW, cellH);
+      if (c.count) {
+        ctx.fillStyle = alpha > 0.55 ? '#241f18' : '#e7e4de';
+        ctx.font = 'bold 11px -apple-system, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(String(c.count), x + cellW / 2, y + cellH / 2);
+      }
+    });
+  });
+}
+
+function renderWeaveTab() {
+  var w = buildWeave();
+  _weaveData = w;
+
+  function chip(num, label) {
+    return '<div class="analytics-stat-chip"><span class="asc-num">' + num +
+      '</span><span class="asc-label">' + label + '</span></div>';
+  }
+
+  var topRoute = '—';
+  if (w.combos.length && w.combos[0].count > 0) {
+    topRoute = (COMPASS_CH_LABELS[w.combos[0].channel] || w.combos[0].channel) +
+      ' → ' + weaveShortPage(w.combos[0].landing);
+  }
+  var bestConv = '—', bestRate = -1;
+  w.combos.forEach(function(c) {
+    if (c.count >= 2 && c.converted > 0) {
+      var r = c.converted / c.count;
+      if (r > bestRate) {
+        bestRate = r;
+        bestConv = (COMPASS_CH_LABELS[c.channel] || c.channel) + ' → ' + weaveShortPage(c.landing);
+      }
+    }
+  });
+
+  document.getElementById('weave-stats').innerHTML =
+    chip(w.total,                     'Sessions')              +
+    chip(w.uniqueCombos,              'Source→Landing Routes') +
+    chip(topRoute,                    'Top Route')             +
+    chip(bestRate >= 0 ? bestConv : '—', 'Best-Converting Route');
+
+  drawWeaveGrid(w);
+
+  /* Top routes */
+  var routeRows = w.combos.slice(0, 14).map(function(c) {
+    return {
+      label: (COMPASS_CH_LABELS[c.channel] || c.channel) + ' → ' + jPageLabel(c.landing),
+      count: c.count, _c: c
+    };
+  });
+  document.getElementById('weave-routes').innerHTML = w.total
+    ? jBarList(routeRows, w.total, { suffix: function(r) {
+        var c = r._c;
+        var bounce = c.count ? Math.round(c.bounced / c.count * 100) : 0;
+        var conv = c.converted;
+        return bounce + '% bounce' + (conv ? ' · ' + conv + ' inquiry' + (conv > 1 ? 's' : '') : '');
+      } })
+    : '<p class="weave-empty">No visits recorded yet. Share your portfolio link and Weave maps where each source lands.</p>';
+
+  populateWeaveExplorer(w);
+}
+
+function populateWeaveExplorer(w) {
+  var sel = document.getElementById('weave-explore-select');
+  if (!sel) return;
+  var prev = sel.value;
+  sel.innerHTML = w.rows.map(function(ch) {
+    return '<option value="' + ch + '">' + (COMPASS_CH_LABELS[ch] || ch) +
+      ' (' + w.channelTotals[ch] + ')</option>';
+  }).join('');
+  if (prev && w.rows.indexOf(prev) !== -1) sel.value = prev;
+  renderWeaveExplorer();
+}
+
+function renderWeaveExplorer() {
+  var w = _weaveData;
+  var out = document.getElementById('weave-explore-out');
+  if (!out) return;
+  if (!w || !w.rows.length) { out.innerHTML = '<p class="weave-empty">No traffic recorded yet.</p>'; return; }
+  var sel = document.getElementById('weave-explore-select');
+  var ch = sel ? sel.value : null;
+  if (!ch || !w.channelTotals[ch]) { out.innerHTML = '<p class="weave-empty">No traffic from this source yet.</p>'; return; }
+  var landings = {};
+  w.sessions.forEach(function(s) { if (s.channel === ch) landings[s.landing] = (landings[s.landing] || 0) + 1; });
+  var rows = Object.keys(landings).map(function(p) { return { label: jPageLabel(p), count: landings[p] }; })
+    .sort(function(a, b) { return b.count - a.count; });
+  out.innerHTML = jBarList(rows, w.channelTotals[ch], { suffix: function(r, share) { return share + '% of this source'; } });
+}
+
+document.getElementById('weave-refresh-btn').addEventListener('click', renderWeaveTab);
+document.getElementById('weave-explore-select').addEventListener('change', renderWeaveExplorer);
+
+document.getElementById('weave-export-btn').addEventListener('click', function() {
+  var w = buildWeave();
+  var out = {
+    total: w.total, uniqueRoutes: w.uniqueCombos,
+    channelTotals: w.channelTotals, landingTotals: w.landingTotals,
+    matrix: w.matrix.map(function(r) {
+      return { channel: r.channel, total: r.total, cells: r.cells.map(function(c) { return { page: c.page, count: c.count }; }) };
+    }),
+    routes: w.combos.map(function(c) {
+      return { channel: c.channel, landing: c.landing, count: c.count, bounced: c.bounced, converted: c.converted };
+    })
+  };
+  var blob = new Blob([JSON.stringify(out, null, 2)], { type: 'application/json' });
+  var url  = URL.createObjectURL(blob);
+  var a2   = document.createElement('a');
+  a2.href = url; a2.download = 'weave-' + Date.now() + '.json'; a2.click();
   URL.revokeObjectURL(url);
 });
 </script>

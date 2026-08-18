@@ -207,6 +207,7 @@ Password-protected (SHA-256 hash in localStorage, 5-attempt lockout). Session tr
 | Facet       | Cross-device experience comparison — the first *comparative* view: cuts the audience by device class (desktop/mobile/tablet) and lines the same engagement metrics up side by side (bounce, pages, scroll, dwell, clicks, artwork attention, conversion), with a direction-aware best/lag scorecard, biggest-gap ranking, and conversion-by-device |
 | Fuse        | Conversion latency & sales-cycle — the missing *time* dimension of Beacon: joins persistent-visitor identity (`vid`/`vfirst`) with `goal` events to measure how long and how many visits it takes a visitor to reach their first commission-intent signal; conversion-speed donut (Instant→7 days+), visits-before-converting distribution, first-intent-signal mix, and a recent-conversions feed |
 | Arc         | Session engagement lifecycle / intra-visit tempo — lines every event up by its offset from its own session's first event to show *when within a visit* activity crests and when sessions go quiet: activity curve by time-bin (0–15s…5m+), in-visit survival (retention within one visit), event-mix-over-time (early scrolls → mid clicks/intent → late exits), and a longest-sustained-visits feed |
+| Weave       | Source × landing acquisition matrix — the first *two-dimensional acquisition cross-tab*: crosses inbound channel (Compass's axis) against landing page (Journey's axis) to show which source delivers to which entry page and how each source→landing pairing bounces and converts; canvas source×landing heatmap, top routes annotated with bounce/inquiry counts, and a per-source landing-preference explorer |
 
 ---
 
@@ -1139,6 +1140,44 @@ Answers the one question about a visit's *own timeline* that no other tab measur
 
 ---
 
+## Weave — Source × Landing Acquisition Matrix (Admin → Weave tab) — NEW TOOL
+
+Answers the one acquisition question no other tab crosses: **which traffic source actually delivers to which landing page — and does that pairing work?** Compass reports the inbound *channel* on its own (one axis); Journey reports the *landing pages* on their own (another axis); Facet crosses *device × metrics*; Beacon crosses *source × conversion*. None crosses **inbound source × landing page**. Weave is the family's first *two-dimensional acquisition cross-tab*: it holds both axes at once and reports, for every source→landing pairing, how much traffic it carries, how hard it bounces, and whether it converts. For an artist who posts one portfolio link across X, Instagram, TikTok, and search, this is the direct read on where each platform's audience lands and which pairings are worth doubling down on.
+
+**Why it's genuinely new:** it is a *cross-tab of two acquisition dimensions*, not another single-axis aggregate. Compass's "Top Referrers" and Journey's "Entry Pages" each collapse one axis to a ranked list; Beacon's "Which Sources Convert" crosses source with the conversion outcome but never with the *landing page*. Weave is the only view that answers "when traffic arrives from X, where does it land, and how does that specific combination perform?" — the campaign-attribution matrix that neither Compass nor Journey alone can express.
+
+**No new storage key, no `analytics.js` change** — derived live from `_gam_analytics_v1` (`pv` events carry `refHost` + `page`; `goal` events mark conversion), the same read-only pattern as Compass/Journey/Beacon.
+
+**How it works:**
+1. `buildWeave()` groups events by `sid`. A session's **source channel** = `compassClassify(compassHostOf(firstPv))` (own-site/`internal` referrals folded into **direct**, since that's the same visitor moving through the site); its **landing** = that first pageview's `page`.
+2. Per session it flags `bounced` (`pv ≤ 1`) and `converted` (fired any `goal`).
+3. It tallies per-channel totals, per-landing totals, and a **combo map** keyed `channel||landing` accumulating `count` / `bounced` / `converted`.
+4. The matrix uses the four Compass channels present as rows and the top `WEAVE_MAX_COLS` (6) landing pages as columns; every source→landing pairing is also ranked as a flat route list.
+
+**Admin tab sections:**
+- **Stats**: Sessions, Source→Landing Routes (unique pairings), Top Route, Best-Converting Route (among routes with ≥ 2 sessions)
+- **Source × Landing Matrix**: canvas heatmap — rows = channels, columns = top landing pages, each cell amber-scaled by session count (count printed in-cell); a concentrated row is a single-message audience, a spread row is mixed intent
+- **Top Source → Landing Routes**: every pairing ranked by volume (shared `jBarList`), each annotated with its bounce rate and any commission inquiries produced
+- **Landing Preference by Source**: pick a channel → the distribution of where its visitors land first (which audience wants the homepage vs. Commissions)
+
+**Derived schema (for export):**
+```js
+{ total, uniqueRoutes, channelTotals:{channel:count}, landingTotals:{page:count},
+  matrix:[{channel, total, cells:[{page,count}]}],
+  routes:[{channel, landing, count, bounced, converted}] }
+```
+
+**Technical notes:**
+- Matrix cells, tags, and bars reuse the Compass warm amber palette (`rgba(201,168,124,α)`, α scaled by cell-max) — no blue/pink. New `.weave-*` CSS classes; reuses `jBarList()`, `analytics-stat-chip`, the `journey-select` dropdown, `compassClassify()`, `compassHostOf()`, `COMPASS_CH_LABELS`, `jPageLabel()`, and `escHtml()`.
+- A session's source and landing are both fixed at its **first** pageview, so the matrix reflects the entry moment, not later navigation.
+- Own-site referrers fold into *direct* (matching Compass's channel-mix convention) so same-site hops don't masquerade as fresh acquisition.
+- Attribution is per session (`sid`), so one visitor across several tabs may count more than once (consistent with the rest of the family).
+- Tab renders lazily on click, same pattern as Arc/Fuse/Facet/etc.
+
+**API:** none new on `CommissionData` — uses `CommissionData.getAnalytics()`. Logic lives in `renderWeaveTab()` / `buildWeave()` inside `admin/index.html`.
+
+---
+
 ## Commission System
 
 ### Pages
@@ -1216,4 +1255,4 @@ Stored in `_gam_prices_v1`. Three sections: `digital`, `stickers`, `animation`. 
 
 ---
 
-*Last updated: 2026-08-14*
+*Last updated: 2026-08-18*
