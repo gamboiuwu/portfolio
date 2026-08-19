@@ -207,6 +207,7 @@ Password-protected (SHA-256 hash in localStorage, 5-attempt lockout). Session tr
 | Facet       | Cross-device experience comparison — the first *comparative* view: cuts the audience by device class (desktop/mobile/tablet) and lines the same engagement metrics up side by side (bounce, pages, scroll, dwell, clicks, artwork attention, conversion), with a direction-aware best/lag scorecard, biggest-gap ranking, and conversion-by-device |
 | Fuse        | Conversion latency & sales-cycle — the missing *time* dimension of Beacon: joins persistent-visitor identity (`vid`/`vfirst`) with `goal` events to measure how long and how many visits it takes a visitor to reach their first commission-intent signal; conversion-speed donut (Instant→7 days+), visits-before-converting distribution, first-intent-signal mix, and a recent-conversions feed |
 | Arc         | Session engagement lifecycle / intra-visit tempo — lines every event up by its offset from its own session's first event to show *when within a visit* activity crests and when sessions go quiet: activity curve by time-bin (0–15s…5m+), in-visit survival (retention within one visit), event-mix-over-time (early scrolls → mid clicks/intent → late exits), and a longest-sustained-visits feed |
+| Bloom       | Engagement maturation across visits — the first *longitudinal* view: orders each visitor's sessions by visit number (`vnum`) and scores every session 0–100, then shows whether engagement *deepens* with each return: maturation curve (avg score by visit ordinal), per-ordinal signal fingerprints, deepening-vs-cooling split, deepening-visitor sources, and a most-matured-visitors feed |
 
 ---
 
@@ -1139,6 +1140,49 @@ Answers the one question about a visit's *own timeline* that no other tab measur
 
 ---
 
+## Bloom — Engagement Maturation Across Visits (Admin → Bloom tab) — NEW TOOL
+
+Answers the *longitudinal* question no other tab asks: **does a visitor engage more deeply each time they come back?** Orbit *counts* returning visitors (new-vs-returning, frequency, recency); Ripple triangulates *calendar-week* cohort retention; Arc maps tempo *within* a single visit; Facet compares *devices*. None lines a visitor's own successive visits up in order to ask whether repeat exposure **deepens** interest. Bloom is that missing engagement-maturation curve — the truest read on whether the portfolio earns a second, closer look (worth building a return-visitor nurture) or whether the first visit is always the peak (repeat visits fade).
+
+**Why it's genuinely new:** it is keyed on the **visit ordinal** (1st visit, 2nd, 3rd…) per persistent visitor — an axis no existing tool computes. Orbit's "returning %" is a single all-time count; Ripple buckets by acquisition *week*, not by a visitor's *own* visit sequence; Ember scores a session but never relates a visitor's sessions *to each other over time*. Bloom compares visit-1 behaviour to visit-N behaviour for the same person.
+
+**No new storage key, no `analytics.js` change** — derived live from `_gam_analytics_v1` (`pv` carries `vid` / `vnum` / `vfirst` since Orbit; plus `click` / `scroll` / `exit` / `goal`) and `_gam_spotlight_v1` (artwork viewport ms), joined by `vid`/`sid`. The same read-only pattern as Ripple/Muse/Fuse.
+
+**Per-session score (0–100, weights sum to 100)** — the same six-signal model Ember uses, kept in `BLOOM_W` / `BLOOM_CAP`: pages viewed (cap 5 → 20), time on site (cap 3 min → 25), scroll depth (cap 100% → 20), clicks (cap 6 → 15), artwork attention (cap 60 s → 15), commission-intent goal (boolean → 5).
+
+**How it works:**
+1. `buildBloom()` groups analytics events by `sid` into per-session signal objects (pages, dwell = max of event-span & longest `exit.ms`, max scroll, clicks, goal flag, first-pageview `refHost`/`vid`/`vnum`), joins artwork ms per `sid` from spotlight, and scores each session with `bloomScore()`.
+2. Sessions are grouped by persistent visitor (`vid`, fallback `legacy:<sid>`) and ordered; each gets a **visit ordinal** — its `vnum` when present, else its chronological rank within that visitor.
+3. Each session folds into its ordinal **bucket** (1 / 2 / 3 / 4 / 5+), accumulating average score and per-signal averages.
+4. Returning visitors (≥ 2 sessions) get a **delta** = latest-visit score − first-visit score, classified **Deepening** (`≥ +6`), **Cooling** (`≤ −6`), or **Steady**; the first session's channel (`compassClassify`) is credited for the source breakdown.
+
+**Admin tab sections:**
+- **Stats**: Returning Visitors, Avg Visits / Returner, Deepen Rate %, Engagement Lift (avg score of visits 2+ vs. visit 1)
+- **Maturation Curve**: canvas line of average engagement score by visit ordinal (V1…V5+), with per-point sample sizes — climbing = familiarity deepens interest, sagging = first visit is the peak
+- **Signal Growth by Visit**: each ordinal's average behavioural fingerprint (pages · time · scroll % · clicks · artwork time · conversion %) — the diagnostic behind the curve
+- **Deepening vs Cooling**: canvas donut + legend (Deepening / Steady / Cooling among returners); centre shows the deepen rate %
+- **Which Sources Bring Deepening Visitors**: first-touch channel ranked by average engagement lift of the returners it delivered (the *best* retention source, complementing Compass's *most*)
+- **Most-Matured Visitors**: returning visitors whose engagement grew most (first → latest score), tagged `RISING` / `FADING`, with visit count and last-seen
+
+**Derived schema (for export):**
+```js
+{ returners, totalVisitors, avgVisitsPerReturner, deepenRate, engagementLiftPct,
+  ordinals:[{visit,sessions,avgScore,avgPages,avgDwellMs,avgScroll,avgClicks,avgArtMs,convRate}],
+  movement:{deepen,steady,cool},
+  sources:[{channel,returners,avgDelta}],
+  matured:[{vid,visits,firstScore,lastScore,delta,lastTs}] }
+```
+
+**Technical notes:**
+- Line/donut/bars use the warm amber→clay ramp (`#e0cba4` visit 1 → `#96683e` visit 5+; deepening amber `#b07a4a`, cooling clay `#7c5433`) — no blue/pink. New `.bloom-*` CSS classes; reuses `analytics-stat-chip`, `compass-legend`, the `spotlight-board`/`sp-*` bar styles, `jFmtDur()`, `escHtml()`, `fmtDate()`, `compassClassify()`.
+- Keyed by the **persistent visitor** (`vid`), so a return in a new tab correctly counts as the same person — the whole point of a maturation view. Legacy pageviews without a `vid` fold in as single-visit visitors (they only ever populate the visit-1 bucket and never count as returners).
+- Multiple tabs opened in one visit share a `vnum`, so they map to the same ordinal bucket (averaging absorbs them). Analysis is *association* — a visitor's engagement is correlated with their visit number, not proven caused by it.
+- Tab renders lazily on click, same pattern as Arc/Fuse/Facet/etc.
+
+**API:** none new on `CommissionData` — uses `CommissionData.getAnalytics()` + `.getSpotlight()`. Logic lives in `renderBloomTab()` / `buildBloom()` / `bloomScore()` inside `admin/index.html`.
+
+---
+
 ## Commission System
 
 ### Pages
@@ -1216,4 +1260,4 @@ Stored in `_gam_prices_v1`. Three sections: `digital`, `stickers`, `animation`. 
 
 ---
 
-*Last updated: 2026-08-14*
+*Last updated: 2026-08-19*
