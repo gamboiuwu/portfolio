@@ -1016,6 +1016,34 @@
 		.arc-feed-meta { font-family: 'Courier New', monospace; font-size: 0.68em; color: #6f6b63; margin-left: auto; }
 		.arc-empty { color: #444; font-size: 0.85em; padding: 0.5em 0; }
 
+		/* Bloom tab — engagement maturation across visits (warm amber, no blue/pink) */
+		.bloom-donut-row { display: flex; gap: 1.4em; align-items: center; flex-wrap: wrap; }
+		#bloom-donut { display: block; flex-shrink: 0; }
+		.bloom-prof { padding: 0.7em 0; border-bottom: 1px solid rgba(255,255,255,0.06); }
+		.bloom-prof:last-child { border-bottom: none; }
+		.bloom-prof-head { display: flex; justify-content: space-between; align-items: baseline; gap: 1em; margin-bottom: 0.35em; }
+		.bloom-prof-name { font-size: 0.94em; color: #e7e4de; display: flex; align-items: center; gap: 0.55em; }
+		.bloom-prof-swatch { width: 0.85em; height: 0.85em; border-radius: 2px; flex-shrink: 0; }
+		.bloom-prof-meta { font-family: 'Courier New', monospace; font-size: 0.78em; color: #c9a87c; white-space: nowrap; }
+		.bloom-prof-bar-wrap { height: 0.85em; background: rgba(255,255,255,0.05); border-radius: 3px; overflow: hidden; margin-bottom: 0.4em; }
+		.bloom-prof-bar { height: 100%; border-radius: 3px; transition: width 0.4s ease; }
+		.bloom-fingerprint { display: flex; gap: 0.4em; flex-wrap: wrap; }
+		.bloom-fp-cell { font-family: 'Courier New', monospace; font-size: 0.68em; color: #b7b1a6;
+			background: rgba(255,255,255,0.03); border: 1px solid rgba(201,201,201,0.08);
+			border-radius: 3px; padding: 0.18em 0.5em; }
+		.bloom-fp-cell b { color: #d6a878; font-weight: 600; }
+		.bloom-feed { display: flex; flex-direction: column; gap: 0.5em; }
+		.bloom-feed-row { display: flex; align-items: baseline; gap: 0.7em; flex-wrap: wrap;
+			padding: 0.4em 0; border-bottom: 1px solid rgba(255,255,255,0.05); }
+		.bloom-feed-row:last-child { border-bottom: none; }
+		.bloom-feed-delta { font-family: 'Courier New', monospace; font-size: 0.9em; min-width: 5.4em; }
+		.bloom-feed-up { color: #c9a87c; }
+		.bloom-feed-down { color: #96683e; }
+		.bloom-feed-flat { color: #8c887f; }
+		.bloom-feed-score { color: #b7b2a8; font-size: 0.82em; }
+		.bloom-feed-meta { font-family: 'Courier New', monospace; font-size: 0.68em; color: #6f6b63; margin-left: auto; }
+		.bloom-empty { color: #444; font-size: 0.85em; padding: 0.5em 0; }
+
 		/* Tide tab — trends & momentum (reuses spotlight bars) */
 		#tide-canvas { display: block; }
 		.tide-win { display: flex; align-items: center; gap: 0.6em; flex-wrap: wrap; margin-bottom: 1em; }
@@ -1153,6 +1181,7 @@
 				<button class="admin-tab" data-tab="facet">Facet</button>
 				<button class="admin-tab" data-tab="fuse">Fuse</button>
 				<button class="admin-tab" data-tab="arc">Arc</button>
+				<button class="admin-tab" data-tab="bloom">Bloom</button>
 			</div>
 
 			<!-- ============ GALLERY TAB ============ -->
@@ -2564,6 +2593,53 @@
 
 						</div>
 
+						<div id="tab-bloom" class="tab-content">
+
+							<div class="admin-card">
+								<h3>Bloom — Engagement Maturation Across Visits</h3>
+								<p class="hint">Orbit <em>counts</em> returning visitors; Ripple triangulates <em>calendar-week</em> cohort retention; Arc maps tempo <em>within</em> one visit. None asks the longitudinal question: <strong>does a visitor engage more deeply each time they come back?</strong> Bloom orders every visitor&rsquo;s sessions by visit number (<code>vnum</code>) and lines the engagement up visit-by-visit &mdash; whether repeat exposure deepens interest (worth building a return-visitor nurture) or fades (the work isn&rsquo;t pulling people back). Read-only over <code>_gam_analytics_v1</code> + <code>_gam_spotlight_v1</code>, joined by <code>vid</code>/<code>sid</code> &mdash; no new storage key, no <code>analytics.js</code> change. Each session scores 0&ndash;100 from six signals (pages, time, scroll, clicks, artwork, intent). Legacy pageviews without a <code>vid</code> fold in as single-visit visitors.</p>
+								<div id="bloom-stats" class="analytics-stats" style="margin-bottom:1em"></div>
+								<div style="display:flex;gap:0.5em;flex-wrap:wrap">
+									<button class="button small" id="bloom-refresh-btn">Refresh</button>
+									<button class="button small" id="bloom-export-btn">Export JSON</button>
+								</div>
+							</div>
+
+							<div class="admin-card">
+								<h3>Maturation Curve — Engagement by Visit Number</h3>
+								<p class="hint">Average engagement score for every visitor&rsquo;s 1st visit, 2nd visit, 3rd, and so on. A curve that climbs means familiarity deepens interest &mdash; returning visitors do more each time. A curve that sags means the first visit is the peak and repeat visits are shallower. Only visit-ordinals that actually have sessions are plotted.</p>
+								<canvas id="bloom-curve" width="640" height="210" style="width:100%;max-width:640px;height:auto"></canvas>
+							</div>
+
+							<div class="admin-card">
+								<h3>Signal Growth by Visit</h3>
+								<p class="hint">The diagnostic behind the curve &mdash; each visit-ordinal&rsquo;s average behavioural fingerprint (pages &middot; time on site &middot; scroll % &middot; clicks &middot; artwork time &middot; conversion rate). Read down the visits to see <em>which</em> signal deepens: do returners scroll further, linger on more artwork, or start reaching for the commission form?</p>
+								<div id="bloom-profiles"></div>
+							</div>
+
+							<div class="admin-card">
+								<h3>Deepening vs Cooling Visitors</h3>
+								<p class="hint">Among returning visitors (&ge;2 visits), whether their <em>latest</em> visit out-engaged their <em>first</em>. Deepening = the work is earning a second, closer look; Cooling = they came back but engaged less; Steady = held level. The centre shows the share who deepened.</p>
+								<div class="bloom-donut-row">
+									<canvas id="bloom-donut" width="180" height="180"></canvas>
+									<div id="bloom-legend" class="compass-legend"></div>
+								</div>
+							</div>
+
+							<div class="admin-card">
+								<h3>Which Sources Bring Deepening Visitors</h3>
+								<p class="hint">First-touch acquisition channel ranked by average engagement lift (latest visit minus first visit) across the returning visitors it delivered. Compass tells you which source brings the <em>most</em> traffic; this tells you which brings visitors who come back and go <em>deeper</em> &mdash; the audience worth cultivating.</p>
+								<div id="bloom-sources"></div>
+							</div>
+
+							<div class="admin-card">
+								<h3>Most-Matured Visitors</h3>
+								<p class="hint">The returning visitors whose engagement grew the most from first visit to latest &mdash; first score &rarr; latest score, tagged <span class="bloom-feed-up">RISING</span> or <span class="bloom-feed-down">FADING</span>, with visit count and when they last dropped in. The loyal audience whose interest is compounding.</p>
+								<div id="bloom-feed"></div>
+							</div>
+
+						</div>
+
 		</div><!-- /#admin-dash -->
 		<input type="file" id="img-file-input" accept="image/*" style="display:none" />
 
@@ -3614,6 +3690,9 @@ document.addEventListener('click', function(e){
   }
   if (e.target.dataset && e.target.dataset.tab === 'arc') {
     renderArcTab();
+  }
+  if (e.target.dataset && e.target.dataset.tab === 'bloom') {
+    renderBloomTab();
   }
 });
 
@@ -9501,6 +9580,411 @@ document.getElementById('arc-export-btn').addEventListener('click', function() {
   var url  = URL.createObjectURL(blob);
   var a2   = document.createElement('a');
   a2.href = url; a2.download = 'arc-' + Date.now() + '.json'; a2.click();
+  URL.revokeObjectURL(url);
+});
+
+/* ── Bloom — Engagement Maturation Across Visits ──
+   Read-only over _gam_analytics_v1 + _gam_spotlight_v1 (joined by vid/sid). Orders each
+   visitor's sessions by visit number (vnum) and asks whether engagement DEEPENS with each
+   return — the longitudinal curve Orbit (counts), Ripple (calendar cohorts) and Arc
+   (intra-visit) structurally can't express. Each session scores 0–100 from six signals,
+   the same model Ember uses. No new storage key, no analytics.js change.
+   Warm amber/clay ramp, no blue/pink. */
+var BLOOM_W   = { pages: 20, dwell: 25, scroll: 20, clicks: 15, art: 15, goal: 5 };
+var BLOOM_CAP = { pages: 5, dwell: 180000, scroll: 100, clicks: 6, art: 60000 };
+var BLOOM_DELTA = 6;   /* points of change to count as deepen / cool (else steady) */
+var BLOOM_ORDINALS = [
+  { key: 1,  label: 'Visit 1',  color: '#e0cba4' },
+  { key: 2,  label: 'Visit 2',  color: '#d1b487' },
+  { key: 3,  label: 'Visit 3',  color: '#c29a6a' },
+  { key: 4,  label: 'Visit 4',  color: '#b0824f' },
+  { key: 5,  label: 'Visit 5+', color: '#96683e' }
+];
+var BLOOM_MOVE = {
+  deepen: { key: 'deepen', label: 'Deepening', color: '#b07a4a' },
+  steady: { key: 'steady', label: 'Steady',    color: '#c9a87c' },
+  cool:   { key: 'cool',   label: 'Cooling',   color: '#7c5433' }
+};
+
+function bloomScore(s) {
+  var pts = 0;
+  pts += Math.min(1, (s.pages   || 0) / BLOOM_CAP.pages)  * BLOOM_W.pages;
+  pts += Math.min(1, (s.dwellMs || 0) / BLOOM_CAP.dwell)  * BLOOM_W.dwell;
+  pts += Math.min(1, (s.scroll  || 0) / BLOOM_CAP.scroll) * BLOOM_W.scroll;
+  pts += Math.min(1, (s.clicks  || 0) / BLOOM_CAP.clicks) * BLOOM_W.clicks;
+  pts += Math.min(1, (s.artMs   || 0) / BLOOM_CAP.art)    * BLOOM_W.art;
+  pts += (s.goal ? 1 : 0) * BLOOM_W.goal;
+  return Math.max(0, Math.min(100, Math.round(pts)));
+}
+
+function bloomOrdBucket(ord) { return ord >= 5 ? 5 : (ord < 1 ? 1 : ord); }
+
+function bloomChannelLabel(ch) {
+  if (ch === 'internal') return 'Direct';
+  return ch.charAt(0).toUpperCase() + ch.slice(1);
+}
+
+function buildBloom() {
+  var events = CommissionData.getAnalytics() || [];
+  var spot   = (CommissionData.getSpotlight && CommissionData.getSpotlight()) || [];
+
+  /* artwork ms per session */
+  var artBySid = {};
+  spot.forEach(function(v) {
+    var sid = v.sid || '?';
+    artBySid[sid] = (artBySid[sid] || 0) + (v.ms || 0);
+  });
+
+  /* group analytics events into per-session signal objects */
+  var bySid = {};
+  events.forEach(function(e) {
+    var sid = e.sid || '?';
+    (bySid[sid] || (bySid[sid] = [])).push(e);
+  });
+
+  var sessions = {};   /* sid -> session signals */
+  Object.keys(bySid).forEach(function(sid) {
+    var evs = bySid[sid].slice().sort(function(a, b) { return (a.ts || 0) - (b.ts || 0); });
+    var t0 = evs[0].ts || 0, tLast = evs[evs.length - 1].ts || t0;
+    var span = Math.max(0, tLast - t0);
+    var pages = 0, clicks = 0, scroll = 0, goal = false;
+    var vid = '', vnum = 0, vfirst = 0, refHost = 'direct', sawPv = false;
+    evs.forEach(function(e) {
+      if (e.type === 'pv') {
+        pages++;
+        if (!sawPv) {
+          sawPv = true;
+          if (e.vid) vid = e.vid;
+          if (e.vnum) vnum = e.vnum;
+          if (e.vfirst) vfirst = e.vfirst;
+          refHost = e.refHost || (e.ref === 'direct' || !e.ref ? 'direct' : 'unknown');
+        }
+      } else if (e.type === 'click') { clicks++; }
+      else if (e.type === 'scroll') { if ((e.depth || 0) > scroll) scroll = e.depth; }
+      else if (e.type === 'goal')   { goal = true; }
+      else if (e.type === 'exit')   { if (e.ms && e.ms > span) span = e.ms; }
+    });
+    var sig = {
+      sid: sid, vid: vid, vnum: vnum, vfirst: vfirst, refHost: refHost,
+      firstTs: t0, pages: pages, clicks: clicks, scroll: scroll, goal: goal,
+      dwellMs: span, artMs: artBySid[sid] || 0
+    };
+    sig.score = bloomScore(sig);
+    sessions[sid] = sig;
+  });
+
+  /* group sessions by persistent visitor */
+  var byVid = {};
+  Object.keys(sessions).forEach(function(sid) {
+    var s = sessions[sid];
+    var key = s.vid || ('legacy:' + sid);
+    (byVid[key] || (byVid[key] = [])).push(s);
+  });
+
+  /* per-ordinal accumulators */
+  var buckets = {};
+  BLOOM_ORDINALS.forEach(function(o) {
+    buckets[o.key] = { key: o.key, label: o.label, color: o.color, count: 0,
+      score: 0, pages: 0, dwellMs: 0, scroll: 0, clicks: 0, artMs: 0, goals: 0 };
+  });
+
+  var move = { deepen: 0, steady: 0, cool: 0 };
+  var returners = 0, visitSum = 0;
+  var srcAgg = {};   /* channel -> { sum, n } of deltas */
+  var maturedFeed = [];
+
+  Object.keys(byVid).forEach(function(key) {
+    var sess = byVid[key].slice().sort(function(a, b) {
+      var va = a.vnum || 0, vb = b.vnum || 0;
+      if (va !== vb) return va - vb;
+      return a.firstTs - b.firstTs;
+    });
+    /* assign an ordinal: prefer vnum, else chronological rank */
+    sess.forEach(function(s, i) {
+      s.ord = (s.vnum && s.vnum >= 1) ? s.vnum : (i + 1);
+    });
+    /* fold each session into its ordinal bucket */
+    sess.forEach(function(s) {
+      var b = buckets[bloomOrdBucket(s.ord)];
+      b.count++; b.score += s.score; b.pages += s.pages; b.dwellMs += s.dwellMs;
+      b.scroll += s.scroll; b.clicks += s.clicks; b.artMs += s.artMs;
+      if (s.goal) b.goals++;
+    });
+
+    if (sess.length >= 2) {
+      returners++;
+      visitSum += sess.length;
+      var first = sess[0], last = sess[sess.length - 1];
+      var delta = last.score - first.score;
+      var cls = delta >= BLOOM_DELTA ? 'deepen' : (delta <= -BLOOM_DELTA ? 'cool' : 'steady');
+      move[cls]++;
+      var ch = compassClassify(first.refHost);
+      if (ch === 'internal') ch = 'direct';
+      (srcAgg[ch] || (srcAgg[ch] = { sum: 0, n: 0 })).sum += delta;
+      srcAgg[ch].n++;
+      maturedFeed.push({
+        vid: key, visits: sess.length, first: first.score, last: last.score,
+        delta: delta, lastTs: last.firstTs
+      });
+    }
+  });
+
+  /* finalize per-ordinal averages */
+  var ordStats = BLOOM_ORDINALS.map(function(o) {
+    var b = buckets[o.key], c = b.count || 0;
+    return {
+      key: o.key, label: o.label, color: o.color, count: c,
+      avgScore:  c ? Math.round(b.score / c)            : 0,
+      avgPages:  c ? Math.round((b.pages / c) * 10) / 10 : 0,
+      avgDwell:  c ? Math.round(b.dwellMs / c)           : 0,
+      avgScroll: c ? Math.round(b.scroll / c)            : 0,
+      avgClicks: c ? Math.round((b.clicks / c) * 10) / 10 : 0,
+      avgArt:    c ? Math.round(b.artMs / c)             : 0,
+      convRate:  c ? Math.round((b.goals / c) * 100)     : 0
+    };
+  });
+
+  var v1 = ordStats[0];
+  var laterCount = 0, laterScore = 0;
+  ordStats.slice(1).forEach(function(o) { laterCount += o.count; laterScore += o.avgScore * o.count; });
+  var laterAvg = laterCount ? laterScore / laterCount : 0;
+  var lift = (v1 && v1.avgScore) ? Math.round(((laterAvg - v1.avgScore) / v1.avgScore) * 100) : 0;
+
+  var sources = Object.keys(srcAgg).map(function(ch) {
+    return { channel: ch, label: bloomChannelLabel(ch), n: srcAgg[ch].n,
+      avgDelta: Math.round((srcAgg[ch].sum / srcAgg[ch].n) * 10) / 10 };
+  }).sort(function(a, b) { return b.avgDelta - a.avgDelta; });
+
+  maturedFeed.sort(function(a, b) { return b.delta - a.delta; });
+
+  return {
+    ordStats: ordStats, move: move, returners: returners,
+    avgVisits: returners ? Math.round((visitSum / returners) * 10) / 10 : 0,
+    deepenRate: returners ? Math.round((move.deepen / returners) * 100) : 0,
+    lift: lift, sources: sources, matured: maturedFeed,
+    totalVisitors: Object.keys(byVid).length
+  };
+}
+
+function drawBloomCurve(b) {
+  var canvas = document.getElementById('bloom-curve');
+  if (!canvas) return;
+  var ctx = canvas.getContext('2d');
+  var W = canvas.width, H = canvas.height;
+  ctx.clearRect(0, 0, W, H);
+
+  var pts = b.ordStats.filter(function(o) { return o.count > 0; });
+  if (!pts.length) {
+    ctx.fillStyle = '#444'; ctx.font = '13px -apple-system, sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText('No visits recorded yet.', W / 2, H / 2);
+    return;
+  }
+
+  var padL = 34, padR = 18, padT = 22, padB = 40;
+  var plotW = W - padL - padR, plotH = H - padT - padB;
+  var n = pts.length;
+  var xOf = function(i) { return n === 1 ? padL + plotW / 2 : padL + (i / (n - 1)) * plotW; };
+  var yOf = function(v) { return padT + plotH - (v / 100) * plotH; };
+
+  /* gridlines at 25/50/75/100 */
+  ctx.strokeStyle = 'rgba(255,255,255,0.07)';
+  ctx.fillStyle = '#5f5b53';
+  ctx.font = '9px "Courier New", monospace';
+  ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+  [0, 25, 50, 75, 100].forEach(function(g) {
+    var y = yOf(g);
+    ctx.beginPath(); ctx.moveTo(padL, y); ctx.lineTo(padL + plotW, y); ctx.stroke();
+    ctx.fillText(String(g), padL - 5, y);
+  });
+
+  /* area under curve */
+  ctx.beginPath();
+  pts.forEach(function(p, i) { var x = xOf(i), y = yOf(p.avgScore); if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y); });
+  ctx.lineTo(xOf(n - 1), padT + plotH);
+  ctx.lineTo(xOf(0), padT + plotH);
+  ctx.closePath();
+  ctx.fillStyle = 'rgba(201,168,124,0.14)';
+  ctx.fill();
+
+  /* line */
+  ctx.beginPath();
+  pts.forEach(function(p, i) { var x = xOf(i), y = yOf(p.avgScore); if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y); });
+  ctx.strokeStyle = '#c9a87c'; ctx.lineWidth = 2; ctx.stroke();
+
+  /* dots + value + x label */
+  pts.forEach(function(p, i) {
+    var x = xOf(i), y = yOf(p.avgScore);
+    ctx.beginPath(); ctx.arc(x, y, 3.2, 0, Math.PI * 2); ctx.fillStyle = p.color; ctx.fill();
+    ctx.fillStyle = '#d6a878'; ctx.font = 'bold 11px -apple-system, sans-serif';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
+    ctx.fillText(String(p.avgScore), x, y - 6);
+    ctx.fillStyle = '#8c887f'; ctx.font = '10px "Courier New", monospace'; ctx.textBaseline = 'top';
+    ctx.fillText(p.label.replace('Visit ', 'V'), x, padT + plotH + 8);
+    ctx.fillStyle = '#5f5b53'; ctx.font = '8px "Courier New", monospace';
+    ctx.fillText('n=' + p.count, x, padT + plotH + 22);
+  });
+
+  ctx.save();
+  ctx.translate(11, padT + plotH / 2);
+  ctx.rotate(-Math.PI / 2);
+  ctx.fillStyle = '#6f6b63'; ctx.font = '9px "Courier New", monospace';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText('AVG SCORE', 0, 0);
+  ctx.restore();
+}
+
+function drawBloomDonut(b) {
+  var canvas = document.getElementById('bloom-donut');
+  if (!canvas) return;
+  var ctx = canvas.getContext('2d');
+  var W = canvas.width, H = canvas.height;
+  ctx.clearRect(0, 0, W, H);
+  var cx = W / 2, cy = H / 2, rOut = 78, rIn = 46;
+  var total = b.returners;
+
+  if (!total) {
+    ctx.fillStyle = '#444'; ctx.font = '12px -apple-system, sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText('No returning visitors yet.', cx, cy);
+    return;
+  }
+
+  var order = ['deepen', 'steady', 'cool'];
+  var start = -Math.PI / 2;
+  order.forEach(function(k) {
+    var v = b.move[k] || 0;
+    if (!v) return;
+    var ang = (v / total) * Math.PI * 2;
+    ctx.beginPath(); ctx.moveTo(cx, cy);
+    ctx.arc(cx, cy, rOut, start, start + ang); ctx.closePath();
+    ctx.fillStyle = BLOOM_MOVE[k].color; ctx.fill();
+    start += ang;
+  });
+
+  ctx.globalCompositeOperation = 'destination-out';
+  ctx.beginPath(); ctx.arc(cx, cy, rIn, 0, Math.PI * 2); ctx.fill();
+  ctx.globalCompositeOperation = 'source-over';
+
+  ctx.fillStyle = '#c9a87c'; ctx.font = 'bold 22px -apple-system, sans-serif';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText(b.deepenRate + '%', cx, cy - 6);
+  ctx.fillStyle = '#8c887f'; ctx.font = '10px "Courier New", monospace';
+  ctx.fillText('DEEPENING', cx, cy + 12);
+}
+
+function renderBloomTab() {
+  var b = buildBloom();
+  function chip(num, label) {
+    return '<div class="analytics-stat-chip"><span class="asc-num">' + num +
+      '</span><span class="asc-label">' + label + '</span></div>';
+  }
+  document.getElementById('bloom-stats').innerHTML =
+    chip(b.returners,                              'Returning Visitors') +
+    chip(b.returners ? b.avgVisits : '—',          'Avg Visits / Returner') +
+    chip(b.returners ? b.deepenRate + '%' : '—',   'Deepen Rate') +
+    chip(b.returners ? (b.lift >= 0 ? '+' : '') + b.lift + '%' : '—', 'Engagement Lift (v2+ vs v1)');
+
+  drawBloomCurve(b);
+
+  /* Signal growth by visit */
+  var present = b.ordStats.filter(function(o) { return o.count > 0; });
+  var maxScore = present.reduce(function(m, o) { return Math.max(m, o.avgScore); }, 1);
+  document.getElementById('bloom-profiles').innerHTML = present.length
+    ? present.map(function(o) {
+        var w = Math.max(3, Math.round((o.avgScore / maxScore) * 100));
+        var art = o.avgArt >= 1000 ? jFmtDur(o.avgArt) : '0s';
+        return '<div class="bloom-prof">' +
+          '<div class="bloom-prof-head">' +
+            '<div class="bloom-prof-name"><span class="bloom-prof-swatch" style="background:' + o.color + '"></span>' +
+              escHtml(o.label) + '</div>' +
+            '<div class="bloom-prof-meta">' + o.count + (o.count === 1 ? ' visit' : ' visits') + ' · avg score ' + o.avgScore + '</div>' +
+          '</div>' +
+          '<div class="bloom-prof-bar-wrap"><div class="bloom-prof-bar" style="width:' + w + '%;background:' + o.color + '"></div></div>' +
+          '<div class="bloom-fingerprint">' +
+            '<span class="bloom-fp-cell"><b>' + o.avgPages + '</b> pages</span>' +
+            '<span class="bloom-fp-cell"><b>' + jFmtDur(o.avgDwell) + '</b> on site</span>' +
+            '<span class="bloom-fp-cell"><b>' + o.avgScroll + '%</b> scroll</span>' +
+            '<span class="bloom-fp-cell"><b>' + o.avgClicks + '</b> clicks</span>' +
+            '<span class="bloom-fp-cell"><b>' + art + '</b> artwork</span>' +
+            '<span class="bloom-fp-cell"><b>' + o.convRate + '%</b> convert</span>' +
+          '</div>' +
+        '</div>';
+      }).join('')
+    : '<p class="bloom-empty">No visits recorded yet. Browse the public pages and Bloom populates automatically.</p>';
+
+  /* Deepening vs cooling donut + legend */
+  drawBloomDonut(b);
+  var legOrder = ['deepen', 'steady', 'cool'];
+  document.getElementById('bloom-legend').innerHTML = b.returners
+    ? legOrder.map(function(k) {
+        var v = b.move[k] || 0;
+        var share = b.returners ? Math.round((v / b.returners) * 100) : 0;
+        return '<div class="compass-legend-item"><span class="compass-legend-swatch" style="background:' +
+          BLOOM_MOVE[k].color + '"></span>' + BLOOM_MOVE[k].label +
+          '<span class="compass-legend-val">' + v + ' · ' + share + '%</span></div>';
+      }).join('')
+    : '<p class="bloom-empty">No returning visitors yet — this fills once someone visits a second time.</p>';
+
+  /* Which sources bring deepening visitors */
+  var sEl = document.getElementById('bloom-sources');
+  if (!b.sources.length) {
+    sEl.innerHTML = '<p class="bloom-empty">No returning visitors with a known source yet.</p>';
+  } else {
+    var maxAbs = b.sources.reduce(function(m, s) { return Math.max(m, Math.abs(s.avgDelta)); }, 1);
+    sEl.innerHTML = '<div class="spotlight-board">' + b.sources.map(function(s) {
+      var pct = Math.max(4, Math.round((Math.abs(s.avgDelta) / maxAbs) * 100));
+      var col = s.avgDelta >= 0 ? '#c9a87c' : '#96683e';
+      var sign = s.avgDelta > 0 ? '+' : '';
+      return '<div class="spotlight-row">' +
+        '<div class="sp-info">' +
+          '<div class="sp-label">' + escHtml(s.label) + '</div>' +
+          '<div class="sp-bar-wrap"><div class="sp-bar" style="width:' + pct + '%;background:' + col + '"></div></div>' +
+        '</div>' +
+        '<div class="sp-meta">' +
+          '<span class="sp-time">' + sign + s.avgDelta + '</span>' +
+          '<span class="sp-views">' + s.n + (s.n === 1 ? ' returner' : ' returners') + '</span>' +
+        '</div>' +
+      '</div>';
+    }).join('') + '</div>';
+  }
+
+  /* Most-matured visitors feed */
+  var feed = b.matured.slice(0, 12);
+  document.getElementById('bloom-feed').innerHTML = feed.length
+    ? '<div class="bloom-feed">' + feed.map(function(m) {
+        var cls = m.delta > 0 ? 'bloom-feed-up' : (m.delta < 0 ? 'bloom-feed-down' : 'bloom-feed-flat');
+        var tag = m.delta > 0 ? 'RISING' : (m.delta < 0 ? 'FADING' : 'STEADY');
+        var sign = m.delta > 0 ? '+' : '';
+        return '<div class="bloom-feed-row">' +
+          '<span class="bloom-feed-delta ' + cls + '">' + sign + m.delta + ' pts</span>' +
+          '<span class="bloom-feed-score">' + m.first + ' &rarr; ' + m.last + ' · ' + tag + '</span>' +
+          '<span class="bloom-feed-meta">' + m.visits + ' visits · ' + escHtml(fmtDate(m.lastTs)) + '</span>' +
+        '</div>';
+      }).join('') + '</div>'
+    : '<p class="bloom-empty">No returning visitors yet — this fills as visitors come back a second time.</p>';
+}
+
+document.getElementById('bloom-refresh-btn').addEventListener('click', renderBloomTab);
+
+document.getElementById('bloom-export-btn').addEventListener('click', function() {
+  var b = buildBloom();
+  var out = {
+    returners: b.returners, totalVisitors: b.totalVisitors, avgVisitsPerReturner: b.avgVisits,
+    deepenRate: b.deepenRate, engagementLiftPct: b.lift,
+    ordinals: b.ordStats.map(function(o) {
+      return { visit: o.label, sessions: o.count, avgScore: o.avgScore, avgPages: o.avgPages,
+        avgDwellMs: o.avgDwell, avgScroll: o.avgScroll, avgClicks: o.avgClicks,
+        avgArtMs: o.avgArt, convRate: o.convRate };
+    }),
+    movement: b.move,
+    sources: b.sources.map(function(s) { return { channel: s.channel, returners: s.n, avgDelta: s.avgDelta }; }),
+    matured: b.matured.slice(0, 50).map(function(m) {
+      return { vid: m.vid, visits: m.visits, firstScore: m.first, lastScore: m.last, delta: m.delta, lastTs: m.lastTs };
+    })
+  };
+  var blob = new Blob([JSON.stringify(out, null, 2)], { type: 'application/json' });
+  var url  = URL.createObjectURL(blob);
+  var a2   = document.createElement('a');
+  a2.href = url; a2.download = 'bloom-' + Date.now() + '.json'; a2.click();
   URL.revokeObjectURL(url);
 });
 </script>
