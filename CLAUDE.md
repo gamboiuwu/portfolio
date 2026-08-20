@@ -207,6 +207,7 @@ Password-protected (SHA-256 hash in localStorage, 5-attempt lockout). Session tr
 | Facet       | Cross-device experience comparison — the first *comparative* view: cuts the audience by device class (desktop/mobile/tablet) and lines the same engagement metrics up side by side (bounce, pages, scroll, dwell, clicks, artwork attention, conversion), with a direction-aware best/lag scorecard, biggest-gap ranking, and conversion-by-device |
 | Fuse        | Conversion latency & sales-cycle — the missing *time* dimension of Beacon: joins persistent-visitor identity (`vid`/`vfirst`) with `goal` events to measure how long and how many visits it takes a visitor to reach their first commission-intent signal; conversion-speed donut (Instant→7 days+), visits-before-converting distribution, first-intent-signal mix, and a recent-conversions feed |
 | Arc         | Session engagement lifecycle / intra-visit tempo — lines every event up by its offset from its own session's first event to show *when within a visit* activity crests and when sessions go quiet: activity curve by time-bin (0–15s…5m+), in-visit survival (retention within one visit), event-mix-over-time (early scrolls → mid clicks/intent → late exits), and a longest-sustained-visits feed |
+| Echo        | Artwork re-engagement & magnetic pull — the first tool to measure *intra-visit re-visitation of the same piece*: counts how often each artwork is re-entered (scrolled past, then returned to) within one visit; per-artwork **pull rate** (share of viewers who looked twice), attention-split donut (one glance vs came back), most-magnetic (pull rate) and most-re-viewed (raw returns) leaderboards, glance-and-gone cold list, and a per-artwork look-distribution explorer |
 
 ---
 
@@ -1139,6 +1140,45 @@ Answers the one question about a visit's *own timeline* that no other tab measur
 
 ---
 
+## Echo — Artwork Re-Engagement & Magnetic Pull (Admin → Echo tab) — NEW TOOL
+
+Answers the simplest magnetism question no other tool asks: **which artworks make a visitor look twice?** Spotlight ranks each piece by *total* viewport time; Mosaic pairs the pieces seen *together* (unordered); Thread *orders* them; Muse ties them to *conversion*. None measures **re-visitation of the same piece within a single visit** — the visitor who scrolls past a work, then scrolls *back* to look again. That return is the clearest passive signal that a piece reaches out and reclaims attention. Echo is the artwork-magnetism layer: the pieces that earn a second look are the ones worth leading with, printing large, and building a series around.
+
+**Why it's genuinely new:** every existing artwork tool reads spotlight events as *magnitude* (Spotlight), *association* (Mosaic), *order* (Thread), or *conversion* (Muse). Echo is the first to read them as *re-entry frequency per session* — a distinct axis. Spotlight already stores a raw view-count, but only as an all-time aggregate; Echo instead asks, per visit, *did this piece pull the same eyes back?* and reports a per-artwork pull rate and look-distribution the aggregate count cannot express.
+
+**No new storage key, no `analytics.js` change** — derived live from `_gam_spotlight_v1`, the same viewport events Spotlight records via `IntersectionObserver`. Each event is one continuous in-view span (the observer pushes on viewport exit / page unload, ≥400ms), so more than one span for the same `artId` in the same `sid` *is* a re-view. The same read-only pattern as Mosaic/Thread reading spotlight.
+
+**How it works:**
+1. `buildEcho()` groups spotlight events by session×artwork (`sid|artId`) into one record per piece-in-a-visit, tallying `views` (span count) and total `ms`, keeping the longest human `label` per artwork.
+2. Per artwork it aggregates: `sessions` (distinct viewers), `reSessions` (viewers with ≥2 spans — came back), `revisits` (Σ `views − 1`), `totalMs`, and a look-distribution (`one` / `two` / `many`).
+3. **Pull rate** = `reSessions / sessions` (share of a piece's viewers who returned to it). **Avg looks** = `totalViews / sessions`. Pieces need ≥ `ECHO_MIN_SESSIONS` (2) viewing sessions to rank on the pull/cold boards, so one lucky visit can't top the leaderboard.
+4. Global tallies use the session×piece pair as the unit: **overall pull rate** = multi-look pairs ÷ all art-viewing pairs.
+
+**Admin tab sections:**
+- **Stats**: Re-Viewed Pieces, Total Re-Views, Overall Pull Rate %, Avg Looks / Viewer
+- **Attention Split**: canvas donut + legend (came back vs one glance); centre shows the overall pull rate %
+- **Most Magnetic Pieces — Highest Pull**: artworks ranked by pull rate, annotated `×avg-looks` and *re-viewers / total viewers*
+- **Most Re-Viewed — Raw Return Count**: artworks ranked by total re-entries (volume, complementing the pull-rate quality signal)
+- **Glance-and-Gone — Seen Once, Never Again**: pieces with ≥2 viewers and the lowest pull rate (attention that never returns)
+- **Re-View Explorer**: pick any artwork → its pull rate, avg looks, total held attention, and the 1-look / 2-look / 3+-look visit distribution
+
+**Derived schema (for export):**
+```js
+{ reViewedPieces, totalReviews, totalPairs, overallPullRate, avgLooksAll,
+  magnetic:[{artId,label,sessions,reSessions,totalViews,revisits,totalMs,pullRate,avgLooks,lookDist:{one,two,many}}],
+  mostReviewed:[…], glanceAndGone:[…] }
+```
+
+**Technical notes:**
+- Donut + swatches use the warm amber/sand palette (`rgba(176,122,74…)` came back, `rgba(214,190,150…)` one glance) — no blue/pink. New `.echo-*` CSS classes; reuses `jBarList()`, `analytics-stat-chip`, `compass-legend`/`compass-donut-row`, the `journey-select` dropdown, `jFmtDur()`, and `escHtml()`.
+- A re-view is a *proxy* for a deliberate return: the 400ms floor filters rapid flicker, but a piece hovering around the 25% threshold could log multiple spans without a true "look away" — noted in the tab hint.
+- Keyed by `sid` (per-tab), so one visitor across several tabs counts as separate visits (consistent with the rest of the family).
+- Tab renders lazily on click, same pattern as Arc/Fuse/Facet/etc.
+
+**API:** none new on `CommissionData` — uses `CommissionData.getSpotlight()`. Logic lives in `renderEchoTab()` / `buildEcho()` inside `admin/index.html`.
+
+---
+
 ## Commission System
 
 ### Pages
@@ -1216,4 +1256,4 @@ Stored in `_gam_prices_v1`. Three sections: `digital`, `stickers`, `animation`. 
 
 ---
 
-*Last updated: 2026-08-14*
+*Last updated: 2026-08-20*
