@@ -1031,6 +1031,20 @@
 		.echo-explore-summary strong { color: #d6a878; }
 		.echo-empty { color: #444; font-size: 0.85em; padding: 0.5em 0; }
 
+		/* Linger tab — page dwell time & stickiness (reuses spotlight bars) */
+		.linger-tag { font-family: 'Courier New', monospace; font-size: 0.66em; letter-spacing: 0.04em;
+			padding: 0.12em 0.5em; border-radius: 3px; margin-left: 0.5em; white-space: nowrap;
+			background: rgba(201,168,124,0.2); color: #d6a878; border: 1px solid rgba(201,168,124,0.38); }
+		.linger-dist { display: flex; gap: 0.5em; flex-wrap: wrap; margin: 0.4em 0 0.2em; }
+		.linger-dist-chip { display: flex; flex-direction: column; align-items: center; gap: 0.15em;
+			padding: 0.5em 0.9em; background: rgba(255,255,255,0.03); border: 1px solid rgba(201,168,124,0.18);
+			border-radius: 5px; min-width: 4.6em; }
+		.linger-dist-num { font-size: 1.15em; font-weight: 600; color: #d6a878; font-family: 'Courier New', monospace; }
+		.linger-dist-lbl { font-size: 0.63em; color: #8c887f; font-family: 'Courier New', monospace; letter-spacing: 0.03em; }
+		.linger-explore-summary { font-size: 0.8em; color: #b7b2a8; margin: 0.2em 0 0.7em; line-height: 1.5; }
+		.linger-explore-summary strong { color: #d6a878; }
+		.linger-empty { color: #444; font-size: 0.85em; padding: 0.5em 0; }
+
 		/* Tide tab — trends & momentum (reuses spotlight bars) */
 		#tide-canvas { display: block; }
 		.tide-win { display: flex; align-items: center; gap: 0.6em; flex-wrap: wrap; margin-bottom: 1em; }
@@ -1169,6 +1183,7 @@
 				<button class="admin-tab" data-tab="fuse">Fuse</button>
 				<button class="admin-tab" data-tab="arc">Arc</button>
 				<button class="admin-tab" data-tab="echo">Echo</button>
+				<button class="admin-tab" data-tab="linger">Linger</button>
 			</div>
 
 			<!-- ============ GALLERY TAB ============ -->
@@ -2628,6 +2643,54 @@
 
 						</div>
 
+						<div id="tab-linger" class="tab-content">
+
+							<div class="admin-card">
+								<h3>Linger — Page Dwell Time &amp; Stickiness</h3>
+								<p class="hint">Spotlight measures time on individual <em>artworks</em>; Depth measures how far a page is <em>scrolled</em>; Journey measures whole-<em>session</em> duration and flow. None answers the classic content question: <strong>which pages actually hold a visitor, and which get abandoned in seconds?</strong> Linger is the missing <em>time-on-page</em> lens &mdash; the average and median seconds spent on each page, a stickiness ranking, a skim-vs-read band mix, and the pages people bail from fastest. For a portfolio, this is the difference between a landing page that draws people in and one that loses them before they scroll. Read-only over <code>_gam_analytics_v1</code> &mdash; each <code>exit</code> event already carries <code>ms</code> (time on that page), so no new storage key and no <code>analytics.js</code> change. Page-visits without a recorded exit (hard closes) aren&rsquo;t measured; dwell is per page-load (<code>sid</code>-scoped), consistent with the rest of the family.</p>
+								<div id="linger-stats" class="analytics-stats" style="margin-bottom:1em"></div>
+								<div style="display:flex;gap:0.5em;flex-wrap:wrap">
+									<button class="button small" id="linger-refresh-btn">Refresh</button>
+									<button class="button small" id="linger-export-btn">Export JSON</button>
+								</div>
+							</div>
+
+							<div class="admin-card">
+								<h3>Skim vs Read — Dwell Band Mix</h3>
+								<p class="hint">Every measured page-visit falls into one of four dwell bands. A tail weighted toward <em>Quick</em> means visitors bounce before the content lands; a tail toward <em>Engaged</em>/<em>Deep</em> means the pages hold attention. The centre shows the overall average time on page.</p>
+								<div class="compass-donut-row">
+									<canvas id="linger-donut" width="180" height="180"></canvas>
+									<div id="linger-legend" class="compass-legend"></div>
+								</div>
+							</div>
+
+							<div class="admin-card">
+								<h3>Stickiest Pages — Longest Average Dwell</h3>
+								<p class="hint">Pages ranked by <strong>average time on page</strong> &mdash; the content that holds visitors longest. Pages need at least two measured visits to rank, so a single outlier can&rsquo;t top the board. Each bar is annotated with its median dwell and visit count.</p>
+								<div id="linger-sticky"></div>
+							</div>
+
+							<div class="admin-card">
+								<h3>Total Attention by Page</h3>
+								<p class="hint">Where the raw <em>volume</em> of dwell accumulates &mdash; total seconds spent across every visit to a page. Complements the average-based stickiness ranking: a page can be sticky per-visit yet small in total, or ordinary per-visit yet huge in aggregate because it&rsquo;s where everyone lands.</p>
+								<div id="linger-total"></div>
+							</div>
+
+							<div class="admin-card">
+								<h3>Quickest Exits — Where Visitors Bail Fastest</h3>
+								<p class="hint">Pages with the <strong>shortest</strong> average dwell (fuller bar = faster exit, inverse-scaled) among those with at least two measured visits. These are the pages losing people first &mdash; the ones whose opening seconds most need a stronger hook.</p>
+								<div id="linger-quick"></div>
+							</div>
+
+							<div class="admin-card">
+								<h3>Dwell Explorer</h3>
+								<p class="hint">Pick any page to see exactly how its visitors spent their time &mdash; average and median dwell, and the split across the four dwell bands.</p>
+								<select id="linger-explore-select" class="journey-select" style="margin-bottom:0.9em"></select>
+								<div id="linger-explore"></div>
+							</div>
+
+						</div>
+
 		</div><!-- /#admin-dash -->
 		<input type="file" id="img-file-input" accept="image/*" style="display:none" />
 
@@ -3681,6 +3744,9 @@ document.addEventListener('click', function(e){
   }
   if (e.target.dataset && e.target.dataset.tab === 'echo') {
     renderEchoTab();
+  }
+  if (e.target.dataset && e.target.dataset.tab === 'linger') {
+    renderLingerTab();
   }
 });
 
@@ -9825,6 +9891,273 @@ document.getElementById('echo-export-btn').addEventListener('click', function() 
   var url  = URL.createObjectURL(blob);
   var a    = document.createElement('a');
   a.href = url; a.download = 'echo-' + Date.now() + '.json'; a.click();
+  URL.revokeObjectURL(url);
+});
+
+/* ================================================================
+   LINGER TAB — page dwell time & stickiness
+   Reads `exit` events (each carries ms = time on that page) from
+   _gam_analytics_v1. Read-only, no new storage key, no analytics.js
+   change. Distinct from Spotlight (per-artwork), Depth (scroll %),
+   and Journey (per-session duration/flow): Linger measures per-page
+   time-on-page — which pages hold visitors and which lose them fast.
+================================================================ */
+
+var LINGER_MIN_VISITS = 2;   /* min measured visits for a page to rank on sticky/quick boards */
+/* dwell bands, deep → quick (warm amber ramp, no blue/pink) */
+var LINGER_BANDS = [
+  { key: 'deep',    label: 'Deep (60s+)',      min: 60000, color: 'rgba(176,122,74,0.92)' },
+  { key: 'engaged', label: 'Engaged (15–60s)', min: 15000, color: 'rgba(201,168,124,0.9)'  },
+  { key: 'brief',   label: 'Brief (5–15s)',    min:  5000, color: 'rgba(214,190,150,0.85)' },
+  { key: 'quick',   label: 'Quick (<5s)',      min:     0, color: 'rgba(230,214,186,0.8)'  }
+];
+var LINGER_SPEED_CAP = 90000;  /* inverse-scale cap for the quickest-exit board (90s) */
+
+function lingerBandOf(ms) {
+  for (var i = 0; i < LINGER_BANDS.length; i++) {
+    if (ms >= LINGER_BANDS[i].min) return LINGER_BANDS[i].key;
+  }
+  return 'quick';
+}
+
+function lingerMedian(arr) {
+  if (!arr.length) return 0;
+  var s = arr.slice().sort(function(a, b){ return a - b; });
+  var m = Math.floor(s.length / 2);
+  return s.length % 2 ? s[m] : Math.round((s[m - 1] + s[m]) / 2);
+}
+
+function buildLinger() {
+  var events = CommissionData.getAnalytics() || [];
+
+  var pvCount = 0;
+  var pages = {};   /* page -> { page, visits, totalMs, samples:[ms], bands:{} } */
+  var bandTotals = { deep: 0, engaged: 0, brief: 0, quick: 0 };
+  var totalMeasured = 0, totalMs = 0;
+
+  events.forEach(function(e) {
+    if (e.type === 'pv') { pvCount++; return; }
+    if (e.type !== 'exit') return;
+    var ms = +e.ms;
+    if (!(ms >= 0) || !isFinite(ms)) return;
+    /* guard against absurd tab-left-open-for-days durations */
+    if (ms > 6 * 3600 * 1000) return;
+    var pg = e.page || '/';
+    var p = pages[pg] || (pages[pg] = {
+      page: pg, visits: 0, totalMs: 0, samples: [],
+      bands: { deep: 0, engaged: 0, brief: 0, quick: 0 }
+    });
+    p.visits++;
+    p.totalMs += ms;
+    p.samples.push(ms);
+    var band = lingerBandOf(ms);
+    p.bands[band]++;
+    bandTotals[band]++;
+    totalMeasured++;
+    totalMs += ms;
+  });
+
+  var list = Object.keys(pages).map(function(pg) {
+    var p = pages[pg];
+    p.avgMs = p.visits ? p.totalMs / p.visits : 0;
+    p.medMs = lingerMedian(p.samples);
+    p.label = jPageLabel(p.page);
+    return p;
+  });
+
+  var eligible = list.filter(function(p){ return p.visits >= LINGER_MIN_VISITS; });
+  var sticky = eligible.slice().sort(function(a, b){
+    return (b.avgMs - a.avgMs) || (b.visits - a.visits);
+  });
+  var quick = eligible.slice().sort(function(a, b){
+    return (a.avgMs - b.avgMs) || (b.visits - a.visits);
+  });
+  var byTotal = list.slice().sort(function(a, b){ return b.totalMs - a.totalMs; });
+  var explore = list.slice().sort(function(a, b){ return b.visits - a.visits; });
+
+  var avgOnPage = totalMeasured ? totalMs / totalMeasured : 0;
+  var coverage  = pvCount ? Math.round(totalMeasured / pvCount * 100) : 0;
+
+  return {
+    list: list, pagesMeasured: list.length, totalMeasured: totalMeasured,
+    totalMs: totalMs, avgOnPage: avgOnPage, pvCount: pvCount, coverage: coverage,
+    bandTotals: bandTotals,
+    sticky: sticky, quick: quick, byTotal: byTotal, explore: explore,
+    stickiest: sticky.length ? sticky[0] : null
+  };
+}
+
+function drawLingerDonut(lg) {
+  var canvas = document.getElementById('linger-donut');
+  if (!canvas) return;
+  var ctx = canvas.getContext('2d');
+  var W = canvas.width, H = canvas.height;
+  ctx.clearRect(0, 0, W, H);
+  var cx = W / 2, cy = H / 2, rOut = 78, rIn = 46;
+
+  var tot = lg.totalMeasured;
+  if (!tot) {
+    ctx.fillStyle = '#444';
+    ctx.font = '12px -apple-system, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('No dwell measured yet.', cx, cy);
+    return;
+  }
+
+  var start = -Math.PI / 2;
+  LINGER_BANDS.forEach(function(b) {
+    var v = lg.bandTotals[b.key];
+    if (!v) return;
+    var ang = (v / tot) * Math.PI * 2;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.arc(cx, cy, rOut, start, start + ang);
+    ctx.closePath();
+    ctx.fillStyle = b.color;
+    ctx.fill();
+    start += ang;
+  });
+
+  ctx.globalCompositeOperation = 'destination-out';
+  ctx.beginPath();
+  ctx.arc(cx, cy, rIn, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.globalCompositeOperation = 'source-over';
+
+  ctx.fillStyle = '#c9a87c';
+  ctx.font = 'bold 20px -apple-system, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(jFmtDur(lg.avgOnPage), cx, cy - 6);
+  ctx.fillStyle = '#8c887f';
+  ctx.font = '9px "Courier New", monospace';
+  ctx.fillText('AVG / PAGE', cx, cy + 12);
+}
+
+function renderLingerTab() {
+  var lg = buildLinger();
+  function chip(num, label) {
+    return '<div class="analytics-stat-chip"><span class="asc-num">' + num +
+      '</span><span class="asc-label">' + label + '</span></div>';
+  }
+  document.getElementById('linger-stats').innerHTML =
+    chip(lg.pagesMeasured,                              'Pages Measured')     +
+    chip(lg.totalMeasured ? jFmtDur(lg.avgOnPage) : '—', 'Avg Time on Page')  +
+    chip(lg.stickiest ? escHtml(lg.stickiest.label) : '—', 'Stickiest Page')  +
+    chip(lg.totalMeasured ? jFmtDur(lg.totalMs) : '—',  'Total Dwell Measured');
+
+  /* Band-mix donut */
+  drawLingerDonut(lg);
+  document.getElementById('linger-legend').innerHTML = lg.totalMeasured
+    ? LINGER_BANDS.map(function(b) {
+        var v = lg.bandTotals[b.key];
+        var share = lg.totalMeasured ? Math.round(v / lg.totalMeasured * 100) : 0;
+        return '<div class="compass-legend-item">' +
+          '<span class="compass-legend-swatch" style="background:' + b.color + '"></span>' +
+          '<span>' + escHtml(b.label) + '</span>' +
+          '<span class="compass-legend-val">' + v + ' · ' + share + '%</span>' +
+        '</div>';
+      }).join('')
+    : '<p class="linger-empty">No page-dwell recorded yet. Linger populates as visitors browse and leave the public pages.</p>';
+
+  /* Stickiest pages — highest average dwell */
+  document.getElementById('linger-sticky').innerHTML = lg.sticky.length
+    ? jBarList(
+        lg.sticky.slice(0, 12).map(function(p) { return { label: p.label, count: Math.round(p.avgMs / 1000), _p: p }; }),
+        lg.sticky.length ? Math.round(lg.sticky[0].avgMs / 1000) : 1,
+        { suffix: function(r) {
+            var p = r._p;
+            return jFmtDur(p.avgMs) + ' avg' +
+              '<span class="linger-tag">med ' + jFmtDur(p.medMs) + '</span>' +
+              ' · ' + p.visits + (p.visits === 1 ? ' visit' : ' visits');
+          } }
+      )
+    : '<p class="linger-empty">No page has yet been measured over ' + LINGER_MIN_VISITS + '+ visits. This ranks once a few visits accumulate.</p>';
+
+  /* Total attention by page — raw volume */
+  document.getElementById('linger-total').innerHTML = lg.byTotal.length
+    ? jBarList(
+        lg.byTotal.slice(0, 12).map(function(p) { return { label: p.label, count: Math.round(p.totalMs / 1000), _p: p }; }),
+        lg.byTotal.length ? Math.round(lg.byTotal[0].totalMs / 1000) : 1,
+        { suffix: function(r) {
+            var p = r._p;
+            return jFmtDur(p.totalMs) + ' total · ' + p.visits + (p.visits === 1 ? ' visit' : ' visits');
+          } }
+      )
+    : '<p class="linger-empty">No dwell recorded yet — this fills as visitors spend time on the public pages.</p>';
+
+  /* Quickest exits — inverse-scaled (fuller bar = faster exit) */
+  document.getElementById('linger-quick').innerHTML = lg.quick.length
+    ? jBarList(
+        lg.quick.slice(0, 12).map(function(p) {
+          var inv = Math.max(0, LINGER_SPEED_CAP - Math.min(p.avgMs, LINGER_SPEED_CAP));
+          return { label: p.label, count: Math.round(inv / 1000), _p: p };
+        }),
+        Math.round(LINGER_SPEED_CAP / 1000),
+        { suffix: function(r) {
+            var p = r._p;
+            return jFmtDur(p.avgMs) + ' avg' +
+              '<span class="linger-tag">' + p.visits + (p.visits === 1 ? ' visit' : ' visits') + '</span>';
+          } }
+      )
+    : '<p class="linger-empty">Nothing to flag yet — no page with ' + LINGER_MIN_VISITS + '+ visits has a fast-exit problem.</p>';
+
+  /* Dwell explorer */
+  var sel = document.getElementById('linger-explore-select');
+  var opts = lg.explore;
+  var prev = sel.value;
+  sel.innerHTML = opts.map(function(p) {
+    return '<option value="' + escHtml(p.page) + '">' + escHtml(p.label) + ' (' + p.visits + ')</option>';
+  }).join('');
+  if (prev && opts.some(function(p){ return p.page === prev; })) sel.value = prev;
+
+  function drawExplore() {
+    var pg = sel.value;
+    var el = document.getElementById('linger-explore');
+    var p = lg.list.filter(function(x){ return x.page === pg; })[0];
+    if (!p) {
+      el.innerHTML = '<p class="linger-empty">Pick a page above to inspect its dwell behaviour.</p>';
+      return;
+    }
+    el.innerHTML =
+      '<p class="linger-explore-summary"><strong>' + escHtml(p.label) + '</strong> was measured across <strong>' + p.visits +
+        '</strong> ' + (p.visits === 1 ? 'visit' : 'visits') + ' &mdash; averaging <strong>' + jFmtDur(p.avgMs) +
+        '</strong> on page (median <strong>' + jFmtDur(p.medMs) + '</strong>), <strong>' + jFmtDur(p.totalMs) +
+        '</strong> total held attention.</p>' +
+      '<div class="linger-dist">' +
+        '<div class="linger-dist-chip"><span class="linger-dist-num">' + p.bands.quick   + '</span><span class="linger-dist-lbl">QUICK &lt;5s</span></div>' +
+        '<div class="linger-dist-chip"><span class="linger-dist-num">' + p.bands.brief   + '</span><span class="linger-dist-lbl">BRIEF 5–15s</span></div>' +
+        '<div class="linger-dist-chip"><span class="linger-dist-num">' + p.bands.engaged + '</span><span class="linger-dist-lbl">ENGAGED 15–60s</span></div>' +
+        '<div class="linger-dist-chip"><span class="linger-dist-num">' + p.bands.deep    + '</span><span class="linger-dist-lbl">DEEP 60s+</span></div>' +
+      '</div>';
+  }
+  sel.onchange = drawExplore;
+  drawExplore();
+}
+
+document.getElementById('linger-refresh-btn').addEventListener('click', renderLingerTab);
+
+document.getElementById('linger-export-btn').addEventListener('click', function() {
+  var lg = buildLinger();
+  function row(p) {
+    return {
+      page: p.page, visits: p.visits, avgMs: Math.round(p.avgMs), medianMs: p.medMs,
+      totalMs: p.totalMs, bands: p.bands
+    };
+  }
+  var out = {
+    pagesMeasured: lg.pagesMeasured, totalMeasured: lg.totalMeasured,
+    pageviews: lg.pvCount, coveragePct: lg.coverage,
+    avgTimeOnPageMs: Math.round(lg.avgOnPage), totalDwellMs: lg.totalMs,
+    bandTotals: lg.bandTotals,
+    stickiest: lg.sticky.slice(0, 50).map(row),
+    quickestExit: lg.quick.slice(0, 50).map(row),
+    byTotalAttention: lg.byTotal.slice(0, 50).map(row)
+  };
+  var blob = new Blob([JSON.stringify(out, null, 2)], { type: 'application/json' });
+  var url  = URL.createObjectURL(blob);
+  var a    = document.createElement('a');
+  a.href = url; a.download = 'linger-' + Date.now() + '.json'; a.click();
   URL.revokeObjectURL(url);
 });
 </script>
