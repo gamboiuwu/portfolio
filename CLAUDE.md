@@ -208,6 +208,7 @@ Password-protected (SHA-256 hash in localStorage, 5-attempt lockout). Session tr
 | Fuse        | Conversion latency & sales-cycle — the missing *time* dimension of Beacon: joins persistent-visitor identity (`vid`/`vfirst`) with `goal` events to measure how long and how many visits it takes a visitor to reach their first commission-intent signal; conversion-speed donut (Instant→7 days+), visits-before-converting distribution, first-intent-signal mix, and a recent-conversions feed |
 | Arc         | Session engagement lifecycle / intra-visit tempo — lines every event up by its offset from its own session's first event to show *when within a visit* activity crests and when sessions go quiet: activity curve by time-bin (0–15s…5m+), in-visit survival (retention within one visit), event-mix-over-time (early scrolls → mid clicks/intent → late exits), and a longest-sustained-visits feed |
 | Echo        | Artwork re-engagement & magnetic pull — the first tool to measure *intra-visit re-visitation of the same piece*: counts how often each artwork is re-entered (scrolled past, then returned to) within one visit; per-artwork **pull rate** (share of viewers who looked twice), attention-split donut (one glance vs came back), most-magnetic (pull rate) and most-re-viewed (raw returns) leaderboards, glance-and-gone cold list, and a per-artwork look-distribution explorer |
+| Linger      | Page dwell time & stickiness — the missing *time-on-page* lens: reads the `ms` each `exit` event already records to rank pages by average & median seconds spent, a skim-vs-read dwell-band donut (Quick/Brief/Engaged/Deep), stickiest-pages and total-attention boards, a quickest-exit (fastest-bail) board, and a per-page dwell-band explorer |
 
 ---
 
@@ -1179,6 +1180,46 @@ Answers the simplest magnetism question no other tool asks: **which artworks mak
 
 ---
 
+## Linger — Page Dwell Time & Stickiness (Admin → Linger tab) — NEW TOOL
+
+Answers the classic content question no other tab measures: **which pages actually hold a visitor, and which get abandoned in seconds?** Spotlight measures time on individual *artworks* (elements, not pages); Depth measures how far a page is *scrolled* (vertical reach, not time); Journey measures whole-*session* duration and flow (per session, not per page); Arc measures event *tempo* within a visit (offset from session start, not per-page). None reports **time-on-page** — the single most standard web-analytics metric. Linger is that missing lens: the average and median seconds spent on each page, a stickiness ranking, a skim-vs-read band mix, and the pages people bail from fastest. For a portfolio it separates a landing page that draws people in from one that loses them before they scroll.
+
+**Why it's genuinely new:** it is a *per-page attention-duration* aggregate, a unit no existing tool computes. Journey's "Avg. Duration" is a single whole-session number focused on flow; Depth is spatial scroll, not time; Spotlight's ms is per-artwork-element. Linger is the first to rank the *pages themselves* by how long visitors stay on them.
+
+**No new storage key, no `analytics.js` change** — derived live from `_gam_analytics_v1`. Every page load already fires exactly one `exit` event carrying `ms` (time on that page since the pageview), so per-page dwell is read directly with zero new instrumentation, the same read-only pattern as Journey/Depth.
+
+**How it works:**
+1. `buildLinger()` walks all events, counting `pv` events (for coverage) and reading each `exit` event's `ms` as one measured page-visit dwell. Negative/non-finite values and absurd durations (`> 6h`, a tab left open) are discarded.
+2. Per page it aggregates `visits` (measured exits), `totalMs`, `avgMs`, `medMs` (true median of the sample array), and a four-band histogram.
+3. Each dwell is bucketed into a band via `lingerBandOf()`: **Quick** (`<5s`), **Brief** (`5–15s`), **Engaged** (`15–60s`), **Deep** (`60s+`). Thresholds live in `LINGER_BANDS` at the top of the block.
+4. Pages need ≥ `LINGER_MIN_VISITS` (2) measured visits to rank on the stickiness / quickest-exit boards, so a single outlier can't top the board.
+
+**Admin tab sections:**
+- **Stats**: Pages Measured, Avg Time on Page, Stickiest Page, Total Dwell Measured
+- **Skim vs Read — Dwell Band Mix**: canvas donut + legend across the four bands; centre shows the overall average time on page
+- **Stickiest Pages**: pages ranked by average dwell, annotated with median + visit count
+- **Total Attention by Page**: pages ranked by total accumulated dwell (volume, complementing the per-visit average)
+- **Quickest Exits**: pages with the shortest average dwell, **inverse-scaled** (fuller bar = faster exit, capped at `LINGER_SPEED_CAP` = 90s) — where the opening seconds most need a stronger hook
+- **Dwell Explorer**: pick any page → its average/median dwell and the split across the four bands
+
+**Derived schema (for export):**
+```js
+{ pagesMeasured, totalMeasured, pageviews, coveragePct, avgTimeOnPageMs, totalDwellMs,
+  bandTotals:{deep,engaged,brief,quick},
+  stickiest:[{page,visits,avgMs,medianMs,totalMs,bands}], quickestExit:[…], byTotalAttention:[…] }
+```
+
+**Technical notes:**
+- Donut, band swatches, and tags use the warm amber ramp (`rgba(176,122,74…)` deep → `rgba(230,214,186…)` quick) — no blue/pink. New `.linger-*` CSS classes; reuses `jBarList()`, `analytics-stat-chip`, `compass-legend`/`compass-donut-row`, the `journey-select` dropdown, `jFmtDur()`, `jPageLabel()`, and `escHtml()`.
+- Only page loads that fire an `exit` are measured; hard closes (crash/kill) leave no exit and are excluded — so `coveragePct` (measured exits ÷ pageviews) is exported as an honesty check.
+- The quickest-exit board is inverse-scaled so a shorter dwell reads as a longer bar (consistent with Latch's speed board); all other bars scale by raw value.
+- Dwell is per page-load (`sid`-scoped), so one visitor across several tabs counts as separate page-visits (consistent with the rest of the family).
+- Tab renders lazily on click, same pattern as Echo/Arc/Fuse/etc.
+
+**API:** none new on `CommissionData` — uses `CommissionData.getAnalytics()`. Logic lives in `renderLingerTab()` / `buildLinger()` inside `admin/index.html`.
+
+---
+
 ## Commission System
 
 ### Pages
@@ -1256,4 +1297,4 @@ Stored in `_gam_prices_v1`. Three sections: `digital`, `stickers`, `animation`. 
 
 ---
 
-*Last updated: 2026-08-20*
+*Last updated: 2026-08-21*
