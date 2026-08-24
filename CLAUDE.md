@@ -208,6 +208,7 @@ Password-protected (SHA-256 hash in localStorage, 5-attempt lockout). Session tr
 | Fuse        | Conversion latency & sales-cycle — the missing *time* dimension of Beacon: joins persistent-visitor identity (`vid`/`vfirst`) with `goal` events to measure how long and how many visits it takes a visitor to reach their first commission-intent signal; conversion-speed donut (Instant→7 days+), visits-before-converting distribution, first-intent-signal mix, and a recent-conversions feed |
 | Arc         | Session engagement lifecycle / intra-visit tempo — lines every event up by its offset from its own session's first event to show *when within a visit* activity crests and when sessions go quiet: activity curve by time-bin (0–15s…5m+), in-visit survival (retention within one visit), event-mix-over-time (early scrolls → mid clicks/intent → late exits), and a longest-sustained-visits feed |
 | Echo        | Artwork re-engagement & magnetic pull — the first tool to measure *intra-visit re-visitation of the same piece*: counts how often each artwork is re-entered (scrolled past, then returned to) within one visit; per-artwork **pull rate** (share of viewers who looked twice), attention-split donut (one glance vs came back), most-magnetic (pull rate) and most-re-viewed (raw returns) leaderboards, glance-and-gone cold list, and a per-artwork look-distribution explorer |
+| Dwell       | Time-on-page & reading duration — the classic *average time on page* metric no other tab reports: aggregates the `exit` events' per-page `ms` into a per-page reading-duration board — reading-time distribution donut (Bounced→Immersed), stickiest pages (longest average read), quick-exit pages (% leaving under 10s), longest individual reads feed, and a per-page timing-profile explorer |
 
 ---
 
@@ -1179,6 +1180,47 @@ Answers the simplest magnetism question no other tool asks: **which artworks mak
 
 ---
 
+## Dwell — Time-on-Page & Reading Duration (Admin → Dwell tab) — NEW TOOL
+
+Answers the single most classic web-analytics question the family had, surprisingly, never dedicated a tab to: **how long do visitors actually spend on each page?** Journey and Compass measure *where* attention goes; Depth measures how *far* down a page it scrolls; Arc measures *when within a visit* activity crests; Ember folds dwell into a six-signal composite *score*; Journey reports whole-*session* duration. None ranks the **pages themselves by their own average time-on-page** — the canonical "avg. time on page" metric from every real analytics suite. Dwell is that board: which pages hold a reader, which get abandoned in seconds, and how the site's attention time is distributed overall. For a portfolio, it is the difference between a piece someone *studies* and one they scroll straight past.
+
+**Why it's genuinely new:** it is a *per-page reading-duration* aggregate. Depth is spatial (scroll %), not temporal; Arc's time axis is session-relative bins across all visits, not per-page; Ember's dwell is one input to a session score, never surfaced per page; Journey's duration is per session. Dwell is the first tab keyed on **page × time-on-page**.
+
+**No new storage key, no `analytics.js` change** — derived live from `_gam_analytics_v1` `exit` events, each of which already carries the `ms` a visitor spent on a page before leaving (fired on `beforeunload` / visibility-hidden). The same read-only pattern as Journey/Depth.
+
+**How it works:**
+1. `buildDwell()` walks all `exit` events (ignoring any with `ms ≤ 0`), grouping by `page`.
+2. Per page it collects every `ms`, deriving `views` (timed page-views), `avgMs`, `medianMs`, `maxMs`, `minMs`, a **quick-exit** count (`ms < DWELL_QUICK_MS`, 10 s), and a per-page split across the reading-duration buckets.
+3. Site-wide it computes the average and median time-on-page and the global bucket distribution, plus a list of the deepest individual page-views.
+4. Pages need ≥ `DWELL_MIN_VIEWS` (2) timed views to rank on the stickiest / quick-exit boards, so one long visit can't top a board.
+
+**Reading-duration buckets** (`DWELL_BUCKETS`, cold→warm ramp): Bounced (`<5s`), Skimmed (`5–15s`), Read (`15–60s`), Engaged (`1–3m`), Immersed (`3m+`).
+
+**Admin tab sections:**
+- **Stats**: Timed Page-Views, Avg Time on Page, Stickiest Page, Median Time on Page
+- **Reading-Time Distribution**: canvas donut + legend across the five buckets; centre shows the site median
+- **Stickiest Pages**: pages ranked by average time on page (bar = avg seconds), annotated with median + timed-view count
+- **Quick-Exit Pages**: pages ranked by the share of visits that ended in under ten seconds — the weakest hooks
+- **Longest Individual Reads**: the single deepest page-views on record (duration · page · when)
+- **Per-Page Detail Explorer**: pick any page → avg/median, fastest & deepest read, and its bucket split
+
+**Derived schema (for export):**
+```js
+{ totalViews, pagesTracked, siteAvgMs, siteMedianMs, distribution:{bucket:count},
+  stickiest:[{page,views,avgMs,medianMs,maxMs,minMs,quickExits,quickRate,buckets}],
+  quickExit:[…], longestReads:[{page,ms,ts}] }
+```
+
+**Technical notes:**
+- Donut + swatches use the warm cold→hot amber/clay ramp (`rgba(120,116,108,0.5)` bounced → `rgba(124,84,51,0.95)` immersed) — no blue/pink. New `.dwell-*` CSS classes; reuses `jBarList()`, `analytics-stat-chip`, `compass-legend`/`compass-donut-row`, the `journey-select` dropdown, the `echo-dist`/`echo-dist-chip` bucket chips, `jFmtDur()`, `jPageLabel()`, `escHtml()`, `fmtDate()`.
+- A page-view with no recorded `exit` (a visitor still reading, or a hard tab-kill before the handler fired) contributes no timing — so Dwell measures *completed* reads, a caveat noted in the tab hint.
+- Timing is per page-view `exit` (`sid`-keyed), so one visitor across several tabs may count more than once (consistent with the rest of the family).
+- Tab renders lazily on click, same pattern as Echo/Arc/Fuse/etc.
+
+**API:** none new on `CommissionData` — uses `CommissionData.getAnalytics()`. Logic lives in `renderDwellTab()` / `buildDwell()` inside `admin/index.html`.
+
+---
+
 ## Commission System
 
 ### Pages
@@ -1256,4 +1298,4 @@ Stored in `_gam_prices_v1`. Three sections: `digital`, `stickers`, `animation`. 
 
 ---
 
-*Last updated: 2026-08-20*
+*Last updated: 2026-08-24*
