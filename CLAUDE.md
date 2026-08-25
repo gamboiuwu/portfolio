@@ -208,6 +208,7 @@ Password-protected (SHA-256 hash in localStorage, 5-attempt lockout). Session tr
 | Fuse        | Conversion latency & sales-cycle — the missing *time* dimension of Beacon: joins persistent-visitor identity (`vid`/`vfirst`) with `goal` events to measure how long and how many visits it takes a visitor to reach their first commission-intent signal; conversion-speed donut (Instant→7 days+), visits-before-converting distribution, first-intent-signal mix, and a recent-conversions feed |
 | Arc         | Session engagement lifecycle / intra-visit tempo — lines every event up by its offset from its own session's first event to show *when within a visit* activity crests and when sessions go quiet: activity curve by time-bin (0–15s…5m+), in-visit survival (retention within one visit), event-mix-over-time (early scrolls → mid clicks/intent → late exits), and a longest-sustained-visits feed |
 | Echo        | Artwork re-engagement & magnetic pull — the first tool to measure *intra-visit re-visitation of the same piece*: counts how often each artwork is re-entered (scrolled past, then returned to) within one visit; per-artwork **pull rate** (share of viewers who looked twice), attention-split donut (one glance vs came back), most-magnetic (pull rate) and most-re-viewed (raw returns) leaderboards, glance-and-gone cold list, and a per-artwork look-distribution explorer |
+| Aperture    | Audience × artwork affinity — the first tool to *cross acquisition source with artwork attention*: joins each visit's channel (Compass-style referrer classification) with the artworks it viewed (Spotlight), matched by `sid`, to reveal which audience is drawn to which piece — engaged-audience mix donut, signature channel→artwork pairings ranked by an **affinity index** (100 = site average), a per-channel "what this audience looks at" explorer, and a per-artwork "who's drawn to this piece" explorer |
 
 ---
 
@@ -1179,6 +1180,45 @@ Answers the simplest magnetism question no other tool asks: **which artworks mak
 
 ---
 
+## Aperture — Audience × Artwork Affinity (Admin → Aperture tab) — NEW TOOL
+
+Answers the one question that ties the two most actionable dimensions together and that no other tool crosses: **which audience is drawn to which piece?** Compass reports where visitors *come from* but never what they *look at*; Spotlight/Mosaic/Thread/Echo rank artworks but are blind to *who* is viewing; Muse ties artwork to *conversion*, not to *source*. Aperture is the family's first **cross-axis join of acquisition channel and artwork attention** — the direct answer to an artist's most practical question: *where should I post which work?* If the Instagram crowd lingers on one series and search traffic gravitates to another, Aperture surfaces that pairing so each platform gets led with the piece its audience already loves.
+
+**Why it's genuinely new:** every other tool holds one axis fixed — Compass = source only, Spotlight/Echo/Mosaic/Thread = artwork only, Muse = artwork→conversion, Ember/Facet = source/device→engagement *magnitude*. None relates *specific source* to *specific artwork*. Aperture is a two-dimensional affinity matrix (channel × artwork), reporting not just co-occurrence counts but a normalized **affinity index** (lift) that tells you which pairings genuinely over-index versus the site-wide average.
+
+**No new storage key, no `analytics.js` change** — derived live from the two existing streams: `_gam_analytics_v1` (`pv` events carry `refHost`, added for Compass) and `_gam_spotlight_v1` (artwork viewport events), matched by session id. The same read-only join pattern as Muse (spotlight × goal) and Loom (analytics × spotlight).
+
+**How it works:**
+1. `buildAperture()` finds each session's **channel** from its earliest `pv`'s referrer host via the shared `compassHostOf()` + `compassClassify()` (internal navigation folds into *direct*, matching Compass's channel mix).
+2. It groups spotlight events into the set of artworks each session viewed (with summed ms), keeping the longest human `label` per `artId`.
+3. It attributes every art-viewing session with a known channel to a **channel × artwork** pair matrix, tallying shared-session counts and viewport ms; `attrSessions` is the total of such sessions. Sessions with artwork views but no recorded source are left unattributed.
+4. Per pair it computes an **affinity index** = `lift × 100`, where `lift = P(artwork | channel) / P(artwork | all)` — 100 means that audience views the piece exactly as often as visitors overall; 240 means 2.4× as often. Pairings need ≥ `APER_MIN_SESSIONS` (2) shared sessions *and* a channel with ≥ 2 art-viewing sessions to rank, so one lucky visit can't top the board.
+
+**Admin tab sections:**
+- **Stats**: Attributed Sessions, Channels Contributing, Artworks Attributed, Strongest Affinity (top channel + its lift)
+- **Engaged Audience Mix**: canvas donut + legend of art-viewing sessions per channel (the audience the *work* held, split by source — narrower than Compass's all-arrivals mix); centre shows total attributed sessions
+- **Signature Pairings**: channel→artwork combinations ranked by affinity index, bars sized by the index, each annotated `×lift` and *shared / channel* session counts
+- **What Each Audience Looks At**: pick a channel → its most-viewed artworks (share of that channel's art-viewers), each tagged with its affinity for that channel
+- **Who's Drawn to This Piece**: pick an artwork → the channels driving its attention (share of the piece's viewers), each tagged with its affinity index
+
+**Derived schema (for export):**
+```js
+{ attrSessions,
+  audienceMix:[{channel, sessions}],
+  signaturePairings:[{channel, artId, label, sessions, channelSessions, artworkSessions, affinityIndex, lift, ms}],
+  artworks:[{artId, label, sessions}] }
+```
+
+**Technical notes:**
+- Donut, bars, and affinity tags use the warm amber/sand palette (`rgba(176,122,74…)` social, `rgba(201,168,124…)` search, `rgba(214,190,150…)` referral, muted taupe direct; `aper-tag-hot` amber for lift ≥ 1, `aper-tag-low` grey below) — no blue/pink. New `.aper-*` CSS classes; reuses `jBarList()`, `analytics-stat-chip`, `compass-legend`/`compass-donut-row`, `journey-select`, `compassHostOf()`, `compassClassify()`, `jFmtDur()`, `escHtml()`.
+- Attribution is *association*, not proof of causation — a session whose referrer was a given channel and which also viewed a given piece, matched by `sid`. A session's channel is fixed at its first pageview.
+- Keyed by `sid` (per-tab), so one visitor across several tabs counts as separate visits (consistent with the rest of the family).
+- Tab renders lazily on click, same pattern as Echo/Arc/Fuse/etc.
+
+**API:** none new on `CommissionData` — uses `CommissionData.getAnalytics()` + `.getSpotlight()`. Logic lives in `renderApertureTab()` / `buildAperture()` inside `admin/index.html`.
+
+---
+
 ## Commission System
 
 ### Pages
@@ -1256,4 +1296,4 @@ Stored in `_gam_prices_v1`. Three sections: `digital`, `stickers`, `animation`. 
 
 ---
 
-*Last updated: 2026-08-20*
+*Last updated: 2026-08-25*
