@@ -1030,6 +1030,13 @@
 		.echo-explore-summary { font-size: 0.8em; color: #b7b2a8; margin: 0.2em 0 0.7em; line-height: 1.5; }
 		.echo-explore-summary strong { color: #d6a878; }
 		.echo-empty { color: #444; font-size: 0.85em; padding: 0.5em 0; }
+		.vantage-tag { font-family: 'Courier New', monospace; font-size: 0.66em; letter-spacing: 0.04em;
+			padding: 0.05em 0.4em; border-radius: 3px; margin-left: 0.4em; white-space: nowrap; }
+		.vantage-tag-hot { background: rgba(176,122,74,0.22); color: #d6a878; border: 1px solid rgba(176,122,74,0.4); }
+		.vantage-tag-ch  { background: rgba(201,168,124,0.16); color: #c9a87c; border: 1px solid rgba(201,168,124,0.34); }
+		.vantage-explore-summary { font-size: 0.8em; color: #b7b2a8; margin: 0.2em 0 0.7em; line-height: 1.5; }
+		.vantage-explore-summary strong { color: #d6a878; }
+		.vantage-empty { color: #444; font-size: 0.85em; padding: 0.5em 0; }
 
 		/* Tide tab — trends & momentum (reuses spotlight bars) */
 		#tide-canvas { display: block; }
@@ -1169,6 +1176,7 @@
 				<button class="admin-tab" data-tab="fuse">Fuse</button>
 				<button class="admin-tab" data-tab="arc">Arc</button>
 				<button class="admin-tab" data-tab="echo">Echo</button>
+				<button class="admin-tab" data-tab="vantage">Vantage</button>
 			</div>
 
 			<!-- ============ GALLERY TAB ============ -->
@@ -2628,6 +2636,48 @@
 
 						</div>
 
+						<div id="tab-vantage" class="tab-content">
+
+								<div class="admin-card">
+									<h3>Vantage — Artwork Affinity by Acquisition Channel</h3>
+									<p class="hint">Compass counts <em>how many</em> visits arrive from each channel; Spotlight ranks each piece by attention; Muse ties artworks to <em>conversion</em>; Facet cuts metrics by <em>device</em>. None asks the crossing question: <strong>which artworks does each traffic source actually look at?</strong> Vantage joins the acquisition channel of every visit (its first pageview&rsquo;s referrer &rarr; <code>social / search / referral / direct</code>) with the pieces that visit viewed, so the gallery each audience walks through comes into focus &mdash; the single clearest read on <strong>what to post where</strong>: lead Instagram with the pieces its visitors linger on, feed ArtStation the ones its audience returns to. Read-only over <code>_gam_analytics_v1</code> + <code>_gam_spotlight_v1</code>, matched by <code>sid</code> &mdash; no new storage key, no <code>analytics.js</code> change. Internal same-site navigation folds into <em>direct</em> (as in Compass). Keyed by <code>sid</code>, so one visitor across several tabs counts as separate visits (consistent with the rest of the family).</p>
+									<div id="vantage-stats" class="analytics-stats" style="margin-bottom:1em"></div>
+									<div style="display:flex;gap:0.5em;flex-wrap:wrap">
+										<button class="button small" id="vantage-refresh-btn">Refresh</button>
+										<button class="button small" id="vantage-export-btn">Export JSON</button>
+									</div>
+								</div>
+
+								<div class="admin-card">
+									<h3>Artwork Attention by Channel</h3>
+									<p class="hint">Share of total artwork viewport time contributed by each acquisition channel &mdash; whose audience spends the most eyeball-time on the work. Centre shows the leading channel by attention.</p>
+									<div class="compass-donut-row">
+										<canvas id="vantage-donut" width="180" height="180"></canvas>
+										<div id="vantage-legend" class="compass-legend"></div>
+									</div>
+								</div>
+
+								<div class="admin-card">
+									<h3>Channel &rarr; Signature Artworks</h3>
+									<p class="hint">Pick a channel to see the pieces its visitors view most, ranked by how many of that channel&rsquo;s sessions looked at each. The <span class="vantage-tag vantage-tag-hot">&times;lift</span> tag shows how much the channel over-indexes on a piece versus the site-wide average &mdash; a lift above 1.0 means this audience gravitates to that work more than visitors at large. These are the pieces to lead with on that platform.</p>
+									<select id="vantage-explore-select" class="journey-select" style="margin-bottom:0.9em"></select>
+									<div id="vantage-explore"></div>
+								</div>
+
+								<div class="admin-card">
+									<h3>Channel-Defining Pieces — Highest Affinity</h3>
+									<p class="hint">The piece&times;channel pairs with the strongest over-index &mdash; works that a specific audience disproportionately seeks out. Each needs at least two sessions from the channel to rank, so one visit can&rsquo;t manufacture an affinity. Read as &ldquo;this piece <em>belongs</em> to that channel.&rdquo;</p>
+									<div id="vantage-affinity"></div>
+								</div>
+
+								<div class="admin-card">
+									<h3>Broadest-Reach Pieces — Cross-Channel Appeal</h3>
+									<p class="hint">Artworks viewed across the most distinct channels &mdash; the universally-appealing pieces that resonate no matter where the visitor came from. Strong candidates for the homepage hero and the portfolio cover, where the audience is mixed.</p>
+									<div id="vantage-broad"></div>
+								</div>
+
+							</div>
+
 		</div><!-- /#admin-dash -->
 		<input type="file" id="img-file-input" accept="image/*" style="display:none" />
 
@@ -3681,6 +3731,9 @@ document.addEventListener('click', function(e){
   }
   if (e.target.dataset && e.target.dataset.tab === 'echo') {
     renderEchoTab();
+  }
+  if (e.target.dataset && e.target.dataset.tab === 'vantage') {
+    renderVantageTab();
   }
 });
 
@@ -9825,6 +9878,316 @@ document.getElementById('echo-export-btn').addEventListener('click', function() 
   var url  = URL.createObjectURL(blob);
   var a    = document.createElement('a');
   a.href = url; a.download = 'echo-' + Date.now() + '.json'; a.click();
+  URL.revokeObjectURL(url);
+});
+
+/* ================================================================
+   VANTAGE TAB — Artwork Affinity by Acquisition Channel
+   Joins each session's acquisition channel (first pv refHost →
+   compassClassify) with the artworks that session viewed (spotlight),
+   matched by sid. Answers "which pieces does each traffic source look
+   at" — the source×artwork crossing no other tool performs.
+================================================================ */
+
+var VANTAGE_MIN = 2;   /* min channel-sessions for a piece to rank on affinity boards */
+
+var VANTAGE_CH = {
+  social:   { label: 'Social',            color: 'rgba(176,122,74,0.92)' },
+  search:   { label: 'Search',            color: 'rgba(214,190,150,0.9)' },
+  referral: { label: 'Referral',          color: 'rgba(138,120,86,0.88)' },
+  direct:   { label: 'Direct / Internal', color: 'rgba(201,168,124,0.9)' }
+};
+var VANTAGE_ORDER = ['social', 'search', 'referral', 'direct'];
+
+function vantageChannel(host) {
+  var c = compassClassify(host);
+  return c === 'internal' ? 'direct' : c;   /* fold same-site nav into direct, as Compass does */
+}
+function vantageChLabel(ch) { return (VANTAGE_CH[ch] || {}).label || ch; }
+function vantageChColor(ch) { return (VANTAGE_CH[ch] || {}).color || 'rgba(150,104,62,0.85)'; }
+
+function buildVantage() {
+  var analytics = CommissionData.getAnalytics() || [];
+  var spot      = CommissionData.getSpotlight() || [];
+
+  /* session → acquisition channel (from earliest pageview) */
+  var sessFirst = {};   /* sid → {ts, host} */
+  analytics.forEach(function(e) {
+    if (e.type !== 'pv') return;
+    var sid = e.sid || '?';
+    var cur = sessFirst[sid];
+    var ts  = e.ts || 0;
+    if (!cur || ts < cur.ts) sessFirst[sid] = { ts: ts, host: compassHostOf(e) };
+  });
+
+  /* session → artworks viewed {artId: ms} */
+  var sessArt = {};     /* sid → {artId: ms} */
+  var labelOf = {};     /* artId → longest human label */
+  spot.forEach(function(e) {
+    var sid = e.sid || '?';
+    var art = e.artId || '?';
+    var m = sessArt[sid] || (sessArt[sid] = {});
+    m[art] = (m[art] || 0) + (e.ms || 0);
+    var lbl = (e.label || '').trim() || (art.split('::')[1] || art);
+    if (!labelOf[art] || lbl.length > labelOf[art].length) labelOf[art] = lbl;
+  });
+
+  var channels = {};    /* ch → {ch, sessions, ms, arts:{art:{sessions,ms}}} */
+  var arts     = {};    /* art → {art, sessions, ms, byCh:{ch:{sessions,ms}}} */
+  var attributed = 0;
+
+  Object.keys(sessArt).forEach(function(sid) {
+    var artIds = Object.keys(sessArt[sid]);
+    if (!artIds.length) return;
+    var fm = sessFirst[sid];
+    var ch = fm ? vantageChannel(fm.host) : 'direct';
+    attributed++;
+
+    var c = channels[ch] || (channels[ch] = { ch: ch, sessions: 0, ms: 0, arts: {} });
+    c.sessions++;
+    artIds.forEach(function(art) {
+      var ms = sessArt[sid][art];
+      c.ms += ms;
+      var ca = c.arts[art] || (c.arts[art] = { sessions: 0, ms: 0 });
+      ca.sessions++; ca.ms += ms;
+
+      var a = arts[art] || (arts[art] = { art: art, sessions: 0, ms: 0, byCh: {} });
+      a.sessions++; a.ms += ms;
+      var ac = a.byCh[ch] || (a.byCh[ch] = { sessions: 0, ms: 0 });
+      ac.sessions++; ac.ms += ms;
+    });
+  });
+
+  /* channel baselines: a channel's share of all attributed art-sessions */
+  var chList = VANTAGE_ORDER.filter(function(ch){ return channels[ch]; }).map(function(ch) {
+    var c = channels[ch];
+    c.baseline = attributed ? c.sessions / attributed : 0;
+    return c;
+  });
+
+  function liftOf(a, ch) {
+    var ac = a.byCh[ch];
+    if (!ac || !a.sessions || !channels[ch] || !channels[ch].baseline) return 0;
+    var pieceShareFromCh = ac.sessions / a.sessions;   /* of this piece's viewers, share from ch */
+    return pieceShareFromCh / channels[ch].baseline;   /* vs how common that channel is overall */
+  }
+
+  var artList = Object.keys(arts).map(function(id) {
+    var a = arts[id];
+    a.label       = labelOf[id] || (id.split('::')[1] || id);
+    a.channelsSeen = Object.keys(a.byCh).length;
+    /* signature channel = channel with highest lift among those with ≥ VANTAGE_MIN sessions */
+    var sig = null, sigLift = 0;
+    Object.keys(a.byCh).forEach(function(ch) {
+      if (a.byCh[ch].sessions < VANTAGE_MIN) return;
+      var lf = liftOf(a, ch);
+      if (lf > sigLift) { sigLift = lf; sig = ch; }
+    });
+    a.sigChannel = sig; a.sigLift = sigLift;
+    return a;
+  });
+
+  /* affinity combos: piece×channel with ≥ VANTAGE_MIN channel-sessions, ranked by lift */
+  var combos = [];
+  artList.forEach(function(a) {
+    Object.keys(a.byCh).forEach(function(ch) {
+      var ac = a.byCh[ch];
+      if (ac.sessions < VANTAGE_MIN) return;
+      combos.push({ art: a.art, label: a.label, ch: ch, sessions: ac.sessions, ms: ac.ms, lift: liftOf(a, ch) });
+    });
+  });
+  combos.sort(function(x, y){ return (y.lift - x.lift) || (y.sessions - x.sessions); });
+
+  var broad = artList.slice().sort(function(x, y){
+    return (y.channelsSeen - x.channelsSeen) || (y.sessions - x.sessions) || (y.ms - x.ms);
+  });
+
+  var totalMs = chList.reduce(function(s, c){ return s + c.ms; }, 0);
+  var topChannel = chList.slice().sort(function(x, y){ return y.ms - x.ms; })[0] || null;
+  var broadest   = broad[0] || null;
+
+  return {
+    attributed: attributed, chList: chList, arts: arts, artList: artList,
+    combos: combos, broad: broad, totalMs: totalMs,
+    channels: channels, topChannel: topChannel, broadest: broadest, liftOf: liftOf
+  };
+}
+
+function drawVantageDonut(v) {
+  var canvas = document.getElementById('vantage-donut');
+  if (!canvas) return;
+  var ctx = canvas.getContext('2d');
+  var W = canvas.width, H = canvas.height;
+  ctx.clearRect(0, 0, W, H);
+  var cx = W / 2, cy = H / 2, rOut = 78, rIn = 46;
+
+  var tot = v.totalMs;
+  if (!tot) {
+    ctx.fillStyle = '#444';
+    ctx.font = '12px -apple-system, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('No attributed artwork views yet.', cx, cy);
+    return;
+  }
+
+  var start = -Math.PI / 2;
+  VANTAGE_ORDER.forEach(function(ch) {
+    var c = v.channels[ch];
+    if (!c || !c.ms) return;
+    var ang = (c.ms / tot) * Math.PI * 2;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.arc(cx, cy, rOut, start, start + ang);
+    ctx.closePath();
+    ctx.fillStyle = vantageChColor(ch);
+    ctx.fill();
+    start += ang;
+  });
+
+  ctx.globalCompositeOperation = 'destination-out';
+  ctx.beginPath();
+  ctx.arc(cx, cy, rIn, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.globalCompositeOperation = 'source-over';
+
+  var top = v.topChannel;
+  ctx.fillStyle = '#c9a87c';
+  ctx.font = 'bold 15px -apple-system, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(top ? vantageChLabel(top.ch) : '—', cx, cy - 6);
+  ctx.fillStyle = '#8c887f';
+  ctx.font = '9px "Courier New", monospace';
+  ctx.fillText('TOP BY ATTENTION', cx, cy + 12);
+}
+
+function renderVantageTab() {
+  var v = buildVantage();
+  function chip(num, label) {
+    return '<div class="analytics-stat-chip"><span class="asc-num">' + num +
+      '</span><span class="asc-label">' + label + '</span></div>';
+  }
+  document.getElementById('vantage-stats').innerHTML =
+    chip(v.attributed,                                        'Attributed Sessions') +
+    chip(v.chList.length,                                     'Channels Active')      +
+    chip(v.topChannel ? vantageChLabel(v.topChannel.ch) : '—', 'Top Channel')         +
+    chip(v.broadest ? v.broadest.channelsSeen : '—',         'Broadest Reach');
+
+  /* Attention-by-channel donut */
+  drawVantageDonut(v);
+  document.getElementById('vantage-legend').innerHTML = v.totalMs
+    ? VANTAGE_ORDER.filter(function(ch){ return v.channels[ch] && v.channels[ch].ms; }).map(function(ch) {
+        var c = v.channels[ch];
+        var share = v.totalMs ? Math.round(c.ms / v.totalMs * 100) : 0;
+        return '<div class="compass-legend-item">' +
+          '<span class="compass-legend-swatch" style="background:' + vantageChColor(ch) + '"></span>' +
+          '<span>' + escHtml(vantageChLabel(ch)) + '</span>' +
+          '<span class="compass-legend-val">' + jFmtDur(c.ms) + ' · ' + share + '%</span>' +
+        '</div>';
+      }).join('')
+    : '<p class="vantage-empty">No attributed artwork views yet. Vantage populates once visitors with a known referrer browse the artwork.</p>';
+
+  /* Channel → signature artworks explorer */
+  var sel  = document.getElementById('vantage-explore-select');
+  var prev = sel.value;
+  sel.innerHTML = v.chList.slice().sort(function(x, y){ return y.sessions - x.sessions; }).map(function(c) {
+    return '<option value="' + escHtml(c.ch) + '">' + escHtml(vantageChLabel(c.ch)) + ' (' + c.sessions + ' sessions)</option>';
+  }).join('');
+  if (prev && v.channels[prev]) sel.value = prev;
+
+  function drawExplore() {
+    var ch = sel.value;
+    var el = document.getElementById('vantage-explore');
+    var c  = v.channels[ch];
+    if (!c) {
+      el.innerHTML = '<p class="vantage-empty">No channel data yet.</p>';
+      return;
+    }
+    var rows = Object.keys(c.arts).map(function(art) {
+      var a = v.arts[art];
+      return { label: (a ? a.label : art), count: c.arts[art].sessions, _art: a, _ms: c.arts[art].ms };
+    }).sort(function(x, y){ return (y.count - x.count) || (y._ms - x._ms); });
+
+    var summary = '<p class="vantage-explore-summary"><strong>' + escHtml(vantageChLabel(ch)) +
+      '</strong> delivered <strong>' + c.sessions + '</strong> art-viewing ' +
+      (c.sessions === 1 ? 'session' : 'sessions') + ' (' +
+      (v.attributed ? Math.round(c.sessions / v.attributed * 100) : 0) + '% of all), holding <strong>' +
+      jFmtDur(c.ms) + '</strong> of artwork attention. Its visitors gravitate toward:</p>';
+
+    el.innerHTML = summary + (rows.length
+      ? jBarList(rows.slice(0, 12), c.sessions, { suffix: function(r) {
+          var a = r._art;
+          var lift = a ? v.liftOf(a, ch) : 0;
+          var liftTag = (a && a.byCh[ch] && a.byCh[ch].sessions >= VANTAGE_MIN)
+            ? '<span class="vantage-tag vantage-tag-hot">×' + (Math.round(lift * 100) / 100) + ' lift</span>'
+            : '';
+          return r.count + '/' + c.sessions + ' sessions · ' + jFmtDur(r._ms) + liftTag;
+        } })
+      : '<p class="vantage-empty">No artworks recorded for this channel yet.</p>');
+  }
+  sel.onchange = drawExplore;
+  drawExplore();
+
+  /* Channel-defining pieces — highest affinity */
+  document.getElementById('vantage-affinity').innerHTML = v.combos.length
+    ? jBarList(
+        v.combos.slice(0, 12).map(function(c) {
+          return { label: c.label, count: Math.round(c.lift * 100), _c: c };
+        }),
+        v.combos.length ? Math.round(v.combos[0].lift * 100) : 100,
+        { suffix: function(r) {
+            var c = r._c;
+            return '×' + (Math.round(c.lift * 100) / 100) + ' over-index' +
+              '<span class="vantage-tag vantage-tag-ch">via ' + escHtml(vantageChLabel(c.ch)) + '</span>' +
+              ' · ' + c.sessions + ' sessions';
+          } }
+      )
+    : '<p class="vantage-empty">No piece has yet drawn ' + VANTAGE_MIN + '+ sessions from a single channel. This ranks once traffic accumulates.</p>';
+
+  /* Broadest-reach pieces — cross-channel */
+  document.getElementById('vantage-broad').innerHTML = v.broad.length
+    ? jBarList(
+        v.broad.slice(0, 12).map(function(a) { return { label: a.label, count: a.channelsSeen, _a: a }; }),
+        v.chList.length || 1,
+        { suffix: function(r) {
+            var a = r._a;
+            var chans = Object.keys(a.byCh).sort(function(x, y){ return a.byCh[y].sessions - a.byCh[x].sessions; })
+              .map(vantageChLabel).join(', ');
+            return a.channelsSeen + (a.channelsSeen === 1 ? ' channel' : ' channels') +
+              ' · ' + a.sessions + ' sessions <span class="vantage-tag vantage-tag-ch">' + escHtml(chans) + '</span>';
+          } }
+      )
+    : '<p class="vantage-empty">No artwork attention attributed to a channel yet.</p>';
+}
+
+document.getElementById('vantage-refresh-btn').addEventListener('click', renderVantageTab);
+
+document.getElementById('vantage-export-btn').addEventListener('click', function() {
+  var v = buildVantage();
+  var out = {
+    attributedSessions: v.attributed,
+    channels: v.chList.map(function(c) {
+      return {
+        channel: c.ch, label: vantageChLabel(c.ch), sessions: c.sessions,
+        ms: c.ms, baseline: Math.round(c.baseline * 1000) / 1000,
+        topArtworks: Object.keys(c.arts).map(function(art) {
+          var a = v.arts[art];
+          return { artId: art, label: a ? a.label : art, sessions: c.arts[art].sessions, ms: c.arts[art].ms };
+        }).sort(function(x, y){ return y.sessions - x.sessions; }).slice(0, 25)
+      };
+    }),
+    affinity: v.combos.slice(0, 60).map(function(c) {
+      return { artId: c.art, label: c.label, channel: c.ch, sessions: c.sessions, ms: c.ms, lift: Math.round(c.lift * 1000) / 1000 };
+    }),
+    broadest: v.broad.slice(0, 60).map(function(a) {
+      return { artId: a.art, label: a.label, channelsSeen: a.channelsSeen, sessions: a.sessions, ms: a.ms,
+        signatureChannel: a.sigChannel, signatureLift: Math.round(a.sigLift * 1000) / 1000 };
+    })
+  };
+  var blob = new Blob([JSON.stringify(out, null, 2)], { type: 'application/json' });
+  var url  = URL.createObjectURL(blob);
+  var a    = document.createElement('a');
+  a.href = url; a.download = 'vantage-' + Date.now() + '.json'; a.click();
   URL.revokeObjectURL(url);
 });
 </script>
