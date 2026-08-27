@@ -1031,6 +1031,20 @@
 		.echo-explore-summary strong { color: #d6a878; }
 		.echo-empty { color: #444; font-size: 0.85em; padding: 0.5em 0; }
 
+		/* Strata tab — attention distribution & portfolio equity (warm amber, no blue/pink) */
+		.strata-tag { font-family: 'Courier New', monospace; font-size: 0.66em; letter-spacing: 0.04em;
+			padding: 0.12em 0.5em; border-radius: 3px; margin-left: 0.5em; white-space: nowrap; }
+		.strata-tag-share { background: rgba(176,122,74,0.22); color: #d6a878; border: 1px solid rgba(176,122,74,0.4); }
+		.strata-tag-cold { background: rgba(120,116,108,0.18); color: #9a958c; border: 1px solid rgba(120,116,108,0.35); }
+		.strata-caption { font-size: 0.8em; color: #b7b2a8; line-height: 1.55; max-width: 22em; }
+		.strata-caption strong { color: #d6a878; }
+		.strata-caption .sc-row { display: flex; justify-content: space-between; gap: 1em;
+			padding: 0.28em 0; border-bottom: 1px solid rgba(201,168,124,0.12); }
+		.strata-caption .sc-row:last-child { border-bottom: 0; }
+		.strata-caption .sc-k { color: #8c887f; }
+		.strata-caption .sc-v { color: #d6a878; font-family: 'Courier New', monospace; }
+		.strata-empty { color: #444; font-size: 0.85em; padding: 0.5em 0; }
+
 		/* Tide tab — trends & momentum (reuses spotlight bars) */
 		#tide-canvas { display: block; }
 		.tide-win { display: flex; align-items: center; gap: 0.6em; flex-wrap: wrap; margin-bottom: 1em; }
@@ -1169,6 +1183,7 @@
 				<button class="admin-tab" data-tab="fuse">Fuse</button>
 				<button class="admin-tab" data-tab="arc">Arc</button>
 				<button class="admin-tab" data-tab="echo">Echo</button>
+				<button class="admin-tab" data-tab="strata">Strata</button>
 			</div>
 
 			<!-- ============ GALLERY TAB ============ -->
@@ -2628,6 +2643,47 @@
 
 						</div>
 
+						<div id="tab-strata" class="tab-content">
+
+							<div class="admin-card">
+								<h3>Strata — Attention Distribution &amp; Portfolio Equity</h3>
+								<p class="hint">Spotlight ranks each piece by total attention; Tide tracks momentum; Echo measures re-views. Every one of them looks at pieces <em>individually</em>. None asks about the <strong>shape of the distribution itself</strong>: is visitor attention spread evenly across the whole body of work, or carried by a handful of hits while the rest sit unseen? Strata reads the same viewport events Spotlight records and computes the portfolio&rsquo;s <strong>attention inequality</strong> &mdash; a Lorenz curve and concentration index (Gini), the top-piece and top-3 shares, and the long tail of under-seen work. The single clearest read on whether the catalog is a one-hit show or a deep, evenly-appreciated collection &mdash; and which pieces are quietly dead inventory. Read-only over <code>_gam_spotlight_v1</code> &mdash; no new storage key, no <code>analytics.js</code> change. Attention is measured as total viewport time (ms) per artwork.</p>
+								<div id="strata-stats" class="analytics-stats" style="margin-bottom:1em"></div>
+								<div style="display:flex;gap:0.5em;flex-wrap:wrap">
+									<button class="button small" id="strata-refresh-btn">Refresh</button>
+									<button class="button small" id="strata-export-btn">Export JSON</button>
+								</div>
+							</div>
+
+							<div class="admin-card">
+								<h3>Distribution Shape — Lorenz Curve</h3>
+								<p class="hint">The classic inequality curve. Pieces are sorted from least- to most-viewed along the horizontal axis; the vertical axis is the cumulative share of attention they hold. A straight diagonal (dashed) is perfect equality &mdash; every piece earns identical attention. The more the amber curve bows below that line, the more a few works dominate the room. The area of the bow <em>is</em> the concentration index.</p>
+								<div class="compass-donut-row">
+									<canvas id="strata-lorenz" width="240" height="240"></canvas>
+									<div id="strata-lorenz-caption" class="strata-caption"></div>
+								</div>
+							</div>
+
+							<div class="admin-card">
+								<h3>Concentration Ladder — Who Carries the Portfolio</h3>
+								<p class="hint">Pieces ranked by their share of all held attention, each annotated with total viewport time and the running cumulative share. Reading top-down shows exactly how few works carry the majority of the audience&rsquo;s eyes &mdash; the pieces to lead with, and where the &ldquo;fair share&rdquo; line falls.</p>
+								<div id="strata-ladder"></div>
+							</div>
+
+							<div class="admin-card">
+								<h3>The Long Tail — Under-Seen Pieces</h3>
+								<p class="hint">The cold floor of the distribution: pieces earning less than <strong>half their fair share</strong> of attention (fair share = an equal slice across every tracked piece). These get shown but barely seen &mdash; dead inventory worth re-cropping, re-sequencing, or reconsidering featuring so prominently.</p>
+								<div id="strata-tail"></div>
+							</div>
+
+							<div class="admin-card">
+								<h3>Balance by Page — Where One Piece Dominates</h3>
+								<p class="hint">Concentration cut per page: how much of a page&rsquo;s total artwork attention lands on its single most-viewed piece. A high share means that page is a one-piece show; a low share means its works are evenly appreciated. Useful for deciding where to diversify what&rsquo;s on the wall.</p>
+								<div id="strata-pages"></div>
+							</div>
+
+						</div>
+
 		</div><!-- /#admin-dash -->
 		<input type="file" id="img-file-input" accept="image/*" style="display:none" />
 
@@ -3681,6 +3737,9 @@ document.addEventListener('click', function(e){
   }
   if (e.target.dataset && e.target.dataset.tab === 'echo') {
     renderEchoTab();
+  }
+  if (e.target.dataset && e.target.dataset.tab === 'strata') {
+    renderStrataTab();
   }
 });
 
@@ -9825,6 +9884,277 @@ document.getElementById('echo-export-btn').addEventListener('click', function() 
   var url  = URL.createObjectURL(blob);
   var a    = document.createElement('a');
   a.href = url; a.download = 'echo-' + Date.now() + '.json'; a.click();
+  URL.revokeObjectURL(url);
+});
+
+/* ── Strata — Attention Distribution & Portfolio Equity ──
+   Read-only over _gam_spotlight_v1. Every other artwork tool reads pieces individually
+   (Spotlight = magnitude, Mosaic = co-view, Thread = order, Muse = conversion, Echo =
+   re-view). Strata is the first to measure the SHAPE of the whole distribution — how
+   evenly attention (total viewport ms) spreads across the catalog: a Lorenz curve + Gini
+   concentration index, top-piece / top-3 share, the under-seen long tail, and per-page
+   dominance. No new storage key, no analytics.js change. Warm amber/sand, no blue/pink. */
+
+/* Gini coefficient of a non-negative value array (0 = perfectly even, →1 = all on one). */
+function strataGini(values) {
+  var n = values.length;
+  if (n < 2) return 0;
+  var sorted = values.slice().sort(function(a, b){ return a - b; });
+  var sum = 0, weighted = 0;
+  for (var i = 0; i < n; i++) sum += sorted[i];
+  if (sum <= 0) return 0;
+  for (var j = 0; j < n; j++) weighted += (j + 1) * sorted[j];
+  var g = (2 * weighted) / (n * sum) - (n + 1) / n;
+  return Math.max(0, Math.min(1, g));
+}
+
+function buildStrata() {
+  var events = CommissionData.getSpotlight() || [];
+
+  var msByArt = {}, labelOf = {};
+  var pageTotal = {}, pageArt = {};   /* page -> ms ; page -> {art: ms} */
+  events.forEach(function(e) {
+    var art = e.artId || '?';
+    var ms  = e.ms || 0;
+    msByArt[art] = (msByArt[art] || 0) + ms;
+    var lbl = (e.label || '').trim() || (art.split('::')[1] || art);
+    if (!labelOf[art] || lbl.length > labelOf[art].length) labelOf[art] = lbl;
+    var pg = e.page || '/';
+    pageTotal[pg] = (pageTotal[pg] || 0) + ms;
+    (pageArt[pg] || (pageArt[pg] = {}))[art] = (pageArt[pg][art] || 0) + ms;
+  });
+
+  var list = Object.keys(msByArt).map(function(art) {
+    return { art: art, label: labelOf[art] || (art.split('::')[1] || art), ms: msByArt[art] };
+  }).filter(function(a) { return a.ms > 0; });
+  list.sort(function(x, y) { return y.ms - x.ms; });
+
+  var n = list.length;
+  var total = list.reduce(function(s, a){ return s + a.ms; }, 0);
+
+  /* shares + running cumulative (descending) */
+  var cum = 0;
+  list.forEach(function(a) {
+    a.share = total ? a.ms / total : 0;
+    cum += a.share;
+    a.cum = cum;
+  });
+
+  var gini    = strataGini(list.map(function(a){ return a.ms; }));
+  var giniIdx = Math.round(gini * 100);
+  var top3    = list.slice(0, 3).reduce(function(s, a){ return s + a.ms; }, 0);
+  var top3Share = total ? Math.round(top3 / total * 100) : 0;
+  var topShare  = (total && n) ? Math.round(list[0].share * 100) : 0;
+  var evenShare = n ? 1 / n : 0;
+
+  /* Lorenz points (ascending): cumulative share of pieces vs cumulative share of attention */
+  var asc = list.slice().sort(function(x, y){ return x.ms - y.ms; });
+  var lorenz = [{ x: 0, y: 0 }];
+  var c = 0;
+  asc.forEach(function(a, i) {
+    c += a.ms;
+    lorenz.push({ x: n ? (i + 1) / n : 0, y: total ? c / total : 0 });
+  });
+
+  /* long tail = pieces earning less than half their fair (equal) share */
+  var coldThresh = evenShare * 0.5;
+  var tail = list.filter(function(a){ return a.share < coldThresh; })
+                 .sort(function(x, y){ return x.ms - y.ms; });
+
+  /* per-page balance — top single-piece dominance */
+  var pages = Object.keys(pageTotal).map(function(pg) {
+    var arts = pageArt[pg];
+    var keys = Object.keys(arts);
+    var tot  = pageTotal[pg];
+    var topMs = 0, topArt = null;
+    keys.forEach(function(k){ if (arts[k] > topMs) { topMs = arts[k]; topArt = k; } });
+    return {
+      page: pg, pieces: keys.length, totalMs: tot,
+      topShare: tot ? topMs / tot : 0,
+      topLabel: topArt ? (labelOf[topArt] || (topArt.split('::')[1] || topArt)) : '—'
+    };
+  }).filter(function(p){ return p.pieces >= 1 && p.totalMs > 0; })
+    .sort(function(x, y){ return (y.topShare - x.topShare) || (y.totalMs - x.totalMs); });
+
+  return {
+    list: list, n: n, total: total, gini: gini, giniIdx: giniIdx,
+    top3Share: top3Share, topShare: topShare, evenShare: evenShare,
+    lorenz: lorenz, tail: tail, pages: pages
+  };
+}
+
+function drawStrataLorenz(st) {
+  var canvas = document.getElementById('strata-lorenz');
+  if (!canvas) return;
+  var ctx = canvas.getContext('2d');
+  var W = canvas.width, H = canvas.height;
+  ctx.clearRect(0, 0, W, H);
+  var pad = 30;
+  var x0 = pad, y0 = H - pad, x1 = W - 12, y1 = 12;
+  var plotW = x1 - x0, plotH = y0 - y1;
+  function px(fx){ return x0 + fx * plotW; }
+  function py(fy){ return y0 - fy * plotH; }
+
+  /* axes */
+  ctx.strokeStyle = 'rgba(201,168,124,0.28)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(x0, y0); ctx.lineTo(x1, y0);
+  ctx.moveTo(x0, y0); ctx.lineTo(x0, y1);
+  ctx.stroke();
+
+  if (!st.lorenz || st.lorenz.length < 2 || !st.total) {
+    ctx.fillStyle = '#444';
+    ctx.font = '12px -apple-system, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('No artwork attention yet.', W / 2, H / 2);
+    return;
+  }
+
+  /* equality diagonal */
+  ctx.strokeStyle = 'rgba(140,136,127,0.6)';
+  ctx.setLineDash([4, 3]);
+  ctx.beginPath();
+  ctx.moveTo(px(0), py(0)); ctx.lineTo(px(1), py(1));
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  /* filled area under the Lorenz curve */
+  ctx.beginPath();
+  ctx.moveTo(px(0), py(0));
+  st.lorenz.forEach(function(p){ ctx.lineTo(px(p.x), py(p.y)); });
+  ctx.lineTo(px(1), py(0));
+  ctx.closePath();
+  ctx.fillStyle = 'rgba(201,168,124,0.14)';
+  ctx.fill();
+
+  /* Lorenz curve */
+  ctx.strokeStyle = 'rgba(176,122,74,0.95)';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  st.lorenz.forEach(function(p, i) {
+    var X = px(p.x), Y = py(p.y);
+    if (i === 0) ctx.moveTo(X, Y); else ctx.lineTo(X, Y);
+  });
+  ctx.stroke();
+
+  /* vertices */
+  ctx.fillStyle = '#d6a878';
+  st.lorenz.forEach(function(p) {
+    ctx.beginPath();
+    ctx.arc(px(p.x), py(p.y), 2.2, 0, Math.PI * 2);
+    ctx.fill();
+  });
+
+  /* axis labels */
+  ctx.fillStyle = '#8c887f';
+  ctx.font = '9px "Courier New", monospace';
+  ctx.textAlign = 'center';
+  ctx.fillText('SHARE OF PIECES →', W / 2, H - 9);
+  ctx.save();
+  ctx.translate(11, H / 2);
+  ctx.rotate(-Math.PI / 2);
+  ctx.fillText('SHARE OF ATTENTION →', 0, 0);
+  ctx.restore();
+}
+
+function renderStrataTab() {
+  var st = buildStrata();
+  function chip(num, label) {
+    return '<div class="analytics-stat-chip"><span class="asc-num">' + num +
+      '</span><span class="asc-label">' + label + '</span></div>';
+  }
+  document.getElementById('strata-stats').innerHTML =
+    chip(st.n,                                'Pieces Tracked')        +
+    chip(st.n >= 2 ? st.giniIdx : '—',   'Concentration (0–100)') +
+    chip(st.total ? st.top3Share + '%' : '—', 'Top-3 Share')      +
+    chip(st.tail.length,                      'Under-Seen Pieces');
+
+  /* Lorenz curve + caption */
+  drawStrataLorenz(st);
+  var evenPct  = st.evenShare ? Math.round(st.evenShare * 1000) / 10 : 0;
+  var giniWord = st.giniIdx >= 70 ? 'highly concentrated'
+               : st.giniIdx >= 45 ? 'moderately concentrated'
+               : st.giniIdx > 0   ? 'fairly even'
+               : 'flat';
+  document.getElementById('strata-lorenz-caption').innerHTML = st.total
+    ? '<p style="margin:0 0 0.7em">The curve bows below the dashed equality line by an amount equal to the <strong>concentration</strong>. The straighter the diagonal, the more evenly every piece earns its attention; the deeper the bow, the more a few works carry the room.</p>' +
+      '<div class="sc-row"><span class="sc-k">Concentration index</span><span class="sc-v">' + (st.n >= 2 ? st.giniIdx : '—') + ' / 100</span></div>' +
+      '<div class="sc-row"><span class="sc-k">Shape</span><span class="sc-v">' + giniWord + '</span></div>' +
+      '<div class="sc-row"><span class="sc-k">Top piece share</span><span class="sc-v">' + st.topShare + '%</span></div>' +
+      '<div class="sc-row"><span class="sc-k">Even (fair) share</span><span class="sc-v">' + evenPct + '%</span></div>' +
+      '<div class="sc-row"><span class="sc-k">Total held attention</span><span class="sc-v">' + jFmtDur(st.total) + '</span></div>'
+    : '<p class="strata-empty">No artwork attention recorded yet. Strata populates as visitors browse the public pages.</p>';
+
+  /* Concentration ladder */
+  document.getElementById('strata-ladder').innerHTML = st.list.length
+    ? jBarList(
+        st.list.slice(0, 14).map(function(a) { return { label: a.label, count: Math.round(a.share * 1000) / 10, _a: a }; }),
+        100,
+        { suffix: function(r) {
+            var a = r._a;
+            return (Math.round(a.share * 1000) / 10) + '% of attention' +
+              '<span class="strata-tag strata-tag-share">' + jFmtDur(a.ms) + '</span>' +
+              ' · cum ' + Math.round(a.cum * 100) + '%';
+          } }
+      )
+    : '<p class="strata-empty">No artwork attention recorded yet.</p>';
+
+  /* Long tail */
+  document.getElementById('strata-tail').innerHTML = st.tail.length
+    ? jBarList(
+        st.tail.slice(0, 14).map(function(a) { return { label: a.label, count: Math.round(a.share * 1000) / 10, _a: a }; }),
+        100,
+        { suffix: function(r) {
+            var a = r._a;
+            return (Math.round(a.share * 1000) / 10) + '% share' +
+              '<span class="strata-tag strata-tag-cold">' + jFmtDur(a.ms) + '</span>';
+          } }
+      )
+    : '<p class="strata-empty">No under-seen pieces — attention sits above the fair-share floor across the tracked catalog. A healthy sign of even engagement.</p>';
+
+  /* Balance by page */
+  document.getElementById('strata-pages').innerHTML = st.pages.length
+    ? jBarList(
+        st.pages.slice(0, 12).map(function(p) { return { label: jPageLabel(p.page), count: Math.round(p.topShare * 100), _p: p }; }),
+        100,
+        { suffix: function(r) {
+            var p = r._p;
+            var lbl = p.topLabel.length > 22 ? p.topLabel.slice(0, 21) + '…' : p.topLabel;
+            return Math.round(p.topShare * 100) + '% on one piece · ' + p.pieces + (p.pieces === 1 ? ' piece' : ' pieces') +
+              '<span class="strata-tag strata-tag-share" title="' + escHtml(p.topLabel) + '">' + escHtml(lbl) + '</span>';
+          } }
+      )
+    : '<p class="strata-empty">No page-level artwork attention recorded yet.</p>';
+}
+
+document.getElementById('strata-refresh-btn').addEventListener('click', renderStrataTab);
+
+document.getElementById('strata-export-btn').addEventListener('click', function() {
+  var st = buildStrata();
+  function row(a) {
+    return {
+      artId: a.art, label: a.label, ms: a.ms,
+      share: Math.round(a.share * 10000) / 10000, cum: Math.round(a.cum * 10000) / 10000
+    };
+  }
+  var out = {
+    piecesTracked: st.n, totalMs: st.total,
+    concentrationIndex: st.giniIdx, gini: Math.round(st.gini * 10000) / 10000,
+    top3Share: st.top3Share, topShare: st.topShare,
+    evenShare: Math.round(st.evenShare * 10000) / 10000,
+    ladder: st.list.map(row),
+    longTail: st.tail.map(row),
+    lorenz: st.lorenz.map(function(p) { return { x: Math.round(p.x * 10000) / 10000, y: Math.round(p.y * 10000) / 10000 }; }),
+    pages: st.pages.map(function(p) {
+      return { page: p.page, pieces: p.pieces, totalMs: p.totalMs,
+        topShare: Math.round(p.topShare * 10000) / 10000, topLabel: p.topLabel };
+    })
+  };
+  var blob = new Blob([JSON.stringify(out, null, 2)], { type: 'application/json' });
+  var url  = URL.createObjectURL(blob);
+  var a    = document.createElement('a');
+  a.href = url; a.download = 'strata-' + Date.now() + '.json'; a.click();
   URL.revokeObjectURL(url);
 });
 </script>

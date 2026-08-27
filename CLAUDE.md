@@ -208,6 +208,7 @@ Password-protected (SHA-256 hash in localStorage, 5-attempt lockout). Session tr
 | Fuse        | Conversion latency & sales-cycle — the missing *time* dimension of Beacon: joins persistent-visitor identity (`vid`/`vfirst`) with `goal` events to measure how long and how many visits it takes a visitor to reach their first commission-intent signal; conversion-speed donut (Instant→7 days+), visits-before-converting distribution, first-intent-signal mix, and a recent-conversions feed |
 | Arc         | Session engagement lifecycle / intra-visit tempo — lines every event up by its offset from its own session's first event to show *when within a visit* activity crests and when sessions go quiet: activity curve by time-bin (0–15s…5m+), in-visit survival (retention within one visit), event-mix-over-time (early scrolls → mid clicks/intent → late exits), and a longest-sustained-visits feed |
 | Echo        | Artwork re-engagement & magnetic pull — the first tool to measure *intra-visit re-visitation of the same piece*: counts how often each artwork is re-entered (scrolled past, then returned to) within one visit; per-artwork **pull rate** (share of viewers who looked twice), attention-split donut (one glance vs came back), most-magnetic (pull rate) and most-re-viewed (raw returns) leaderboards, glance-and-gone cold list, and a per-artwork look-distribution explorer |
+| Strata      | Attention distribution & portfolio equity — the first tool to measure the *shape of the whole distribution* rather than pieces individually: attention **inequality** across the catalog via a Lorenz curve + concentration (Gini) index, top-piece / top-3 share, the under-seen **long tail** (pieces below half their fair share), and per-page single-piece dominance. Answers whether the portfolio is a one-hit show or a deep, evenly-appreciated body of work |
 
 ---
 
@@ -1179,6 +1180,46 @@ Answers the simplest magnetism question no other tool asks: **which artworks mak
 
 ---
 
+## Strata — Attention Distribution & Portfolio Equity (Admin → Strata tab) — NEW TOOL
+
+Answers a question no other tab asks: **what is the *shape* of attention across the whole catalog?** Every existing artwork tool reads pieces *individually* — Spotlight ranks each by total time (magnitude), Mosaic pairs pieces seen together (association), Thread orders them (sequence), Muse ties them to conversion, Echo measures re-visitation. **None measures the distribution itself** — whether visitor attention is spread evenly across the body of work or carried by a handful of hits while the rest sit unseen. Strata is the family's first **inequality / concentration** view: it reads the same viewport events Spotlight records and reports how *equitably* attention is shared across the portfolio. The single clearest read on whether the catalog is a one-hit show or a deep, evenly-appreciated collection — and which pieces are quietly dead inventory.
+
+**Why it's genuinely new:** it is a *distribution-shape* metric (a Lorenz curve + Gini coefficient), not another per-piece ranking or all-time aggregate. Spotlight's leaderboard tells you *which* piece is on top; Strata tells you *how lopsided* the whole ranking is — an orthogonal question. No existing tool computes concentration, a Lorenz curve, a fair-share floor, or a long-tail of under-seen work.
+
+**No new storage key, no `analytics.js` change** — derived live from `_gam_spotlight_v1` (the artwork viewport events Spotlight already records via `IntersectionObserver`), the same read-only pattern as Echo/Mosaic/Thread. Attention is measured as total viewport time (ms) summed per artwork.
+
+**How it works:**
+1. `buildStrata()` sums viewport `ms` per `artId` (keeping the longest human `label`), and in parallel accumulates per-page totals and per-page per-artwork ms.
+2. Pieces are ranked by total ms; each gets its `share` of all attention and a running `cum` (cumulative share, descending).
+3. `strataGini()` computes the **Gini coefficient** of the ms distribution (sorted-value formula, `0` = perfectly even → `→1` = all attention on one piece), surfaced as a **concentration index** `0–100`.
+4. A **Lorenz curve** is built from the ascending sort: cumulative share of pieces (x) vs. cumulative share of attention (y); the bow below the equality diagonal *is* the concentration.
+5. The **long tail** = pieces earning less than **half their fair share** (`evenShare = 1/n`, threshold `evenShare × 0.5`) — the dead-inventory floor.
+6. **Per-page balance** = each page's single most-viewed piece's share of that page's attention (one-piece dominance).
+
+**Admin tab sections:**
+- **Stats**: Pieces Tracked, Concentration (0–100 Gini index), Top-3 Share %, Under-Seen Pieces
+- **Distribution Shape — Lorenz Curve**: canvas Lorenz curve (amber, filled) against the dashed equality diagonal, with a caption panel (concentration index, shape word, top-piece share, fair share, total held attention)
+- **Concentration Ladder**: pieces ranked by attention share, each annotated with total viewport time and running cumulative share — how few works carry the portfolio
+- **The Long Tail — Under-Seen Pieces**: pieces below the fair-share floor, ranked coldest first (dead inventory to re-crop, re-sequence, or reconsider)
+- **Balance by Page**: pages ranked by how much of their artwork attention lands on a single piece (one-piece shows vs. evenly-appreciated pages)
+
+**Derived schema (for export):**
+```js
+{ piecesTracked, totalMs, concentrationIndex, gini, top3Share, topShare, evenShare,
+  ladder:[{artId,label,ms,share,cum}], longTail:[…],
+  lorenz:[{x,y}], pages:[{page,pieces,totalMs,topShare,topLabel}] }
+```
+
+**Technical notes:**
+- Lorenz curve/area, tags, and bars use the warm amber/sand palette (`rgba(176,122,74…)` curve, `rgba(201,168,124,0.14)` fill, muted grey equality diagonal) — no blue/pink. New `.strata-*` CSS classes; reuses `jBarList()`, `analytics-stat-chip`, `compass-donut-row`, `jFmtDur()`, `jPageLabel()`, `escHtml()`.
+- Ladder bars scale relative to the top piece's share; the Lorenz canvas is a genuinely new chart type in the family (no other tab draws a cumulative-distribution curve).
+- Attention is per artwork across all sessions (an aggregate distribution, not a per-session metric), so unlike the `sid`-keyed tools it answers a catalog-level question, not a visit-level one.
+- Tab renders lazily on click, same pattern as Echo/Arc/Fuse/etc.
+
+**API:** none new on `CommissionData` — uses `CommissionData.getSpotlight()`. Logic lives in `renderStrataTab()` / `buildStrata()` / `strataGini()` inside `admin/index.html`.
+
+---
+
 ## Commission System
 
 ### Pages
@@ -1256,4 +1297,4 @@ Stored in `_gam_prices_v1`. Three sections: `digital`, `stickers`, `animation`. 
 
 ---
 
-*Last updated: 2026-08-20*
+*Last updated: 2026-08-27*
