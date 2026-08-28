@@ -208,6 +208,7 @@ Password-protected (SHA-256 hash in localStorage, 5-attempt lockout). Session tr
 | Fuse        | Conversion latency & sales-cycle — the missing *time* dimension of Beacon: joins persistent-visitor identity (`vid`/`vfirst`) with `goal` events to measure how long and how many visits it takes a visitor to reach their first commission-intent signal; conversion-speed donut (Instant→7 days+), visits-before-converting distribution, first-intent-signal mix, and a recent-conversions feed |
 | Arc         | Session engagement lifecycle / intra-visit tempo — lines every event up by its offset from its own session's first event to show *when within a visit* activity crests and when sessions go quiet: activity curve by time-bin (0–15s…5m+), in-visit survival (retention within one visit), event-mix-over-time (early scrolls → mid clicks/intent → late exits), and a longest-sustained-visits feed |
 | Echo        | Artwork re-engagement & magnetic pull — the first tool to measure *intra-visit re-visitation of the same piece*: counts how often each artwork is re-entered (scrolled past, then returned to) within one visit; per-artwork **pull rate** (share of viewers who looked twice), attention-split donut (one glance vs came back), most-magnetic (pull rate) and most-re-viewed (raw returns) leaderboards, glance-and-gone cold list, and a per-artwork look-distribution explorer |
+| Glide       | Reading pace & scroll velocity — the first tool to measure the *speed* of the scroll descent (Depth measures how far, Latch the latency to first action, Arc event-volume by time-bin): joins each `pv` with its `scroll` tier events by session to time the gap between tiers, classifies every descent as **Skim / Steady / Read** by velocity (%/sec), and builds a per-page reading-pace ladder (avg seconds to each depth tier); pace-mix donut, most-read & most-skimmed page boards, and a per-page ladder explorer |
 
 ---
 
@@ -1179,6 +1180,46 @@ Answers the simplest magnetism question no other tool asks: **which artworks mak
 
 ---
 
+## Glide — Reading Pace & Scroll Velocity (Admin → Glide tab) — NEW TOOL
+
+Answers a question no other tool measures: **how fast do visitors descend a page — are they reading it, or racing to the bottom?** Depth reports *how far* a visit scrolls (spatial reach) and where people drop off; Latch clocks the latency to the *first* interaction; Arc bins events by *absolute* session time. None measures the **speed of the scroll descent itself** — the gap between one depth tier and the next. Glide is that missing velocity axis: for every page-visit it times how quickly a visitor travelled from the top toward the bottom and sorts the descent into **Skim** (raced down), **Steady**, or **Read** (lingered on the way). The clearest read on whether the bio and commission copy are being *read* or scrolled past.
+
+**Why it's genuinely new:** it is a *temporal-derivative of scroll*, not another reach aggregate. Depth's funnel is spatial (max % reached); Glide is kinematic (percent-per-second between tiers). A page can have a high full-read rate in Depth (everyone reaches 100%) yet a terrible read-share in Glide (everyone reached 100% in two seconds) — the two answer different questions, and Glide is the only one that catches the fast skim-to-bottom.
+
+**No new storage key, no `analytics.js` change** — derived live from `_gam_analytics_v1`, joining each `pv` event (page open) with the `scroll` tier events (25 / 50 / 75 / 100) `analytics.js` already records, matched by session and page. The same read-only pattern as Depth/Latch reading the same store.
+
+**How it works:**
+1. `buildGlide()` groups events by `sid`, sorts each session by `ts`, and **walks** it: a `pv` opens a page-visit record; subsequent `scroll` events on that same page stamp the earliest timestamp each tier (25/50/75/100) was reached. Because `sid` is per-tab, navigation is sequential, so the active pageview owns the scroll events that follow it (reloads of the same path start a fresh page-visit).
+2. A page-visit with **≥ `GLIDE_MIN_TIERS` (2)** tiers is a **measured descent**. Its **velocity** = `(maxTier − minTier) / (Δseconds between those tiers)` in **%/sec**, clamped to `GLIDE_VEL_CAP` (40) for instant/outlier descents. Visits with one tier or none aren't rated.
+3. `glideClass(vel)` labels each descent: **Skim** (`≥ GLIDE_SKIM_VEL`, 12 %/s), **Read** (`≤ GLIDE_READ_VEL`, 3 %/s), else **Steady**.
+4. Per page it aggregates the pace mix, average/median velocity, read-share & skim-share, median time-to-furthest-tier, and a **reading-pace ladder** — the average seconds from page-open to each tier (25/50/75/100), anchored to the `pv` timestamp. Pages need **≥ `GLIDE_MIN_VISITS` (2)** measured descents to rank on the boards.
+
+**Admin tab sections:**
+- **Stats**: Pages Measured, Median Scroll Speed (%/s), Skim Rate %, Most-Read Page (lowest average velocity = most deliberate)
+- **Pace Mix**: canvas donut + legend across Read / Steady / Skim; centre shows the median scroll speed
+- **Most Read Pages**: pages ranked by the share of visits that descended slowly (Read), annotated with average velocity — the pages whose words land
+- **Most Skimmed Pages**: the inverse — pages most often raced through, annotated with average velocity
+- **Reading-Pace Ladder**: pick a page → the average seconds to reach each scroll tier (25→100) shown as a four-rung ladder, plus that page's own skim/steady/read split and typical time-to-furthest-point
+
+**Derived schema (for export):**
+```js
+{ pagesMeasured, totalMeasured, totalVisits, medianScrollSpeed, skimRate,
+  paceMix:{read,steady,skim},
+  pages:[{ page, visits, skim, steady, read, avgVel, medVel, readShare, skimShare,
+           medReachSec, ladderSec:{25,50,75,100} }],
+  mostRead:[…], mostSkimmed:[…] }
+```
+
+**Technical notes:**
+- Donut, tags, and ladder rungs use the warm amber/clay/sand ramp (`rgba(176,122,74…)` read → `rgba(214,190,150…)` skim) — no blue/pink. New `.glide-*` CSS classes; reuses `jBarList()`, `analytics-stat-chip`, `compass-legend`/`compass-donut-row`, `journey-select`, `jPageLabel()`, and `escHtml()`.
+- Velocity is a *proxy*: `scroll` events fire once per tier per page-load (debounced at 250ms), so Glide measures the first clean descent, not every micro-scroll. A page shorter than the viewport may never fire a second tier and simply won't be rated (noted in the tab hint), the same reach caveat Depth carries.
+- Measurement is per session (`sid`), so one visitor across several tabs counts as separate descents (consistent with the rest of the family).
+- Tab renders lazily on click, same pattern as Echo/Arc/Fuse/Facet/etc.
+
+**API:** none new on `CommissionData` — uses `CommissionData.getAnalytics()`. Logic lives in `renderGlideTab()` / `buildGlide()` inside `admin/index.html`.
+
+---
+
 ## Commission System
 
 ### Pages
@@ -1256,4 +1297,4 @@ Stored in `_gam_prices_v1`. Three sections: `digital`, `stickers`, `animation`. 
 
 ---
 
-*Last updated: 2026-08-20*
+*Last updated: 2026-08-28*
