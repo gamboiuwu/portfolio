@@ -1031,6 +1031,18 @@
 		.echo-explore-summary strong { color: #d6a878; }
 		.echo-empty { color: #444; font-size: 0.85em; padding: 0.5em 0; }
 
+		/* Atlas tab — source-to-artwork affinity (warm amber, no blue/pink) */
+		.atlas-tag { font-family: 'Courier New', monospace; font-size: 0.66em; letter-spacing: 0.04em;
+			border-radius: 3px; padding: 0.05em 0.4em; margin-left: 0.5em; white-space: nowrap;
+			background: rgba(176,122,74,0.2); color: #d6a878; border: 1px solid rgba(176,122,74,0.4); }
+		.atlas-tag-direct   { background: rgba(201,168,124,0.2); color: #d6be96; border-color: rgba(201,168,124,0.4); }
+		.atlas-tag-social   { background: rgba(176,122,74,0.2);  color: #d6a878; border-color: rgba(176,122,74,0.42); }
+		.atlas-tag-search   { background: rgba(150,168,110,0.18); color: #b6c890; border-color: rgba(150,168,110,0.4); }
+		.atlas-tag-referral { background: rgba(214,190,150,0.2); color: #e0c99e; border-color: rgba(214,190,150,0.42); }
+		.atlas-explore-summary { font-size: 0.8em; color: #b7b2a8; margin: 0.2em 0 0.7em; line-height: 1.5; }
+		.atlas-explore-summary strong { color: #d6a878; }
+		.atlas-empty { color: #444; font-size: 0.85em; padding: 0.5em 0; }
+
 		/* Tide tab — trends & momentum (reuses spotlight bars) */
 		#tide-canvas { display: block; }
 		.tide-win { display: flex; align-items: center; gap: 0.6em; flex-wrap: wrap; margin-bottom: 1em; }
@@ -1169,6 +1181,7 @@
 				<button class="admin-tab" data-tab="fuse">Fuse</button>
 				<button class="admin-tab" data-tab="arc">Arc</button>
 				<button class="admin-tab" data-tab="echo">Echo</button>
+				<button class="admin-tab" data-tab="atlas">Atlas</button>
 			</div>
 
 			<!-- ============ GALLERY TAB ============ -->
@@ -2628,6 +2641,48 @@
 
 						</div>
 
+					<div id="tab-atlas" class="tab-content">
+
+						<div class="admin-card">
+							<h3>Atlas — Source-to-Artwork Affinity</h3>
+							<p class="hint">Compass answers where visitors <em>come from</em>; Spotlight answers which artwork <em>holds attention</em>. Neither crosses the two. Atlas is the join: <strong>which acquisition channel&rsquo;s visitors are drawn to which artwork?</strong> It matches each session&rsquo;s traffic channel (from its first pageview&rsquo;s referrer) with the artwork viewport-time that session recorded &mdash; so you can see that, say, Instagram visitors linger on one piece while search traffic gravitates to another. The single clearest read on <strong>what to post on which platform</strong>. Read-only over <code>_gam_analytics_v1</code> + <code>_gam_spotlight_v1</code> &mdash; no new storage key, no <code>analytics.js</code> change. Attention is measured in viewport milliseconds; internal (same-site) referrals fold into Direct, matching Compass. Keyed by <code>sid</code>, so one visitor across several tabs counts as separate sessions (consistent with the rest of the family).</p>
+							<div id="atlas-stats" class="analytics-stats" style="margin-bottom:1em"></div>
+							<div style="display:flex;gap:0.5em;flex-wrap:wrap">
+								<button class="button small" id="atlas-refresh-btn">Refresh</button>
+								<button class="button small" id="atlas-export-btn">Export JSON</button>
+							</div>
+						</div>
+
+						<div class="admin-card">
+							<h3>Artwork Attention by Channel</h3>
+							<p class="hint">Every second of artwork viewport-time, split by the channel that delivered the visitor. This is the share of your audience&rsquo;s <em>engaged art-gazing</em> each source is responsible for &mdash; not just who sends the most clicks (Compass), but who sends the visitors who actually stop and look.</p>
+							<div class="compass-donut-row">
+								<canvas id="atlas-donut" width="180" height="180"></canvas>
+								<div id="atlas-legend" class="compass-legend"></div>
+							</div>
+						</div>
+
+						<div class="admin-card">
+							<h3>Each Channel&rsquo;s Signature Piece</h3>
+							<p class="hint">For every acquisition channel, the one artwork its visitors spend the most time on &mdash; the piece that best represents what that audience came to see. Bars sized by the channel&rsquo;s total artwork attention; the tag names its top piece. Lead each platform&rsquo;s posts with the work its own audience already gravitates to.</p>
+							<div id="atlas-signature"></div>
+						</div>
+
+						<div class="admin-card">
+							<h3>Channel &rarr; Artwork Explorer</h3>
+							<p class="hint">Pick a channel to see the full ranking of artworks its visitors linger on, by held attention. The concrete answer to &ldquo;what should I post on <em>this</em> platform?&rdquo; &mdash; the pieces that already earn attention from that exact audience.</p>
+							<select id="atlas-explore-select" class="journey-select" style="margin-bottom:0.9em"></select>
+							<div id="atlas-explore"></div>
+						</div>
+
+						<div class="admin-card">
+							<h3>Each Artwork&rsquo;s Best Source</h3>
+							<p class="hint">The inverse view: for every piece, the channel that sends its most engaged viewers &mdash; where that artwork resonates hardest. Ranked by total attention the piece earns, tagged with its strongest source. Use it to decide which platform to feature a given work on.</p>
+							<div id="atlas-bestsource"></div>
+						</div>
+
+					</div>
+
 		</div><!-- /#admin-dash -->
 		<input type="file" id="img-file-input" accept="image/*" style="display:none" />
 
@@ -3681,6 +3736,9 @@ document.addEventListener('click', function(e){
   }
   if (e.target.dataset && e.target.dataset.tab === 'echo') {
     renderEchoTab();
+  }
+  if (e.target.dataset && e.target.dataset.tab === 'atlas') {
+    renderAtlasTab();
   }
 });
 
@@ -9827,6 +9885,285 @@ document.getElementById('echo-export-btn').addEventListener('click', function() 
   a.href = url; a.download = 'echo-' + Date.now() + '.json'; a.click();
   URL.revokeObjectURL(url);
 });
+
+/* ── Atlas — Source-to-Artwork Affinity ──
+   Joins the acquisition-channel stream (analytics pv → refHost → channel)
+   with the artwork-attention stream (spotlight viewport ms) by session id.
+   Answers: which channel's visitors are drawn to which artwork?
+   Read-only over _gam_analytics_v1 + _gam_spotlight_v1 — no new storage key,
+   no analytics.js change. Warm amber palette, reuses Compass channel colors. */
+
+var ATLAS_CH_ORDER  = ['direct', 'social', 'search', 'referral'];
+var ATLAS_CH_LABELS = { direct: 'Direct', social: 'Social', search: 'Search', referral: 'Referral' };
+
+function atlasChLabel(ch) { return ATLAS_CH_LABELS[ch] || (ch ? ch.charAt(0).toUpperCase() + ch.slice(1) : '—'); }
+
+function buildAtlas() {
+  var events = CommissionData.getAnalytics() || [];
+  var spots  = CommissionData.getSpotlight() || [];
+
+  /* session → channel, taken from its earliest pageview's referrer */
+  var firstPvTs = {};   /* sid → earliest pv ts */
+  var sessCh    = {};   /* sid → channel */
+  events.forEach(function(e) {
+    if (!e || e.type !== 'pv' || !e.sid) return;
+    var ts = e.ts || 0;
+    if (firstPvTs[e.sid] === undefined || ts < firstPvTs[e.sid]) {
+      firstPvTs[e.sid] = ts;
+      var ch = compassClassify(compassHostOf(e));
+      if (ch === 'internal') ch = 'direct';   /* fold same-site into direct, matching Compass */
+      sessCh[e.sid] = ch;
+    }
+  });
+
+  var labelOf  = {};   /* artId → longest human label */
+  var channels = {};   /* ch → { sids:{}, artMs, artViews, arts:{ artId:{ms,views,sids:{}} } } */
+  var arts     = {};   /* artId → { totalMs, totalViews, sids:{}, byCh:{ ch:{ms,views,sids:{}} } } */
+  var attrSids = {};   /* distinct attributed art-viewing sessions */
+
+  spots.forEach(function(e) {
+    if (!e || !e.sid || !e.artId) return;
+    var ch = sessCh[e.sid];
+    if (!ch) return;                 /* only art views we can attribute to a channel */
+    var art = e.artId, ms = e.ms || 0;
+    var lbl = (e.label || e.alt || '').trim() || (art.split('::')[1] || art);
+    if (!labelOf[art] || lbl.length > labelOf[art].length) labelOf[art] = lbl;
+    attrSids[e.sid] = true;
+
+    var c = channels[ch] || (channels[ch] = { sids: {}, artMs: 0, artViews: 0, arts: {} });
+    c.sids[e.sid] = true; c.artMs += ms; c.artViews++;
+    var ca = c.arts[art] || (c.arts[art] = { ms: 0, views: 0, sids: {} });
+    ca.ms += ms; ca.views++; ca.sids[e.sid] = true;
+
+    var a = arts[art] || (arts[art] = { totalMs: 0, totalViews: 0, sids: {}, byCh: {} });
+    a.totalMs += ms; a.totalViews++; a.sids[e.sid] = true;
+    var ac = a.byCh[ch] || (a.byCh[ch] = { ms: 0, views: 0, sids: {} });
+    ac.ms += ms; ac.views++; ac.sids[e.sid] = true;
+  });
+
+  /* per-channel list, each with its ranked artworks */
+  var chList = Object.keys(channels).map(function(ch) {
+    var c = channels[ch];
+    var artArr = Object.keys(c.arts).map(function(id) {
+      var ca = c.arts[id];
+      return { art: id, label: labelOf[id] || id, ms: ca.ms, views: ca.views,
+               sessions: Object.keys(ca.sids).length };
+    }).sort(function(x, y) { return (y.ms - x.ms) || (y.views - x.views); });
+    return { channel: ch, label: atlasChLabel(ch), sessions: Object.keys(c.sids).length,
+             artMs: c.artMs, artViews: c.artViews, arts: artArr, topArt: artArr[0] || null };
+  }).sort(function(x, y) { return y.artMs - x.artMs; });
+
+  /* per-artwork list, each with its signature (strongest) channel */
+  var artArr = Object.keys(arts).map(function(id) {
+    var a = arts[id];
+    var byChArr = Object.keys(a.byCh).map(function(ch) {
+      var ac = a.byCh[ch];
+      return { channel: ch, label: atlasChLabel(ch), ms: ac.ms, views: ac.views,
+               sessions: Object.keys(ac.sids).length };
+    }).sort(function(x, y) { return (y.ms - x.ms) || (y.views - x.views); });
+    var sig = byChArr[0] || null;
+    return { art: id, label: labelOf[id] || id, totalMs: a.totalMs, totalViews: a.totalViews,
+             sessions: Object.keys(a.sids).length, byCh: byChArr,
+             signature: sig ? sig.channel : null, signatureLabel: sig ? sig.label : '—',
+             signatureMs: sig ? sig.ms : 0 };
+  }).sort(function(x, y) { return y.totalMs - x.totalMs; });
+
+  var totalMs = chList.reduce(function(s, c) { return s + c.artMs; }, 0);
+
+  /* strongest (channel, artwork) pairing by held attention */
+  var strongest = null;
+  chList.forEach(function(c) {
+    if (c.topArt && (!strongest || c.topArt.ms > strongest.ms)) {
+      strongest = { channel: c.label, art: c.topArt.label, ms: c.topArt.ms };
+    }
+  });
+
+  return {
+    channels: chList, arts: artArr, totalMs: totalMs,
+    attrSessions: Object.keys(attrSids).length,
+    strongest: strongest
+  };
+}
+
+function drawAtlasDonut(at) {
+  var canvas = document.getElementById('atlas-donut');
+  if (!canvas) return;
+  var ctx = canvas.getContext('2d');
+  var W = canvas.width, H = canvas.height;
+  ctx.clearRect(0, 0, W, H);
+  var cx = W / 2, cy = H / 2, rOut = 78, rIn = 46;
+  var total = at.totalMs;
+
+  if (!total) {
+    ctx.fillStyle = '#444';
+    ctx.font = '12px -apple-system, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('No attributed art views yet.', cx, cy);
+    return;
+  }
+
+  var start = -Math.PI / 2;
+  at.channels.forEach(function(c) {
+    if (!c.artMs) return;
+    var ang = (c.artMs / total) * Math.PI * 2;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.arc(cx, cy, rOut, start, start + ang);
+    ctx.closePath();
+    ctx.fillStyle = COMPASS_COLORS[c.channel] || 'rgba(201,168,124,0.9)';
+    ctx.fill();
+    start += ang;
+  });
+
+  ctx.globalCompositeOperation = 'destination-out';
+  ctx.beginPath();
+  ctx.arc(cx, cy, rIn, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.globalCompositeOperation = 'source-over';
+
+  ctx.fillStyle = '#c9a87c';
+  ctx.font = 'bold 18px -apple-system, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(jFmtDur(total), cx, cy - 6);
+  ctx.fillStyle = '#8c887f';
+  ctx.font = '9px "Courier New", monospace';
+  ctx.fillText('ART TIME', cx, cy + 12);
+}
+
+/* one ranked row with a human duration as its number (spotlight bar styles) */
+function atlasRow(label, pct, tagHtml, num, sub) {
+  return '<div class="spotlight-row">' +
+    '<div class="sp-info">' +
+      '<div class="sp-label" title="' + escHtml(label) + '">' + escHtml(label) + (tagHtml || '') + '</div>' +
+      '<div class="sp-bar-wrap"><div class="sp-bar" style="width:' + pct + '%"></div></div>' +
+    '</div>' +
+    '<div class="sp-meta">' +
+      '<span class="sp-time">' + num + '</span>' +
+      '<span class="sp-views">' + sub + '</span>' +
+    '</div>' +
+  '</div>';
+}
+
+function renderAtlasTab() {
+  var at = buildAtlas();
+
+  function chip(num, label) {
+    return '<div class="analytics-stat-chip"><span class="asc-num">' + num +
+      '</span><span class="asc-label">' + label + '</span></div>';
+  }
+  document.getElementById('atlas-stats').innerHTML =
+    chip(at.attrSessions,                          'Attributed Sessions') +
+    chip(at.channels.length,                       'Channels Engaged')    +
+    chip(at.arts.length,                           'Artworks Attributed') +
+    chip(at.totalMs ? jFmtDur(at.totalMs) : '—',   'Total Art Time');
+
+  var noData = '<p class="atlas-empty">No attributed artwork attention yet. Atlas fills once visitors arrive with a known referrer and spend time on artwork — browse the public pages from a social/search link and it populates.</p>';
+
+  /* ── Attention-by-channel donut ── */
+  drawAtlasDonut(at);
+  document.getElementById('atlas-legend').innerHTML = at.totalMs
+    ? at.channels.map(function(c) {
+        var share = at.totalMs ? Math.round(c.artMs / at.totalMs * 100) : 0;
+        return '<div class="compass-legend-item">' +
+          '<span class="compass-legend-swatch" style="background:' + (COMPASS_COLORS[c.channel] || 'rgba(201,168,124,0.9)') + '"></span>' +
+          '<span>' + escHtml(c.label) + '</span>' +
+          '<span class="compass-legend-val">' + jFmtDur(c.artMs) + ' · ' + share + '%</span>' +
+        '</div>';
+      }).join('')
+    : '<p class="atlas-empty">No attributed art time recorded yet.</p>';
+
+  /* ── Each channel's signature piece ── */
+  var sig = at.channels.filter(function(c) { return c.topArt; });
+  if (!sig.length) {
+    document.getElementById('atlas-signature').innerHTML = noData;
+  } else {
+    var maxMs = sig[0].artMs || 1;
+    document.getElementById('atlas-signature').innerHTML = '<div class="spotlight-board">' +
+      sig.map(function(c) {
+        var pct = Math.max(6, Math.round((c.artMs / maxMs) * 100));
+        var tag = '<span class="atlas-tag atlas-tag-' + c.channel + '">' + escHtml(c.label) + '</span>';
+        return atlasRow(c.topArt.label, pct, tag, jFmtDur(c.artMs),
+          'top piece · ' + jFmtDur(c.topArt.ms) + ' · ' + c.sessions + (c.sessions === 1 ? ' session' : ' sessions'));
+      }).join('') + '</div>';
+  }
+
+  /* ── Channel → artwork explorer ── */
+  var sel = document.getElementById('atlas-explore-select');
+  var prev = sel.value;
+  sel.innerHTML = at.channels.map(function(c) {
+    return '<option value="' + escHtml(c.channel) + '">' + escHtml(c.label) + ' (' + jFmtDur(c.artMs) + ')</option>';
+  }).join('');
+  if (prev && at.channels.some(function(c){ return c.channel === prev; })) sel.value = prev;
+
+  function drawExplore() {
+    var el = document.getElementById('atlas-explore');
+    if (!at.channels.length) { el.innerHTML = noData; return; }
+    var c = at.channels.filter(function(x){ return x.channel === sel.value; })[0] || at.channels[0];
+    if (!c || !c.arts.length) { el.innerHTML = '<p class="atlas-empty">No artwork attention from this channel yet.</p>'; return; }
+    var maxMs = c.arts[0].ms || 1;
+    el.innerHTML =
+      '<p class="atlas-explore-summary"><strong>' + escHtml(c.label) + '</strong> delivered <strong>' + c.sessions +
+        '</strong> art-viewing ' + (c.sessions === 1 ? 'session' : 'sessions') + ' across <strong>' + c.arts.length +
+        '</strong> ' + (c.arts.length === 1 ? 'piece' : 'pieces') + ', <strong>' + jFmtDur(c.artMs) +
+        '</strong> of total held attention.</p>' +
+      '<div class="spotlight-board">' +
+        c.arts.slice(0, 15).map(function(r) {
+          var pct = Math.max(6, Math.round((r.ms / maxMs) * 100));
+          return atlasRow(r.label, pct, '', jFmtDur(r.ms),
+            r.views + (r.views === 1 ? ' view · ' : ' views · ') + r.sessions + (r.sessions === 1 ? ' session' : ' sessions'));
+        }).join('') + '</div>';
+  }
+  sel.onchange = drawExplore;
+  drawExplore();
+
+  /* ── Each artwork's best source ── */
+  var pieces = at.arts.filter(function(a){ return a.signature; });
+  if (!pieces.length) {
+    document.getElementById('atlas-bestsource').innerHTML = noData;
+  } else {
+    var maxTot = pieces[0].totalMs || 1;
+    document.getElementById('atlas-bestsource').innerHTML = '<div class="spotlight-board">' +
+      pieces.slice(0, 15).map(function(a) {
+        var pct = Math.max(6, Math.round((a.totalMs / maxTot) * 100));
+        var tag = '<span class="atlas-tag atlas-tag-' + a.signature + '">via ' + escHtml(a.signatureLabel) + '</span>';
+        var sigShare = a.totalMs ? Math.round(a.signatureMs / a.totalMs * 100) : 0;
+        return atlasRow(a.label, pct, tag, jFmtDur(a.totalMs),
+          sigShare + '% from ' + escHtml(a.signatureLabel) + ' · ' + a.sessions + (a.sessions === 1 ? ' session' : ' sessions'));
+      }).join('') + '</div>';
+  }
+}
+
+document.getElementById('atlas-refresh-btn').addEventListener('click', renderAtlasTab);
+
+document.getElementById('atlas-export-btn').addEventListener('click', function() {
+  var at = buildAtlas();
+  var out = {
+    attributedSessions: at.attrSessions,
+    channelsEngaged: at.channels.length,
+    artworksAttributed: at.arts.length,
+    totalArtMs: at.totalMs,
+    strongestPairing: at.strongest,
+    channels: at.channels.map(function(c) {
+      return { channel: c.channel, sessions: c.sessions, artMs: c.artMs, artViews: c.artViews,
+        topArtwork: c.topArt ? { label: c.topArt.label, ms: c.topArt.ms } : null,
+        artworks: c.arts.slice(0, 30).map(function(r) {
+          return { label: r.label, ms: r.ms, views: r.views, sessions: r.sessions };
+        }) };
+    }),
+    artworks: at.arts.slice(0, 60).map(function(a) {
+      return { label: a.label, totalMs: a.totalMs, sessions: a.sessions,
+        signatureChannel: a.signature, signatureMs: a.signatureMs,
+        byChannel: a.byCh.map(function(b) { return { channel: b.channel, ms: b.ms, views: b.views, sessions: b.sessions }; }) };
+    })
+  };
+  var blob = new Blob([JSON.stringify(out, null, 2)], { type: 'application/json' });
+  var url  = URL.createObjectURL(blob);
+  var a    = document.createElement('a');
+  a.href = url; a.download = 'atlas-' + Date.now() + '.json'; a.click();
+  URL.revokeObjectURL(url);
+});
+
 </script>
 
 </body>

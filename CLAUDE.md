@@ -208,6 +208,7 @@ Password-protected (SHA-256 hash in localStorage, 5-attempt lockout). Session tr
 | Fuse        | Conversion latency & sales-cycle — the missing *time* dimension of Beacon: joins persistent-visitor identity (`vid`/`vfirst`) with `goal` events to measure how long and how many visits it takes a visitor to reach their first commission-intent signal; conversion-speed donut (Instant→7 days+), visits-before-converting distribution, first-intent-signal mix, and a recent-conversions feed |
 | Arc         | Session engagement lifecycle / intra-visit tempo — lines every event up by its offset from its own session's first event to show *when within a visit* activity crests and when sessions go quiet: activity curve by time-bin (0–15s…5m+), in-visit survival (retention within one visit), event-mix-over-time (early scrolls → mid clicks/intent → late exits), and a longest-sustained-visits feed |
 | Echo        | Artwork re-engagement & magnetic pull — the first tool to measure *intra-visit re-visitation of the same piece*: counts how often each artwork is re-entered (scrolled past, then returned to) within one visit; per-artwork **pull rate** (share of viewers who looked twice), attention-split donut (one glance vs came back), most-magnetic (pull rate) and most-re-viewed (raw returns) leaderboards, glance-and-gone cold list, and a per-artwork look-distribution explorer |
+| Atlas       | Source-to-artwork affinity — the first tool to *cross acquisition channel with artwork attention*: joins each session's traffic channel (Compass's `refHost`→channel) with its Spotlight viewport-time to answer **which channel's visitors are drawn to which artwork**; art-attention-by-channel donut, each channel's signature piece, a channel→artwork explorer, and each artwork's best source — the direct read on *what to post on which platform* |
 
 ---
 
@@ -1179,6 +1180,44 @@ Answers the simplest magnetism question no other tool asks: **which artworks mak
 
 ---
 
+## Atlas — Source-to-Artwork Affinity (Admin → Atlas tab) — NEW TOOL
+
+Answers the one question that ties acquisition to the artwork itself: **which acquisition channel's visitors are drawn to which artwork?** Compass measures where visitors *come from* (channel mix, referrers, device); Spotlight measures which artwork *holds attention* (total viewport ms). Neither crosses the two — Compass never asks what its traffic looks at, Spotlight never asks where its viewers came from. Atlas is that join: for an artist whose reach is spread across Instagram, TikTok, X, ArtStation and search, it is the single clearest read on **what to post on which platform** — lead each channel's posts with the work its own audience already stops to look at.
+
+**Why it's genuinely new:** it is a *cross-segment join* no other tool performs. Muse joins artwork × *conversion* (goal events); Mosaic joins artwork × *artwork* (co-view); Facet segments by *device* and compares *aggregate* session metrics (not per-artwork); Ember/Prism score/segment whole sessions by source but never attribute *artwork attention* to a source. Atlas holds the acquisition dimension (channel) against the artwork dimension (attention) — the source × artwork matrix that was missing.
+
+**No new storage key, no `analytics.js` change** — derived live from `_gam_analytics_v1` (`pv` events carry `refHost`, added for Compass) and `_gam_spotlight_v1` (artwork viewport ms), matched by session id. The same read-only pattern as Muse/Loom joining the two streams.
+
+**How it works:**
+1. `buildAtlas()` assigns every session a **channel** from its *earliest* `pv`'s referrer via the shared `compassClassify(compassHostOf(e))`; `internal` (same-site) folds into `direct`, matching Compass.
+2. It walks spotlight events, keeping only art views from sessions with a known channel (unattributed views — e.g. a session with no recorded pageview — are skipped), and accumulates viewport ms two ways: **per channel → per artwork**, and **per artwork → per channel**.
+3. Per channel it derives total artwork ms, art-viewing session count, and a ranked artwork list (its **signature piece** = the artwork it spends most time on). Per artwork it derives total ms, viewer count, and its **signature source** = the channel contributing the most attention.
+4. The **strongest pairing** is the single (channel, artwork) cell with the most held attention.
+
+**Admin tab sections:**
+- **Stats**: Attributed Sessions, Channels Engaged, Artworks Attributed, Total Art Time
+- **Artwork Attention by Channel**: canvas donut + legend splitting total artwork viewport-time by channel (reusing Compass's channel colours); centre shows total art time — *who sends the visitors who actually stop and look*, not just who sends clicks
+- **Each Channel's Signature Piece**: channels ranked by total artwork attention, each bar tagged with its single top piece — lead that platform with that work
+- **Channel → Artwork Explorer**: pick a channel → the full ranking of artworks its visitors linger on (the concrete "what to post here" answer)
+- **Each Artwork's Best Source**: the inverse — every piece ranked by total attention, tagged `via <channel>` with the share that channel contributes (which platform to feature a given work on)
+
+**Derived schema (for export):**
+```js
+{ attributedSessions, channelsEngaged, artworksAttributed, totalArtMs, strongestPairing:{channel,art,ms},
+  channels:[{channel, sessions, artMs, artViews, topArtwork:{label,ms}, artworks:[{label,ms,views,sessions}]}],
+  artworks:[{label, totalMs, sessions, signatureChannel, signatureMs, byChannel:[{channel,ms,views,sessions}]}] }
+```
+
+**Technical notes:**
+- Donut, bars, and tags use the warm amber/sand/clay/olive palette — the channel swatches reuse `COMPASS_COLORS` (direct amber, social clay, search olive, referral sand) — no blue/pink. New `.atlas-*` CSS classes; reuses `compass-legend`/`compass-donut-row`, the `spotlight-board`/`sp-*` bar styles, the `journey-select` dropdown, `jFmtDur()`, `compassClassify()`, `compassHostOf()`, and `escHtml()`.
+- Attribution is *association* — a session that both arrived via a channel and later spent time on a piece, matched by `sid`; it does not prove the channel caused the interest. Attention is measured in viewport milliseconds (Spotlight's ≥400ms spans).
+- Keyed by `sid` (per-tab), so one visitor across several tabs counts as separate sessions (consistent with the rest of the family); a session's channel is fixed at its first pageview.
+- Tab renders lazily on click, same pattern as Echo/Arc/Fuse/Facet/etc.
+
+**API:** none new on `CommissionData` — uses `CommissionData.getAnalytics()` + `.getSpotlight()`. Logic lives in `renderAtlasTab()` / `buildAtlas()` inside `admin/index.html`.
+
+---
+
 ## Commission System
 
 ### Pages
@@ -1256,4 +1295,4 @@ Stored in `_gam_prices_v1`. Three sections: `digital`, `stickers`, `animation`. 
 
 ---
 
-*Last updated: 2026-08-20*
+*Last updated: 2026-08-31*
