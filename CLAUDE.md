@@ -208,6 +208,7 @@ Password-protected (SHA-256 hash in localStorage, 5-attempt lockout). Session tr
 | Fuse        | Conversion latency & sales-cycle — the missing *time* dimension of Beacon: joins persistent-visitor identity (`vid`/`vfirst`) with `goal` events to measure how long and how many visits it takes a visitor to reach their first commission-intent signal; conversion-speed donut (Instant→7 days+), visits-before-converting distribution, first-intent-signal mix, and a recent-conversions feed |
 | Arc         | Session engagement lifecycle / intra-visit tempo — lines every event up by its offset from its own session's first event to show *when within a visit* activity crests and when sessions go quiet: activity curve by time-bin (0–15s…5m+), in-visit survival (retention within one visit), event-mix-over-time (early scrolls → mid clicks/intent → late exits), and a longest-sustained-visits feed |
 | Echo        | Artwork re-engagement & magnetic pull — the first tool to measure *intra-visit re-visitation of the same piece*: counts how often each artwork is re-entered (scrolled past, then returned to) within one visit; per-artwork **pull rate** (share of viewers who looked twice), attention-split donut (one glance vs came back), most-magnetic (pull rate) and most-re-viewed (raw returns) leaderboards, glance-and-gone cold list, and a per-artwork look-distribution explorer |
+| Harbor      | Page stickiness & dwell time — the first tool to aggregate per-page *time-on-page* from `exit` events: overall dwell-band distribution donut (Bounce→Deep), stickiest pages (longest average dwell), quick-exit pages (left in under 5s), and a per-page dwell explorer with median/average/quick-exit-rate and the full band spread |
 
 ---
 
@@ -1179,6 +1180,44 @@ Answers the simplest magnetism question no other tool asks: **which artworks mak
 
 ---
 
+## Harbor — Page Stickiness & Dwell Time (Admin → Harbor tab) — NEW TOOL
+
+Answers the plainest engagement question the family never aggregates: **how long do visitors actually linger on each individual page?** Depth measures how far *down* a page visitors scroll (spatial reach); Journey maps how they move *between* pages (flow, plus a single whole-session duration); Arc charts activity tempo across the *whole* visit; Loom replays *one* session. None reports *time-on-page per page* — the difference between a commissions page that holds a reader for a minute and one everyone leaves in three seconds. Harbor is that missing per-page dwell view: it ranks which pages hold attention and which get abandoned at a glance — the clearest read on where the portfolio keeps people and where it sheds them.
+
+**Why it's genuinely new:** every existing tool reads a *different* signal — scroll (Depth), flow (Journey), whole-session tempo (Arc), single-session replay (Loom), or session-level dwell folded into a composite score (Ember/Prism). Harbor is the first to isolate **per-page dwell** and aggregate it into a page stickiness ranking, a dwell-band distribution, and a quick-exit board.
+
+**No new storage key, no `analytics.js` change** — derived live from `_gam_analytics_v1`. `analytics.js` already fires an `exit` event on page-leave (beforeunload / tab-hide) carrying `ms = Date.now() − pageStart` — the exact time the visitor spent on that page. Until now those `ms` values were only surfaced as a per-session duration in the Analytics session list and as Journey's session span; Harbor groups them **by page** into a real time-on-page read. The same read-only pattern as Depth/Journey reading from analytics.
+
+**How it works:**
+1. `buildHarbor()` walks all events. Each `pv` increments its page's pageview count; each `exit` contributes its `ms` as one dwell sample to that page (clamped ≥ 0).
+2. Per page it derives `dwellCount` (samples), `views` (pageviews), `avgMs`, `medianMs`, `quickRate` (share of samples under `HARBOR_QUICK_MS` = 5 s), and a 5-band bucket histogram.
+3. A dwell sample is bucketed into one of `HARBOR_BUCKETS`: Bounce (`<5s`), Quick (`5–15s`), Browsing (`15–30s`), Engaged (`30–60s`), Deep (`60s+`).
+4. Pages need ≥ `HARBOR_MIN` (2) measured visits to rank on the stickiest/quick-exit boards, so one long idle tab can't top the board.
+
+**Admin tab sections:**
+- **Stats**: Pages Tracked, Avg Time on Page, Longest Avg Dwell (the stickiest page's value), Total Dwell Measured
+- **Dwell Distribution**: canvas donut + legend across the five dwell bands (light→deep amber); centre shows the overall average dwell
+- **Stickiest Pages**: pages ranked by average time on page, annotated with median dwell and visit count
+- **Quick-Exit Pages**: pages ranked by quick-exit rate (share leaving in under 5 s) — the weakest first impressions
+- **Page Dwell Explorer**: pick any page → its median/average dwell, quick-exit rate, total held attention, and the full 5-band spread
+
+**Derived schema (for export):**
+```js
+{ pagesTracked, sampleCount, totalMs, avgOnPageMs, mixBuckets:[…5],
+  stickiest:[{page,views,dwellCount,avgMs,medianMs,quickRate,totalMs,buckets:[…5]}],
+  quickExit:[…], pages:[…] }
+```
+
+**Technical notes:**
+- Donut, dwell bands, and tags use the warm amber ramp (`rgba(214,190,150…)` Bounce → `rgba(150,104,62…)` Deep) — no blue/pink. New `.harbor-*` CSS classes; reuses `jBarList()`, `jFmtDur()`, `jPageLabel()`, `analytics-stat-chip`, `compass-legend`/`compass-donut-row`, and `escHtml()`.
+- Dwell relies on the `exit` event firing; a page killed by a hard tab-close may not log one, so Harbor measures *most* visits, not every one (noted in the tab hint) — a relative stickiness signal, consistent with Depth's reach caveat.
+- Keyed per pageview (`exit` sample), so one visitor across several tabs contributes multiple samples (consistent with the rest of the family).
+- Tab renders lazily on click, same pattern as Echo/Arc/Fuse/etc.
+
+**API:** none new on `CommissionData` — uses `CommissionData.getAnalytics()`. Logic lives in `renderHarborTab()` / `buildHarbor()` inside `admin/index.html`.
+
+---
+
 ## Commission System
 
 ### Pages
@@ -1256,4 +1295,4 @@ Stored in `_gam_prices_v1`. Three sections: `digital`, `stickers`, `animation`. 
 
 ---
 
-*Last updated: 2026-08-20*
+*Last updated: 2026-09-01*
