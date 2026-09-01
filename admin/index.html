@@ -1031,6 +1031,21 @@
 		.echo-explore-summary strong { color: #d6a878; }
 		.echo-empty { color: #444; font-size: 0.85em; padding: 0.5em 0; }
 
+		/* Harbor tab — page stickiness & dwell time (warm amber, no blue/pink) */
+		.harbor-tag { font-family: 'Courier New', monospace; font-size: 0.66em; letter-spacing: 0.04em;
+			padding: 0.12em 0.5em; border-radius: 3px; margin-left: 0.5em; white-space: nowrap; }
+		.harbor-tag-sticky { background: rgba(176,122,74,0.22); color: #d6a878; border: 1px solid rgba(176,122,74,0.4); }
+		.harbor-tag-quick { background: rgba(120,116,108,0.18); color: #9a958c; border: 1px solid rgba(120,116,108,0.35); }
+		.harbor-dist { display: flex; gap: 0.5em; flex-wrap: wrap; margin: 0.4em 0 0.2em; }
+		.harbor-dist-chip { display: flex; flex-direction: column; align-items: center; gap: 0.15em;
+			padding: 0.5em 0.9em; background: rgba(255,255,255,0.03); border: 1px solid rgba(201,168,124,0.18);
+			border-radius: 5px; min-width: 4.6em; }
+		.harbor-dist-num { font-size: 1.15em; font-weight: 600; color: #d6a878; font-family: 'Courier New', monospace; }
+		.harbor-dist-lbl { font-size: 0.66em; color: #8c887f; font-family: 'Courier New', monospace; letter-spacing: 0.03em; }
+		.harbor-explore-summary { font-size: 0.8em; color: #b7b2a8; margin: 0.2em 0 0.7em; line-height: 1.5; }
+		.harbor-explore-summary strong { color: #d6a878; }
+		.harbor-empty { color: #444; font-size: 0.85em; padding: 0.5em 0; }
+
 		/* Tide tab — trends & momentum (reuses spotlight bars) */
 		#tide-canvas { display: block; }
 		.tide-win { display: flex; align-items: center; gap: 0.6em; flex-wrap: wrap; margin-bottom: 1em; }
@@ -1169,6 +1184,7 @@
 				<button class="admin-tab" data-tab="fuse">Fuse</button>
 				<button class="admin-tab" data-tab="arc">Arc</button>
 				<button class="admin-tab" data-tab="echo">Echo</button>
+				<button class="admin-tab" data-tab="harbor">Harbor</button>
 			</div>
 
 			<!-- ============ GALLERY TAB ============ -->
@@ -2628,6 +2644,48 @@
 
 						</div>
 
+						<div id="tab-harbor" class="tab-content">
+
+							<div class="admin-card">
+								<h3>Harbor — Page Stickiness &amp; Dwell Time</h3>
+								<p class="hint">Depth measures how far down a page visitors <em>scroll</em>; Journey maps how they move <em>between</em> pages; Arc charts tempo across a <em>whole</em> visit. None answers the plainest engagement question of all: <strong>how long do visitors actually linger on each individual page?</strong> Harbor is that missing per-page dwell view &mdash; it reads the <code>exit</code> events <code>analytics.js</code> already records (each carries the exact time-on-page in <code>ms</code>), groups them by page, and ranks which pages hold attention and which visitors bail from in seconds. The clearest read on whether the commissions page keeps people reading or loses them at a glance. Read-only over <code>_gam_analytics_v1</code> &mdash; no new storage key, no <code>analytics.js</code> change. Dwell relies on the <code>exit</code> event firing on page-leave (beforeunload / tab-hide); a page abandoned by a hard tab-kill may not log one, so Harbor measures <em>most</em> visits, not every one. Keyed per pageview, consistent with the rest of the family.</p>
+								<div id="harbor-stats" class="analytics-stats" style="margin-bottom:1em"></div>
+								<div style="display:flex;gap:0.5em;flex-wrap:wrap">
+									<button class="button small" id="harbor-refresh-btn">Refresh</button>
+									<button class="button small" id="harbor-export-btn">Export JSON</button>
+								</div>
+							</div>
+
+							<div class="admin-card">
+								<h3>Dwell Distribution — How Long a Visit Lingers</h3>
+								<p class="hint">Every page-visit falls into one dwell band, from a sub-5-second bounce to a minute-plus deep read. The mix across the whole site shows whether the portfolio holds attention or sheds it fast &mdash; the share in the deeper bands is what a professional gallery experience is built to grow.</p>
+								<div class="compass-donut-row">
+									<canvas id="harbor-donut" width="180" height="180"></canvas>
+									<div id="harbor-legend" class="compass-legend"></div>
+								</div>
+							</div>
+
+							<div class="admin-card">
+								<h3>Stickiest Pages — Longest Average Dwell</h3>
+								<p class="hint">Pages ranked by <strong>average time on page</strong> &mdash; the ones that genuinely hold a visitor. Pages need at least a couple of measured visits to rank, so one long idle tab can&rsquo;t top the board. These are the pages doing the work; study what makes them land and carry it to the rest.</p>
+								<div id="harbor-sticky"></div>
+							</div>
+
+							<div class="admin-card">
+								<h3>Quick-Exit Pages — Left in Seconds</h3>
+								<p class="hint">Pages ranked by <strong>quick-exit rate</strong> &mdash; the share of visits that left in under five seconds. A high rate is a weak first impression: the page loaded, and the visitor was gone before it could do anything. The clearest candidates for a stronger hook above the fold.</p>
+								<div id="harbor-quick"></div>
+							</div>
+
+							<div class="admin-card">
+								<h3>Page Dwell Explorer</h3>
+								<p class="hint">Pick any page to see exactly how its visits spent their time &mdash; median and average dwell, quick-exit rate, and the full spread across the five dwell bands.</p>
+								<select id="harbor-explore-select" class="journey-select" style="margin-bottom:0.9em"></select>
+								<div id="harbor-explore"></div>
+							</div>
+
+						</div>
+
 		</div><!-- /#admin-dash -->
 		<input type="file" id="img-file-input" accept="image/*" style="display:none" />
 
@@ -3681,6 +3739,9 @@ document.addEventListener('click', function(e){
   }
   if (e.target.dataset && e.target.dataset.tab === 'echo') {
     renderEchoTab();
+  }
+  if (e.target.dataset && e.target.dataset.tab === 'harbor') {
+    renderHarborTab();
   }
 });
 
@@ -9825,6 +9886,247 @@ document.getElementById('echo-export-btn').addEventListener('click', function() 
   var url  = URL.createObjectURL(blob);
   var a    = document.createElement('a');
   a.href = url; a.download = 'echo-' + Date.now() + '.json'; a.click();
+  URL.revokeObjectURL(url);
+});
+
+/* ================================================================
+   HARBOR TAB — page stickiness & dwell time
+   Reads exit events (time-on-page in ms) from _gam_analytics_v1 and
+   aggregates them per page: which pages hold attention, which get
+   abandoned in seconds. No new storage key, no analytics.js change.
+================================================================ */
+
+var HARBOR_MIN = 2;          /* min measured visits for a page to rank on the boards */
+var HARBOR_QUICK_MS = 5000;  /* a dwell under this counts as a quick exit */
+var HARBOR_BUCKETS = [       /* dwell bands, light→deep amber (no blue/pink) */
+  { max: 5000,     label: '<5s',    name: 'Bounce (<5s)',      color: 'rgba(214,190,150,0.62)' },
+  { max: 15000,    label: '5–15s',  name: 'Quick (5–15s)',     color: 'rgba(201,168,124,0.78)' },
+  { max: 30000,    label: '15–30s', name: 'Browsing (15–30s)', color: 'rgba(190,140,90,0.85)'  },
+  { max: 60000,    label: '30–60s', name: 'Engaged (30–60s)',  color: 'rgba(176,122,74,0.92)'  },
+  { max: Infinity, label: '60s+',   name: 'Deep (60s+)',       color: 'rgba(150,104,62,0.96)'  }
+];
+
+function harborBucketIdx(ms) {
+  for (var i = 0; i < HARBOR_BUCKETS.length; i++) {
+    if (ms < HARBOR_BUCKETS[i].max) return i;
+  }
+  return HARBOR_BUCKETS.length - 1;
+}
+
+function harborMedian(arr) {
+  if (!arr.length) return 0;
+  var s = arr.slice().sort(function(a, b){ return a - b; });
+  var m = Math.floor(s.length / 2);
+  return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2;
+}
+
+function buildHarbor() {
+  var events = CommissionData.getAnalytics() || [];
+
+  var pages = {};   /* page -> {page, samples, totalMs, quick, buckets[5]} */
+  var pvOf  = {};   /* page -> pageview count */
+
+  events.forEach(function(e) {
+    var pg = e.page || '/';
+    if (e.type === 'pv') { pvOf[pg] = (pvOf[pg] || 0) + 1; return; }
+    if (e.type !== 'exit') return;
+    var ms = e.ms || 0;
+    if (ms < 0) ms = 0;
+    var p = pages[pg] || (pages[pg] = { page: pg, samples: [], totalMs: 0, quick: 0, buckets: [0, 0, 0, 0, 0] });
+    p.samples.push(ms);
+    p.totalMs += ms;
+    if (ms < HARBOR_QUICK_MS) p.quick++;
+    p.buckets[harborBucketIdx(ms)]++;
+  });
+
+  var list = Object.keys(pages).map(function(pg) {
+    var p = pages[pg];
+    p.dwellCount = p.samples.length;
+    p.views      = pvOf[pg] || p.dwellCount;
+    p.avgMs      = p.dwellCount ? p.totalMs / p.dwellCount : 0;
+    p.medianMs   = harborMedian(p.samples);
+    p.quickRate  = p.dwellCount ? p.quick / p.dwellCount : 0;
+    return p;
+  });
+
+  /* global tallies */
+  var sampleCount = list.reduce(function(s, p){ return s + p.dwellCount; }, 0);
+  var totalMs     = list.reduce(function(s, p){ return s + p.totalMs; }, 0);
+  var avgOnPage   = sampleCount ? totalMs / sampleCount : 0;
+  var mixBuckets  = [0, 0, 0, 0, 0];
+  list.forEach(function(p){ p.buckets.forEach(function(v, i){ mixBuckets[i] += v; }); });
+
+  var eligible  = list.filter(function(p){ return p.dwellCount >= HARBOR_MIN; });
+  var stickiest = eligible.slice().sort(function(a, b){ return (b.avgMs - a.avgMs) || (b.dwellCount - a.dwellCount); });
+  var quickest  = eligible.slice().sort(function(a, b){ return (b.quickRate - a.quickRate) || (b.dwellCount - a.dwellCount); });
+  var explore   = list.slice().sort(function(a, b){ return b.dwellCount - a.dwellCount; });
+
+  return {
+    list: list, pagesTracked: list.length, sampleCount: sampleCount, totalMs: totalMs,
+    avgOnPage: avgOnPage, mixBuckets: mixBuckets,
+    stickiest: stickiest, quickest: quickest, explore: explore,
+    topSticky: stickiest[0] || null
+  };
+}
+
+function drawHarborDonut(hb) {
+  var canvas = document.getElementById('harbor-donut');
+  if (!canvas) return;
+  var ctx = canvas.getContext('2d');
+  var W = canvas.width, H = canvas.height;
+  ctx.clearRect(0, 0, W, H);
+  var cx = W / 2, cy = H / 2, rOut = 78, rIn = 46;
+
+  var tot = hb.sampleCount;
+  if (!tot) {
+    ctx.fillStyle = '#444';
+    ctx.font = '12px -apple-system, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('No dwell recorded yet.', cx, cy);
+    return;
+  }
+
+  var start = -Math.PI / 2;
+  HARBOR_BUCKETS.forEach(function(b, i) {
+    var v = hb.mixBuckets[i];
+    if (!v) return;
+    var ang = (v / tot) * Math.PI * 2;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.arc(cx, cy, rOut, start, start + ang);
+    ctx.closePath();
+    ctx.fillStyle = b.color;
+    ctx.fill();
+    start += ang;
+  });
+
+  ctx.globalCompositeOperation = 'destination-out';
+  ctx.beginPath();
+  ctx.arc(cx, cy, rIn, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.globalCompositeOperation = 'source-over';
+
+  ctx.fillStyle = '#c9a87c';
+  ctx.font = 'bold 20px -apple-system, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(jFmtDur(hb.avgOnPage), cx, cy - 6);
+  ctx.fillStyle = '#8c887f';
+  ctx.font = '9px "Courier New", monospace';
+  ctx.fillText('AVG DWELL', cx, cy + 12);
+}
+
+function renderHarborTab() {
+  var hb = buildHarbor();
+  function chip(num, label) {
+    return '<div class="analytics-stat-chip"><span class="asc-num">' + num +
+      '</span><span class="asc-label">' + label + '</span></div>';
+  }
+  document.getElementById('harbor-stats').innerHTML =
+    chip(hb.pagesTracked,                              'Pages Tracked')   +
+    chip(hb.sampleCount ? jFmtDur(hb.avgOnPage) : '—', 'Avg Time on Page') +
+    chip(hb.topSticky ? jFmtDur(hb.topSticky.avgMs) : '—', 'Longest Avg Dwell') +
+    chip(hb.sampleCount ? jFmtDur(hb.totalMs) : '—',   'Total Dwell Measured');
+
+  /* Dwell distribution donut */
+  drawHarborDonut(hb);
+  document.getElementById('harbor-legend').innerHTML = hb.sampleCount
+    ? HARBOR_BUCKETS.map(function(b, i) {
+        var v = hb.mixBuckets[i];
+        var share = hb.sampleCount ? Math.round(v / hb.sampleCount * 100) : 0;
+        return '<div class="compass-legend-item">' +
+          '<span class="compass-legend-swatch" style="background:' + b.color + '"></span>' +
+          '<span>' + escHtml(b.name) + '</span>' +
+          '<span class="compass-legend-val">' + v + ' · ' + share + '%</span>' +
+        '</div>';
+      }).join('')
+    : '<p class="harbor-empty">No dwell recorded yet. Harbor populates as visitors browse the public pages and leave them.</p>';
+
+  /* Stickiest pages — longest average dwell */
+  document.getElementById('harbor-sticky').innerHTML = hb.stickiest.length
+    ? jBarList(
+        hb.stickiest.slice(0, 12).map(function(p) { return { label: jPageLabel(p.page), count: Math.round(p.avgMs / 1000), _p: p }; }),
+        hb.stickiest.length ? Math.round(hb.stickiest[0].avgMs / 1000) : 1,
+        { suffix: function(r) {
+            var p = r._p;
+            return 'avg ' + jFmtDur(p.avgMs) +
+              '<span class="harbor-tag harbor-tag-sticky">med ' + jFmtDur(p.medianMs) + '</span>' +
+              ' · ' + p.dwellCount + (p.dwellCount === 1 ? ' visit' : ' visits');
+          } }
+      )
+    : '<p class="harbor-empty">No page has yet been measured across ' + HARBOR_MIN + '+ visits. This ranks once a few visits accumulate.</p>';
+
+  /* Quick-exit pages — highest bail rate */
+  document.getElementById('harbor-quick').innerHTML = hb.quickest.length
+    ? jBarList(
+        hb.quickest.slice(0, 12).map(function(p) { return { label: jPageLabel(p.page), count: Math.round(p.quickRate * 100), _p: p }; }),
+        100,
+        { suffix: function(r) {
+            var p = r._p;
+            return Math.round(p.quickRate * 100) + '% left in <5s' +
+              '<span class="harbor-tag harbor-tag-quick">avg ' + jFmtDur(p.avgMs) + '</span>' +
+              ' · ' + p.dwellCount + (p.dwellCount === 1 ? ' visit' : ' visits');
+          } }
+      )
+    : '<p class="harbor-empty">No page with ' + HARBOR_MIN + '+ measured visits yet. Quick-exit rates rank once visits accumulate.</p>';
+
+  /* Page dwell explorer */
+  var sel  = document.getElementById('harbor-explore-select');
+  var opts = hb.explore;
+  var prev = sel.value;
+  sel.innerHTML = opts.map(function(p) {
+    return '<option value="' + escHtml(p.page) + '">' + escHtml(jPageLabel(p.page)) + ' (' + p.dwellCount + ')</option>';
+  }).join('');
+  if (prev && opts.some(function(p){ return p.page === prev; })) sel.value = prev;
+
+  function drawExplore() {
+    var pg = sel.value;
+    var el = document.getElementById('harbor-explore');
+    var p  = hb.list.filter(function(x){ return x.page === pg; })[0];
+    if (!p) {
+      el.innerHTML = '<p class="harbor-empty">Pick a page above to inspect its dwell behaviour.</p>';
+      return;
+    }
+    el.innerHTML =
+      '<p class="harbor-explore-summary"><strong>' + escHtml(jPageLabel(p.page)) + '</strong> was measured across <strong>' +
+        p.dwellCount + '</strong> ' + (p.dwellCount === 1 ? 'visit' : 'visits') + '. Median dwell <strong>' +
+        jFmtDur(p.medianMs) + '</strong>, average <strong>' + jFmtDur(p.avgMs) + '</strong>. <strong>' +
+        Math.round(p.quickRate * 100) + '%</strong> left in under five seconds · <strong>' +
+        jFmtDur(p.totalMs) + '</strong> total attention held.</p>' +
+      '<div class="harbor-dist">' +
+        HARBOR_BUCKETS.map(function(b, i) {
+          return '<div class="harbor-dist-chip"><span class="harbor-dist-num">' + p.buckets[i] +
+            '</span><span class="harbor-dist-lbl">' + b.label + '</span></div>';
+        }).join('') +
+      '</div>';
+  }
+  sel.onchange = drawExplore;
+  drawExplore();
+}
+
+document.getElementById('harbor-refresh-btn').addEventListener('click', renderHarborTab);
+
+document.getElementById('harbor-export-btn').addEventListener('click', function() {
+  var hb = buildHarbor();
+  function row(p) {
+    return {
+      page: p.page, views: p.views, dwellCount: p.dwellCount,
+      avgMs: Math.round(p.avgMs), medianMs: Math.round(p.medianMs),
+      quickRate: Math.round(p.quickRate * 1000) / 1000, totalMs: p.totalMs,
+      buckets: p.buckets.slice()
+    };
+  }
+  var out = {
+    pagesTracked: hb.pagesTracked, sampleCount: hb.sampleCount, totalMs: hb.totalMs,
+    avgOnPageMs: Math.round(hb.avgOnPage), mixBuckets: hb.mixBuckets.slice(),
+    stickiest: hb.stickiest.slice(0, 50).map(row),
+    quickExit: hb.quickest.slice(0, 50).map(row),
+    pages: hb.explore.slice(0, 100).map(row)
+  };
+  var blob = new Blob([JSON.stringify(out, null, 2)], { type: 'application/json' });
+  var url  = URL.createObjectURL(blob);
+  var a    = document.createElement('a');
+  a.href = url; a.download = 'harbor-' + Date.now() + '.json'; a.click();
   URL.revokeObjectURL(url);
 });
 </script>
