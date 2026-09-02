@@ -167,6 +167,23 @@ Inquiries, Feedback.
   - **Pages Trending** and **Sources Trending** — pages and acquisition channels moving
     up or down versus the prior window
   - Derived live from `_gam_analytics_v1` + `_gam_spotlight_v1` — no new storage key.
+- **Brink** *(newest)* — **near-miss conversions & abandonment**. Beacon reports the
+  funnel in aggregate; Brink isolates the *recoverable* segment it never surfaces:
+  visitors who showed real commission intent (clicked a CTA, opened the form, or reached
+  the Contact step) then left **without submitting**. It profiles those "almost clients":
+  - Stats: near-misses, abandonment rate, most-lost stage, recovered (won) count
+  - **How Close They Got** — stage-mix donut (Contact / Form / CTA), centre = abandonment rate
+  - **What Near-Misses Look At** — the artworks these visitors viewed (joins Spotlight —
+    the first conversion tool to cross-reference artwork attention with intent)
+  - **Where They Come From** and **Where They Abandoned** — source channels and pages
+  - **Recent Near-Misses** — latest intent-then-gone visits tagged HOT / WARM / COOL
+  - Derived live from `_gam_analytics_v1` + `_gam_spotlight_v1` — no new storage key.
+  - Distinct from Beacon (aggregate funnel), Fuse (converter latency), Muse (converter
+    artwork attribution): Brink is the *non-converter* segment drill-down.
+
+  > Note: several analytics tools added after Tide (Ember, Latch, Thread, Muse, Ripple,
+  > Loom, Prism, Facet, Fuse, Arc, Echo, Brink) live in the admin dashboard; see
+  > **`CLAUDE.md`** for the full, canonical per-tool reference.
 - **Revenue** — financial dashboard derived from the commission Queue: total earned,
   pipeline value, monthly earnings chart, revenue by type, top clients.
 - **Palette** — extract dominant colors from an uploaded artwork (k-means), save

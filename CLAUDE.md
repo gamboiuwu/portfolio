@@ -208,6 +208,7 @@ Password-protected (SHA-256 hash in localStorage, 5-attempt lockout). Session tr
 | Fuse        | Conversion latency & sales-cycle — the missing *time* dimension of Beacon: joins persistent-visitor identity (`vid`/`vfirst`) with `goal` events to measure how long and how many visits it takes a visitor to reach their first commission-intent signal; conversion-speed donut (Instant→7 days+), visits-before-converting distribution, first-intent-signal mix, and a recent-conversions feed |
 | Arc         | Session engagement lifecycle / intra-visit tempo — lines every event up by its offset from its own session's first event to show *when within a visit* activity crests and when sessions go quiet: activity curve by time-bin (0–15s…5m+), in-visit survival (retention within one visit), event-mix-over-time (early scrolls → mid clicks/intent → late exits), and a longest-sustained-visits feed |
 | Echo        | Artwork re-engagement & magnetic pull — the first tool to measure *intra-visit re-visitation of the same piece*: counts how often each artwork is re-entered (scrolled past, then returned to) within one visit; per-artwork **pull rate** (share of viewers who looked twice), attention-split donut (one glance vs came back), most-magnetic (pull rate) and most-re-viewed (raw returns) leaderboards, glance-and-gone cold list, and a per-artwork look-distribution explorer |
+| Brink       | Near-miss conversions & abandonment — the *recoverable-leads* segment Beacon's aggregate funnel never isolates: sessions that fired a commission-intent goal (CTA click / form-open / contact-step) but **never submitted**. Profiles them by furthest stage reached (stage-mix donut + abandonment rate), **joins spotlight to show what artwork they were looking at** (no other conversion tool touches artwork data), ranks their source channels and abandonment pages, and lists recent near-misses tagged HOT/WARM/COOL by how close they got |
 
 ---
 
@@ -1179,6 +1180,52 @@ Answers the simplest magnetism question no other tool asks: **which artworks mak
 
 ---
 
+## Brink — Near-Miss Conversions & Abandonment (Admin → Brink tab) — NEW TOOL
+
+Answers the question every conversion tool structurally leaves on the table: **who almost became a client, and why didn't they?** Beacon reports the funnel *in aggregate* — stage counts and drop-off across *all* sessions; Fuse times the *converters*; Muse attributes conversion to *artworks* (of converters). None isolates and profiles the **specific sessions that showed real commission intent but never submitted** — the recoverable "almost clients." Brink is that segment drill-down: a session that clicked a commission CTA, opened the inquiry form, or even reached the final Contact step and then *left* is a warm lead the artist could win back with a nudge. Brink shows how close each got, **what artwork they were looking at**, where they came from, and where they slipped away.
+
+**Why it's genuinely new:** it is a *segment view of non-converters*, not another aggregate funnel. Beacon's "Biggest Drop-off Points" ranks stage *transitions* by count; Brink instead isolates the *population* of intent-then-gone sessions and profiles them individually. Crucially, it is the **first conversion tool to join `_gam_spotlight_v1`** — it cross-references what near-misses actually *looked at* against their intent, an axis Beacon/Fuse (analytics-only) can't express and Muse (converters-only) inverts. It is the recoverable-leads / "abandonment recovery" layer standard in commerce analytics, reconstructed with zero new instrumentation.
+
+**No new storage key, no `analytics.js` change** — derived live from `_gam_analytics_v1` (`pv` for source/entry, the `goal` milestones `analytics.js`/the commission form already record for Beacon) and `_gam_spotlight_v1` (artwork viewport events), matched by session id. The same read-only pattern as Beacon/Muse.
+
+**Near-miss definition:** a session is a **near-miss** if it fired any commission-intent goal (`cta_commission` / `form_open` / `form_step3`) but **not** `form_submit`. A session that submitted is a **converter** (excluded from the near-miss set, counted for the rate denominator). A session with no intent goal at all is ignored. **Intent sessions** = near-misses + converters; **abandonment rate** = near-misses ÷ intent sessions.
+
+**Furthest-stage ladder** (`BRINK_STAGES`, warmest first — the deeper the stage, the hotter the lost lead):
+1. **Reached the Contact step** (`form_step3`, no submit) — **HOT**, closest to the finish line
+2. **Opened the inquiry form** (`form_open`, no step3/submit) — **WARM**
+3. **Clicked a commission CTA** (`cta_commission` only) — **COOL**
+
+**How it works:**
+1. `buildBrink()` groups analytics events by `sid`, setting each session's intent flags, its first-pageview `refHost` (via `compassHostOf`), entry/last page, and the page of its latest non-submit intent signal (the abandonment page).
+2. It joins `_gam_spotlight_v1` by `sid` into the set of artworks each session viewed (with per-piece ms), keeping the longest human label.
+3. Each session is classified: converters counted and skipped; near-misses tagged with their furthest stage, their viewed-artwork set, abandonment page, and acquisition channel (`compassClassify`).
+4. It aggregates the stage distribution, artworks viewed by near-misses (ranked by distinct near-miss sessions), source channels, abandonment pages, and a recent-near-miss feed (newest first).
+
+**Admin tab sections:**
+- **Stats**: Near-Misses, Abandonment Rate %, Most-Lost Stage, Recovered (Won) — the converter count for context
+- **How Close They Got**: canvas donut + legend across the three stages (Contact / Form / CTA); centre shows the abandonment rate %
+- **What Near-Misses Look At**: artworks most viewed by near-miss sessions (the spotlight join) — the gallery a hesitating buyer walks through, ranked by near-miss sessions + dwell
+- **Where Would-Be Clients Come From**: acquisition channels of near-misses (a channel heavy here but light in Beacon's converters is sending window-shoppers)
+- **Where They Abandoned**: pages ranked by abandonments (the page of the last intent signal, falling back to the final pageview)
+- **Recent Near-Misses**: latest intent-then-gone visits tagged `HOT` / `WARM` / `COOL` with source and artwork-view count
+
+**Derived schema (for export):**
+```js
+{ nearMisses, converters, intentSessions, abandonRate, mostLostStage, stageCounts:{contact,open,cta},
+  artworks:[{artId,label,sessions,ms}], sources:[{channel,count}], abandonPages:[{label,count}],
+  recent:[{sid,stage,channel,refHost,artsViewed,artMs,abandonPage,ts}] }
+```
+
+**Technical notes:**
+- Donut, tags, and swatches use the warm amber→sand ramp (`rgba(176,122,74…)` HOT/Contact → `rgba(214,190,150…)` COOL/CTA) — no blue/pink. New `.brink-*` / `.brink-tag-*` CSS classes; reuses `jBarList()`, `analytics-stat-chip`, `compass-legend`/`compass-donut-row`, `compassHostOf()`, `compassClassify()`, `jFmtDur()`, `jPageLabel()`, `escHtml()`, `fmtDate()`.
+- Attribution is *association* — a session that both showed intent and (for the artwork join) viewed a piece, matched by `sid`; it does not prove the artwork caused the hesitation.
+- Keyed by `sid` (per-tab), so one visitor across several tabs counts as separate visits (consistent with the rest of the family).
+- Tab renders lazily on click, same pattern as Echo/Arc/Fuse/etc.
+
+**API:** none new on `CommissionData` — uses `CommissionData.getAnalytics()` + `.getSpotlight()`. Logic lives in `renderBrinkTab()` / `buildBrink()` inside `admin/index.html`.
+
+---
+
 ## Commission System
 
 ### Pages
@@ -1256,4 +1303,4 @@ Stored in `_gam_prices_v1`. Three sections: `digital`, `stickers`, `animation`. 
 
 ---
 
-*Last updated: 2026-08-20*
+*Last updated: 2026-09-02*
