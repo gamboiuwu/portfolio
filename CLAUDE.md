@@ -208,6 +208,7 @@ Password-protected (SHA-256 hash in localStorage, 5-attempt lockout). Session tr
 | Fuse        | Conversion latency & sales-cycle — the missing *time* dimension of Beacon: joins persistent-visitor identity (`vid`/`vfirst`) with `goal` events to measure how long and how many visits it takes a visitor to reach their first commission-intent signal; conversion-speed donut (Instant→7 days+), visits-before-converting distribution, first-intent-signal mix, and a recent-conversions feed |
 | Arc         | Session engagement lifecycle / intra-visit tempo — lines every event up by its offset from its own session's first event to show *when within a visit* activity crests and when sessions go quiet: activity curve by time-bin (0–15s…5m+), in-visit survival (retention within one visit), event-mix-over-time (early scrolls → mid clicks/intent → late exits), and a longest-sustained-visits feed |
 | Echo        | Artwork re-engagement & magnetic pull — the first tool to measure *intra-visit re-visitation of the same piece*: counts how often each artwork is re-entered (scrolled past, then returned to) within one visit; per-artwork **pull rate** (share of viewers who looked twice), attention-split donut (one glance vs came back), most-magnetic (pull rate) and most-re-viewed (raw returns) leaderboards, glance-and-gone cold list, and a per-artwork look-distribution explorer |
+| Strata      | Loyalty deepening & visit-over-visit engagement — the first tool to line engagement *depth* up against visit *ordinal*: groups every session by its visit number (1st / 2nd / 3rd / 4–5th / 6th+ via the persistent `vnum`) and compares the same signals across bands — visit-distribution donut, an engagement scorecard matrix (deepest band flagged per metric), a composite-index deepening curve, a first-visit-vs-returning delta headline, and conversion by visit number |
 
 ---
 
@@ -1179,6 +1180,51 @@ Answers the simplest magnetism question no other tool asks: **which artworks mak
 
 ---
 
+## Strata — Loyalty Deepening & Visit-over-Visit Engagement (Admin → Strata tab) — NEW TOOL
+
+Answers the question that sits underneath the whole retention family: **as a visitor returns, do they engage more deeply?** Orbit counts *how many* visitors come back (new vs. returning, frequency, recency); Ripple measures *whether* a given acquisition week's arrivals return in later calendar weeks; Fuse times the run-up to a commission. None of them asks how a visitor's *behaviour* changes from their 1st visit to their 2nd to their 5th. Strata is the first tool to plot engagement **depth** against visit **ordinal** — it groups every session by its visit number and lines the same engagement signals up across those bands, so the artist can see whether familiarity earns deeper reading, more artwork attention, and more commission intent, or whether every visit looks the same (a sign the portfolio isn't rewarding return with anything new).
+
+**Why it's genuinely new:** it is a *longitudinal, per-ordinal* engagement view, not a return-count (Orbit), a calendar-cohort retention triangle (Ripple), or a conversion-latency clock (Fuse). Facet compares engagement across *devices*; Strata compares the identical engagement matrix across *visit numbers* — the same comparative-scorecard shape applied to an orthogonal segmentation dimension (loyalty rather than hardware). No existing tool crosses "how deep" with "how many times before."
+
+**No new storage key, no `analytics.js` change** — derived live from `_gam_analytics_v1` (`pv` carries the `vnum` visit number stamped for Orbit, plus `click` / `scroll` / `exit` / `goal`) and `_gam_spotlight_v1` (artwork viewport ms), the same read-only pattern as Ember/Facet. A session's visit ordinal is taken from the `vnum` on its first pageview (constant across a tab-session, since `vnum` increments once per new session).
+
+**Visit-number bands (`STRATA_BANDS`, warm amber→clay ramp — lightest for 1st, deepest for 6th+):** 1st / 2nd / 3rd / 4th–5th / 6th+.
+
+**Composite engagement index (per session, weights sum to 100 — mirrors Ember's blend, in `STRATA_W`/`STRATA_CAP`):** pages viewed (cap 5 → 20), time on site (cap 3 min → 25), scroll depth (cap 100% → 20), clicks (cap 6 → 15), artwork attention (cap 60 s → 15), commission intent (any `goal` → 5). Each capped, normalized, summed, clamped to 100.
+
+**How it works:**
+1. `buildStrata()` groups events by `sid`, totals spotlight ms per `sid`, and derives each session's six signals + composite score (the same derivation Ember/Facet use).
+2. Each session is bucketed into a visit band by the `vnum` on its first pageview, accumulating averages per band; sessions are also pooled into **first-visit** (`vnum` 1) vs. **returning** (`vnum` ≥ 2).
+3. It builds a per-metric × per-band matrix (with the direction-aware *deepest* band flagged), the composite-score curve across bands in order, the first-vs-returning delta per metric, per-band conversion, and the overall first→returning engagement lift.
+
+**Admin tab sections:**
+- **Stats**: Sessions Analyzed, Repeat-Visit Share %, Deepest Band (highest avg composite score), 1st → Returning Lift %
+- **Visit Distribution**: canvas donut + legend of session share per visit band; centre shows the repeat-visit share %
+- **Engagement by Visit Number**: the centerpiece scorecard matrix — one row per metric (pages, scroll, dwell, clicks, artwork attention, conversion, composite index), one column per band, each cell showing the value + an in-row-scaled bar, the strongest band tagged `DEEPEST`. A rising staircase left-to-right = return deepens engagement.
+- **The Deepening Curve**: canvas line of the composite engagement index across the bands in order — the single clearest read on whether return deepens (climbs) or shallows (sags) engagement
+- **First Visit vs Returning**: the headline — each metric's first-visit average vs. the pooled returning-visit average, with the lift between them (▲/▼)
+- **Conversion by Visit Number**: share of each band's sessions that fired a commission-intent goal — does intent build with familiarity?
+
+**Derived schema (for export):**
+```js
+{ totalSessions, repeatSessions, repeatShare, deepestBand, firstVisitScore, returningScore, lift,
+  bands:[{band,label,sessions,share}],
+  metrics:[{metric,label,deepest,values:{band:value}}],
+  curve:[{band,label,score,sessions}],
+  firstVsReturning:[{metric,label,first,returning,deltaPct}],
+  conversion:[{band,label,sessions,inquiries,rate}] }
+```
+
+**Technical notes:**
+- Donut, curve, and scorecard use the warm amber/clay ramp (`rgba(214,190,150…)` 1st-visit → `rgba(150,104,62…)` 6th+; curve line `#c9a87c`) — no blue/pink. New `.strata-*` CSS classes; reuses the `.facet-scorecard`/`.facet-cell` matrix styles, `jBarList()`, `analytics-stat-chip`, `compass-legend`/donut styles, `jFmtDur()`, and `escHtml()`.
+- Scorecard bars are scaled **within each metric row** (bar = value ÷ row-max), so a short 1st-visit bar against a full returning bar is exactly the deepening gap.
+- Banding is per session (`sid`) keyed on `vnum`, so a return in a new tab is correctly counted as a later visit ordinal; sessions across several tabs on the same visit share the ordinal. Legacy pageviews without a `vnum` fold into the 1st-visit band.
+- Tab renders lazily on click, same pattern as Echo/Arc/Fuse/Facet/etc.
+
+**API:** none new on `CommissionData` — uses `CommissionData.getAnalytics()` + `.getSpotlight()`. Logic lives in `renderStrataTab()` / `buildStrata()` inside `admin/index.html`.
+
+---
+
 ## Commission System
 
 ### Pages
@@ -1256,4 +1302,4 @@ Stored in `_gam_prices_v1`. Three sections: `digital`, `stickers`, `animation`. 
 
 ---
 
-*Last updated: 2026-08-20*
+*Last updated: 2026-09-03*
