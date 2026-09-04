@@ -208,6 +208,7 @@ Password-protected (SHA-256 hash in localStorage, 5-attempt lockout). Session tr
 | Fuse        | Conversion latency & sales-cycle — the missing *time* dimension of Beacon: joins persistent-visitor identity (`vid`/`vfirst`) with `goal` events to measure how long and how many visits it takes a visitor to reach their first commission-intent signal; conversion-speed donut (Instant→7 days+), visits-before-converting distribution, first-intent-signal mix, and a recent-conversions feed |
 | Arc         | Session engagement lifecycle / intra-visit tempo — lines every event up by its offset from its own session's first event to show *when within a visit* activity crests and when sessions go quiet: activity curve by time-bin (0–15s…5m+), in-visit survival (retention within one visit), event-mix-over-time (early scrolls → mid clicks/intent → late exits), and a longest-sustained-visits feed |
 | Echo        | Artwork re-engagement & magnetic pull — the first tool to measure *intra-visit re-visitation of the same piece*: counts how often each artwork is re-entered (scrolled past, then returned to) within one visit; per-artwork **pull rate** (share of viewers who looked twice), attention-split donut (one glance vs came back), most-magnetic (pull rate) and most-re-viewed (raw returns) leaderboards, glance-and-gone cold list, and a per-artwork look-distribution explorer |
+| Vane        | Source-to-artwork affinity — the first tool to *join acquisition channel with artwork attention*: matches each session's inbound channel (first-pageview referrer via `compassClassify`) with the pieces that session viewed (Spotlight), then reports which artworks each source **over-indexes** on. Channel-mix-of-art-viewers donut, per-channel **signature pieces** (highest over-index lift), top source→artwork draws by raw volume, and a per-channel explorer of what its audience looks at — the "what to post where" read |
 
 ---
 
@@ -1256,4 +1257,43 @@ Stored in `_gam_prices_v1`. Three sections: `digital`, `stickers`, `animation`. 
 
 ---
 
-*Last updated: 2026-08-20*
+## Vane — Source-to-Artwork Affinity (Admin → Vane tab) — NEW TOOL
+
+Answers a targeting question no other tool can: **which traffic source delivers viewers who look at which piece?** Compass reports *where* traffic comes from (channel counts), Spotlight ranks *which* pieces hold attention, Muse ties artwork to *conversion*, Facet compares *devices* — but none of them **crosses acquisition channel with artwork attention**. Vane is that join: it connects each session's inbound channel to the artworks that session actually viewed, and reports which pieces each source *over-indexes* on. For an artist whose reach is spread across Instagram, X, TikTok, and ArtStation — each with a different audience — this is the single most actionable read for deciding **what to post where**: lead each platform with the work its own crowd already gravitates to.
+
+**Why it's genuinely new:** it is a *cross-stream join* no existing tool performs. Compass reads only `pv` referrers (source → nothing); every artwork tool (Spotlight/Mosaic/Thread/Echo) reads only spotlight (artwork on its own or artwork ↔ artwork); Muse joins artwork ↔ *conversion*; Facet joins *device* ↔ metrics. Vane is the first to join **channel ↔ artwork**, matched by session id — the acquisition-attribution layer over Spotlight, the artwork mirror of Compass.
+
+**No new storage key, no `analytics.js` change** — derived live from `_gam_analytics_v1` (`pv` `refHost`, already recorded for Compass) and `_gam_spotlight_v1` (artwork viewport events Spotlight records), the same read-only pattern as Muse/Mosaic.
+
+**How it works:**
+1. `buildVane()` finds each session's **channel** from its *first* `pv` referrer (`compassHostOf` → `compassClassify`), folding `internal`/same-site referrals into **Direct** so same-site navigation doesn't invent a bogus source (mirroring Compass).
+2. It groups spotlight events into each session's distinct set of viewed artworks (+ ms), keeping the longest human `label` per `artId`.
+3. **Join:** every art-viewing session's artworks are attributed to its channel, building `channels[ch].arts[art]` (sessions + ms) and `artTotals[art].byChannel`.
+4. **Signature piece per channel** = the artwork with the highest **lift** for that channel, where `lift = rateInChannel / rateOverall` (`rateInChannel` = share of the channel's art-viewers who saw the piece; `rateOverall` = share of all art-viewers who saw it). A piece needs ≥ `VANE_MIN_CH_SESSIONS` (2) sessions from a channel to qualify, so one visit can't crown a signature.
+
+**Admin tab sections:**
+- **Stats**: Attributed Sessions (art-viewing sessions with a known source), Channels Active, Top Channel (by art-viewing sessions), Signature Pieces (channels with an over-indexing piece)
+- **Channel Mix of Art Viewers**: canvas donut + legend of art-viewing sessions by channel (social / search / referral / direct); centre shows total art viewers — the denominator behind the rest (distinct from Compass, which counts *all* traffic)
+- **Signature Pieces — What Each Source Gravitates To**: per channel, its highest-lift artwork, bars sized by lift and annotated `×lift · N/M of source · rate%`
+- **Top Source → Artwork Draws**: channel–artwork pairings ranked by raw art-viewing sessions (volume, complementing the lift signal)
+- **Source Explorer**: pick a channel → the artworks its audience views most (by sessions), with the channel's share of engaged viewers and total held attention — the "what to feature for this platform" view
+
+**Derived schema (for export):**
+```js
+{ totalArtSessions, channelsActive,
+  channelMix:[{channel, sessions, totalMs, share}],
+  signatures:[{channel, artId, label, chSessions, chTotal, totalSessions, rateInChannel, lift}],
+  draws:[{channel, artId, label, sessions, ms}] }
+```
+
+**Technical notes:**
+- Donut, channel chips, and lift tags use the warm amber/sand/clay palette (`rgba(176,122,74…)` social, `rgba(201,168,124…)` search, `rgba(214,190,150…)` referral, `rgba(150,104,62…)` direct) — no blue/pink. New `.vane-*` CSS classes; reuses `jBarList()`, `analytics-stat-chip`, `compass-legend`/`compass-donut-row`, the `journey-select` dropdown, `compassClassify()`, `compassHostOf()`, `jFmtDur()`, and `escHtml()`.
+- Attribution is *association* — a session that arrived via a channel and viewed a piece, matched by `sid`; it does not prove the source caused the interest.
+- A session's channel is fixed at its first pageview. Keyed by `sid` (per-tab), so one visitor across several tabs counts as separate visits (consistent with the rest of the family).
+- Tab renders lazily on click, same pattern as Echo/Arc/Fuse/etc.
+
+**API:** none new on `CommissionData` — uses `CommissionData.getAnalytics()` + `.getSpotlight()`. Logic lives in `renderVaneTab()` / `buildVane()` inside `admin/index.html`.
+
+---
+
+*Last updated: 2026-09-04*
