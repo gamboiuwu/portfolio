@@ -167,6 +167,19 @@ Inquiries, Feedback.
   - **Pages Trending** and **Sources Trending** — pages and acquisition channels moving
     up or down versus the prior window
   - Derived live from `_gam_analytics_v1` + `_gam_spotlight_v1` — no new storage key.
+- **Vane** *(newest)* — **source-to-artwork affinity**. The first tool to *join*
+  acquisition channel with artwork attention: Compass shows where traffic comes from,
+  Spotlight shows which pieces hold attention — Vane connects the two. It matches each
+  session's inbound channel (its first-pageview referrer, via `compassClassify`) with
+  the artworks that session viewed (Spotlight), then reports which pieces each source
+  **over-indexes** on. It surfaces:
+  - Stats: attributed (art-viewing) sessions, channels active, top channel, signature pieces
+  - **Channel Mix of Art Viewers** — donut of art-viewing sessions by channel
+  - **Signature Pieces** — per channel, the artwork it gravitates to most (over-index *lift*)
+  - **Top Source → Artwork Draws** — the biggest channel→artwork streams by raw volume
+  - **Source Explorer** — pick a channel, see exactly what its audience looks at
+  - The "what to post where" read — lead each platform with the work its own crowd loves.
+  - Derived live from `_gam_analytics_v1` + `_gam_spotlight_v1` — no new storage key.
 - **Revenue** — financial dashboard derived from the commission Queue: total earned,
   pipeline value, monthly earnings chart, revenue by type, top clients.
 - **Palette** — extract dominant colors from an uploaded artwork (k-means), save

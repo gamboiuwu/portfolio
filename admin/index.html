@@ -1031,6 +1031,22 @@
 		.echo-explore-summary strong { color: #d6a878; }
 		.echo-empty { color: #444; font-size: 0.85em; padding: 0.5em 0; }
 
+		/* Vane tab — source-to-artwork affinity (warm amber, no blue/pink) */
+		.vane-ch { display: inline-block; font-family: 'Courier New', monospace; font-size: 0.6em;
+			letter-spacing: 0.05em; text-transform: uppercase; padding: 0.14em 0.5em; border-radius: 3px;
+			margin-right: 0.5em; vertical-align: 1px; }
+		.vane-ch-social   { background: rgba(176,122,74,0.22); color: #d6a878; border: 1px solid rgba(176,122,74,0.4); }
+		.vane-ch-search   { background: rgba(201,168,124,0.2); color: #cbab7d; border: 1px solid rgba(201,168,124,0.38); }
+		.vane-ch-referral { background: rgba(214,190,150,0.18); color: #c6b28a; border: 1px solid rgba(214,190,150,0.34); }
+		.vane-ch-direct   { background: rgba(150,104,62,0.2); color: #b58a5e; border: 1px solid rgba(150,104,62,0.38); }
+		.vane-tag { font-family: 'Courier New', monospace; font-size: 0.66em; letter-spacing: 0.04em;
+			padding: 0.12em 0.5em; border-radius: 3px; margin-left: 0.5em; white-space: nowrap;
+			background: rgba(176,122,74,0.22); color: #d6a878; border: 1px solid rgba(176,122,74,0.4); }
+		.vane-arrow { color: #b07a4a; margin: 0 0.35em; font-weight: 600; }
+		.vane-explore-summary { font-size: 0.8em; color: #b7b2a8; margin: 0.2em 0 0.7em; line-height: 1.5; }
+		.vane-explore-summary strong { color: #d6a878; }
+		.vane-empty { color: #444; font-size: 0.85em; padding: 0.5em 0; }
+
 		/* Tide tab — trends & momentum (reuses spotlight bars) */
 		#tide-canvas { display: block; }
 		.tide-win { display: flex; align-items: center; gap: 0.6em; flex-wrap: wrap; margin-bottom: 1em; }
@@ -1169,6 +1185,7 @@
 				<button class="admin-tab" data-tab="fuse">Fuse</button>
 				<button class="admin-tab" data-tab="arc">Arc</button>
 				<button class="admin-tab" data-tab="echo">Echo</button>
+				<button class="admin-tab" data-tab="vane">Vane</button>
 			</div>
 
 			<!-- ============ GALLERY TAB ============ -->
@@ -2628,6 +2645,48 @@
 
 						</div>
 
+						<div id="tab-vane" class="tab-content">
+
+							<div class="admin-card">
+								<h3>Vane — Source-to-Artwork Affinity</h3>
+								<p class="hint">Compass counts <em>where</em> traffic comes from; Spotlight ranks <em>which</em> pieces hold attention; Muse ties artwork to <em>conversion</em>; Facet compares <em>devices</em>. None joins acquisition channel to artwork &mdash; <strong>which traffic source delivers viewers who look at which piece.</strong> Vane joins each session&rsquo;s inbound channel (its first pageview&rsquo;s referrer, via <code>compassClassify</code>) with the artworks that session viewed (from Spotlight), then reports which pieces each source <em>over-indexes</em> on. The single most actionable read for deciding <strong>what to post where</strong> &mdash; lead your Instagram with the work its audience gravitates to, your ArtStation with theirs. Read-only over <code>_gam_analytics_v1</code> + <code>_gam_spotlight_v1</code> &mdash; no new storage key, no <code>analytics.js</code> change. Attribution is <em>association</em> (a session that arrived via a channel and viewed a piece, matched by <code>sid</code>); the channel folds internal/same-site referrals into Direct, mirroring Compass. Keyed by <code>sid</code>, so one visitor across several tabs counts as separate visits.</p>
+								<div id="vane-stats" class="analytics-stats" style="margin-bottom:1em"></div>
+								<div style="display:flex;gap:0.5em;flex-wrap:wrap">
+									<button class="button small" id="vane-refresh-btn">Refresh</button>
+									<button class="button small" id="vane-export-btn">Export JSON</button>
+								</div>
+							</div>
+
+							<div class="admin-card">
+								<h3>Channel Mix of Art Viewers</h3>
+								<p class="hint">Of the sessions that actually looked at artwork, which inbound channel brought them. This is the denominator behind everything below &mdash; the audience that engages with the work, split by where it came from (distinct from Compass, which counts <em>all</em> traffic).</p>
+								<div class="compass-donut-row">
+									<canvas id="vane-donut" width="180" height="180"></canvas>
+									<div id="vane-legend" class="compass-legend"></div>
+								</div>
+							</div>
+
+							<div class="admin-card">
+								<h3>Signature Pieces — What Each Source Gravitates To</h3>
+								<p class="hint">For every channel, the artwork its viewers look at <strong>more than the site average</strong> &mdash; ranked by <strong>lift</strong> (how far the piece over-indexes for that source vs. all art-viewers). A piece needs at least two viewing sessions from a channel to qualify, so one visit can&rsquo;t crown a signature. This is the direct answer to &ldquo;which of my pieces resonates with each platform&rsquo;s crowd.&rdquo;</p>
+								<div id="vane-signatures"></div>
+							</div>
+
+							<div class="admin-card">
+								<h3>Top Source &rarr; Artwork Draws</h3>
+								<p class="hint">The channel&ndash;artwork pairings that account for the most art-viewing sessions in raw terms. Where signatures are a <em>quality</em> (over-index) signal, this is <em>volume</em> &mdash; the biggest actual streams of the-source-that-brought-them to the-piece-they-saw.</p>
+								<div id="vane-draws"></div>
+							</div>
+
+							<div class="admin-card">
+								<h3>Source Explorer — What a Channel&rsquo;s Audience Looks At</h3>
+								<p class="hint">Pick a channel to see the artworks its visitors view most (by sessions), plus how much of the engaged audience it delivers. The &ldquo;what to feature for this platform&rdquo; view.</p>
+								<select id="vane-explore-select" class="journey-select" style="margin-bottom:0.9em"></select>
+								<div id="vane-explore"></div>
+							</div>
+
+						</div>
+
 		</div><!-- /#admin-dash -->
 		<input type="file" id="img-file-input" accept="image/*" style="display:none" />
 
@@ -3681,6 +3740,9 @@ document.addEventListener('click', function(e){
   }
   if (e.target.dataset && e.target.dataset.tab === 'echo') {
     renderEchoTab();
+  }
+  if (e.target.dataset && e.target.dataset.tab === 'vane') {
+    renderVaneTab();
   }
 });
 
@@ -9825,6 +9887,286 @@ document.getElementById('echo-export-btn').addEventListener('click', function() 
   var url  = URL.createObjectURL(blob);
   var a    = document.createElement('a');
   a.href = url; a.download = 'echo-' + Date.now() + '.json'; a.click();
+  URL.revokeObjectURL(url);
+});
+
+/* ================================================================
+   VANE TAB — source-to-artwork affinity
+   Joins each session's acquisition channel (first-pv refHost via
+   compassClassify) with the artworks that session viewed (spotlight),
+   then reports which pieces each source over-indexes on. Read-only over
+   _gam_analytics_v1 + _gam_spotlight_v1 — no new storage key.
+================================================================ */
+
+var VANE_MIN_CH_SESSIONS = 2;   /* min sessions from a channel viewing a piece for a signature */
+
+var VANE_CH_META = {
+  social:   { label: 'Social',        color: 'rgba(176,122,74,0.92)', cls: 'vane-ch-social'   },
+  search:   { label: 'Search',        color: 'rgba(201,168,124,0.9)', cls: 'vane-ch-search'   },
+  referral: { label: 'Referral',      color: 'rgba(214,190,150,0.9)', cls: 'vane-ch-referral' },
+  direct:   { label: 'Direct / Typed',color: 'rgba(150,104,62,0.85)', cls: 'vane-ch-direct'   }
+};
+function vaneChMeta(ch) { return VANE_CH_META[ch] || { label: ch, color: 'rgba(140,136,127,0.7)', cls: 'vane-ch-direct' }; }
+function vaneChChip(ch) { var m = vaneChMeta(ch); return '<span class="vane-ch ' + m.cls + '">' + escHtml(m.label) + '</span>'; }
+
+function buildVane() {
+  var pvs = CommissionData.getAnalytics() || [];
+  var sp  = CommissionData.getSpotlight() || [];
+
+  /* Per session: acquisition channel from the FIRST pageview's referrer */
+  var sessFirst = {};   /* sid -> { ts, host } */
+  pvs.forEach(function(e) {
+    if (e.type !== 'pv') return;
+    var sid = e.sid || '?';
+    var f = sessFirst[sid];
+    var ts = e.ts || 0;
+    if (!f || ts < f.ts) sessFirst[sid] = { ts: ts, host: compassHostOf(e) };
+  });
+  function channelOf(sid) {
+    var f = sessFirst[sid];
+    var ch = f ? compassClassify(f.host) : 'direct';
+    if (ch === 'internal') ch = 'direct';   /* fold same-site nav into direct, like Compass */
+    return ch;
+  }
+
+  /* Per session: distinct artworks viewed (+ ms) from spotlight */
+  var sessArts = {};    /* sid -> { artId: ms } */
+  var labelOf  = {};    /* artId -> longest human label */
+  sp.forEach(function(e) {
+    var sid = e.sid || '?';
+    var art = e.artId || '?';
+    var m = sessArts[sid] || (sessArts[sid] = {});
+    m[art] = (m[art] || 0) + (e.ms || 0);
+    var lbl = (e.label || '').trim() || (art.split('::')[1] || art);
+    if (!labelOf[art] || lbl.length > labelOf[art].length) labelOf[art] = lbl;
+  });
+
+  /* Join: attribute each art-viewing session's artworks to its channel */
+  var channels  = {};   /* ch -> { sessions, totalMs, arts:{art:{sessions,ms}} } */
+  var artTotals = {};   /* art -> { sessions, ms, byChannel:{ch:sessions} } */
+  var totalArtSessions = 0;
+
+  Object.keys(sessArts).forEach(function(sid) {
+    var ids = Object.keys(sessArts[sid]);
+    if (!ids.length) return;
+    var ch = channelOf(sid);
+    totalArtSessions++;
+    var C = channels[ch] || (channels[ch] = { sessions: 0, totalMs: 0, arts: {} });
+    C.sessions++;
+    ids.forEach(function(art) {
+      var ms = sessArts[sid][art];
+      C.totalMs += ms;
+      var CA = C.arts[art] || (C.arts[art] = { sessions: 0, ms: 0 });
+      CA.sessions++; CA.ms += ms;
+      var AT = artTotals[art] || (artTotals[art] = { sessions: 0, ms: 0, byChannel: {} });
+      AT.sessions++; AT.ms += ms;
+      AT.byChannel[ch] = (AT.byChannel[ch] || 0) + 1;
+    });
+  });
+
+  var channelMix = Object.keys(channels).map(function(ch) {
+    return { channel: ch, sessions: channels[ch].sessions, totalMs: channels[ch].totalMs };
+  }).sort(function(a, b) { return b.sessions - a.sessions; });
+
+  /* Signature piece per channel — highest lift (over-index vs. all art-viewers) */
+  var signatures = [];
+  Object.keys(channels).forEach(function(ch) {
+    var C = channels[ch];
+    var best = null;
+    Object.keys(C.arts).forEach(function(art) {
+      var CA = C.arts[art];
+      if (CA.sessions < VANE_MIN_CH_SESSIONS) return;
+      var rateInCh    = C.sessions ? CA.sessions / C.sessions : 0;
+      var rateOverall = totalArtSessions ? artTotals[art].sessions / totalArtSessions : 0;
+      var lift = rateOverall ? rateInCh / rateOverall : 0;
+      var cand = {
+        channel: ch, art: art, label: labelOf[art] || art,
+        chSessions: CA.sessions, chTotal: C.sessions,
+        totalSessions: artTotals[art].sessions, rateInCh: rateInCh, lift: lift
+      };
+      if (!best || cand.lift > best.lift || (cand.lift === best.lift && cand.chSessions > best.chSessions)) best = cand;
+    });
+    if (best) signatures.push(best);
+  });
+  signatures.sort(function(a, b) { return (b.lift - a.lift) || (b.chSessions - a.chSessions); });
+
+  /* Top channel→artwork draws (raw session volume) */
+  var draws = [];
+  Object.keys(channels).forEach(function(ch) {
+    var C = channels[ch];
+    Object.keys(C.arts).forEach(function(art) {
+      draws.push({ channel: ch, art: art, label: labelOf[art] || art, sessions: C.arts[art].sessions, ms: C.arts[art].ms });
+    });
+  });
+  draws.sort(function(a, b) { return (b.sessions - a.sessions) || (b.ms - a.ms); });
+
+  return {
+    channels: channels, channelMix: channelMix, artTotals: artTotals, labelOf: labelOf,
+    totalArtSessions: totalArtSessions, channelsActive: channelMix.length,
+    signatures: signatures, draws: draws,
+    topChannel: channelMix.length ? channelMix[0] : null,
+    mostSpecific: signatures.length ? signatures[0] : null
+  };
+}
+
+function drawVaneDonut(vn) {
+  var canvas = document.getElementById('vane-donut');
+  if (!canvas) return;
+  var ctx = canvas.getContext('2d');
+  var W = canvas.width, H = canvas.height;
+  ctx.clearRect(0, 0, W, H);
+  var cx = W / 2, cy = H / 2, rOut = 78, rIn = 46;
+
+  var tot = vn.totalArtSessions;
+  if (!tot) {
+    ctx.fillStyle = '#444';
+    ctx.font = '12px -apple-system, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('No art-viewing sessions yet.', cx, cy);
+    return;
+  }
+
+  var start = -Math.PI / 2;
+  vn.channelMix.forEach(function(s) {
+    if (!s.sessions) return;
+    var ang = (s.sessions / tot) * Math.PI * 2;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.arc(cx, cy, rOut, start, start + ang);
+    ctx.closePath();
+    ctx.fillStyle = vaneChMeta(s.channel).color;
+    ctx.fill();
+    start += ang;
+  });
+
+  ctx.globalCompositeOperation = 'destination-out';
+  ctx.beginPath();
+  ctx.arc(cx, cy, rIn, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.globalCompositeOperation = 'source-over';
+
+  ctx.fillStyle = '#c9a87c';
+  ctx.font = 'bold 22px -apple-system, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(String(tot), cx, cy - 6);
+  ctx.fillStyle = '#8c887f';
+  ctx.font = '9px "Courier New", monospace';
+  ctx.fillText('ART VIEWERS', cx, cy + 12);
+}
+
+function renderVaneTab() {
+  var vn = buildVane();
+  function chip(num, label) {
+    return '<div class="analytics-stat-chip"><span class="asc-num">' + num +
+      '</span><span class="asc-label">' + label + '</span></div>';
+  }
+  document.getElementById('vane-stats').innerHTML =
+    chip(vn.totalArtSessions,                                        'Attributed Sessions') +
+    chip(vn.channelsActive,                                          'Channels Active')      +
+    chip(vn.topChannel ? escHtml(vaneChMeta(vn.topChannel.channel).label) : '—', 'Top Channel') +
+    chip(vn.signatures.length,                                       'Signature Pieces');
+
+  /* Channel mix donut */
+  drawVaneDonut(vn);
+  document.getElementById('vane-legend').innerHTML = vn.totalArtSessions
+    ? vn.channelMix.map(function(s) {
+        var share = Math.round(s.sessions / vn.totalArtSessions * 100);
+        var m = vaneChMeta(s.channel);
+        return '<div class="compass-legend-item">' +
+          '<span class="compass-legend-swatch" style="background:' + m.color + '"></span>' +
+          '<span>' + escHtml(m.label) + '</span>' +
+          '<span class="compass-legend-val">' + s.sessions + ' · ' + share + '%</span>' +
+        '</div>';
+      }).join('')
+    : '<p class="vane-empty">No art-viewing sessions with a known source yet. Vane populates as visitors arrive and browse the public pages.</p>';
+
+  /* Signature pieces per channel — lift */
+  document.getElementById('vane-signatures').innerHTML = vn.signatures.length
+    ? jBarList(
+        vn.signatures.slice(0, 12).map(function(s) { return { label: s.label, count: Math.round(s.lift * 100) / 100, _s: s }; }),
+        vn.signatures.length ? Math.round(vn.signatures[0].lift * 100) / 100 : 1,
+        { suffix: function(r) {
+            var s = r._s;
+            return vaneChChip(s.channel) +
+              '<span class="vane-tag">×' + (Math.round(s.lift * 100) / 100) + ' lift</span>' +
+              ' · ' + s.chSessions + '/' + s.chTotal + ' of source · ' + Math.round(s.rateInCh * 100) + '%';
+          } }
+      )
+    : '<p class="vane-empty">No signature piece yet — a channel needs a piece viewed by ' + VANE_MIN_CH_SESSIONS + '+ of its sessions to over-index. This ranks once a few source visits accumulate.</p>';
+
+  /* Top source → artwork draws — raw volume */
+  document.getElementById('vane-draws').innerHTML = vn.draws.length
+    ? jBarList(
+        vn.draws.slice(0, 14).map(function(d) { return { label: d.label, count: d.sessions, _d: d }; }),
+        vn.draws.length ? vn.draws[0].sessions : 1,
+        { suffix: function(r) {
+            var d = r._d;
+            return vaneChChip(d.channel) + '<span class="vane-arrow">&rarr;</span>' +
+              d.sessions + (d.sessions === 1 ? ' viewer' : ' viewers') + ' · ' + jFmtDur(d.ms);
+          } }
+      )
+    : '<p class="vane-empty">No source→artwork draws recorded yet — this fills as sourced visitors view the artwork.</p>';
+
+  /* Source explorer */
+  var sel = document.getElementById('vane-explore-select');
+  var opts = vn.channelMix.slice();
+  var prev = sel.value;
+  sel.innerHTML = opts.map(function(s) {
+    return '<option value="' + escHtml(s.channel) + '">' + escHtml(vaneChMeta(s.channel).label) + ' (' + s.sessions + ')</option>';
+  }).join('');
+  if (prev && opts.some(function(s){ return s.channel === prev; })) sel.value = prev;
+
+  function drawExplore() {
+    var ch = sel.value;
+    var el = document.getElementById('vane-explore');
+    var C = vn.channels[ch];
+    if (!C) {
+      el.innerHTML = '<p class="vane-empty">Pick a channel above to see what its audience looks at.</p>';
+      return;
+    }
+    var share = vn.totalArtSessions ? Math.round(C.sessions / vn.totalArtSessions * 100) : 0;
+    var rows = Object.keys(C.arts).map(function(art) {
+      return { label: vn.labelOf[art] || art, count: C.arts[art].sessions, ms: C.arts[art].ms };
+    }).sort(function(a, b) { return (b.count - a.count) || (b.ms - a.ms); });
+    el.innerHTML =
+      '<p class="vane-explore-summary">' + vaneChChip(ch) + ' delivered <strong>' + C.sessions +
+        '</strong> art-viewing ' + (C.sessions === 1 ? 'session' : 'sessions') + ' (<strong>' + share +
+        '%</strong> of engaged viewers) across <strong>' + jFmtDur(C.totalMs) + '</strong> of held attention.</p>' +
+      (rows.length
+        ? jBarList(rows.slice(0, 12), rows.length ? rows[0].count : 1, {
+            suffix: function(r) { return r.count + (r.count === 1 ? ' viewer' : ' viewers') + ' · ' + jFmtDur(r.ms); }
+          })
+        : '<p class="vane-empty">No artworks viewed from this channel yet.</p>');
+  }
+  sel.onchange = drawExplore;
+  drawExplore();
+}
+
+document.getElementById('vane-refresh-btn').addEventListener('click', renderVaneTab);
+
+document.getElementById('vane-export-btn').addEventListener('click', function() {
+  var vn = buildVane();
+  var out = {
+    totalArtSessions: vn.totalArtSessions,
+    channelsActive: vn.channelsActive,
+    channelMix: vn.channelMix.map(function(s) {
+      return { channel: s.channel, sessions: s.sessions, totalMs: s.totalMs,
+        share: vn.totalArtSessions ? Math.round(s.sessions / vn.totalArtSessions * 1000) / 10 : 0 };
+    }),
+    signatures: vn.signatures.slice(0, 50).map(function(s) {
+      return { channel: s.channel, artId: s.art, label: s.label, chSessions: s.chSessions,
+        chTotal: s.chTotal, totalSessions: s.totalSessions,
+        rateInChannel: Math.round(s.rateInCh * 1000) / 1000, lift: Math.round(s.lift * 1000) / 1000 };
+    }),
+    draws: vn.draws.slice(0, 80).map(function(d) {
+      return { channel: d.channel, artId: d.art, label: d.label, sessions: d.sessions, ms: d.ms };
+    })
+  };
+  var blob = new Blob([JSON.stringify(out, null, 2)], { type: 'application/json' });
+  var url  = URL.createObjectURL(blob);
+  var a    = document.createElement('a');
+  a.href = url; a.download = 'vane-' + Date.now() + '.json'; a.click();
   URL.revokeObjectURL(url);
 });
 </script>
