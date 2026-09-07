@@ -208,6 +208,7 @@ Password-protected (SHA-256 hash in localStorage, 5-attempt lockout). Session tr
 | Fuse        | Conversion latency & sales-cycle — the missing *time* dimension of Beacon: joins persistent-visitor identity (`vid`/`vfirst`) with `goal` events to measure how long and how many visits it takes a visitor to reach their first commission-intent signal; conversion-speed donut (Instant→7 days+), visits-before-converting distribution, first-intent-signal mix, and a recent-conversions feed |
 | Arc         | Session engagement lifecycle / intra-visit tempo — lines every event up by its offset from its own session's first event to show *when within a visit* activity crests and when sessions go quiet: activity curve by time-bin (0–15s…5m+), in-visit survival (retention within one visit), event-mix-over-time (early scrolls → mid clicks/intent → late exits), and a longest-sustained-visits feed |
 | Echo        | Artwork re-engagement & magnetic pull — the first tool to measure *intra-visit re-visitation of the same piece*: counts how often each artwork is re-entered (scrolled past, then returned to) within one visit; per-artwork **pull rate** (share of viewers who looked twice), attention-split donut (one glance vs came back), most-magnetic (pull rate) and most-re-viewed (raw returns) leaderboards, glance-and-gone cold list, and a per-artwork look-distribution explorer |
+| Horizon     | Traffic & conversion **forecast** — the family's first *forward-looking* view (all others describe the past): fits a linear trend + day-of-week seasonality to the historical daily visit series and projects the next 14 days of traffic and commission inquiries; forecast chart (recorded history solid → projection dashed past a "today" marker), day-by-day next-14 projection, weekday seasonality profile, and a confidence read that firms as history accumulates |
 
 ---
 
@@ -1179,6 +1180,47 @@ Answers the simplest magnetism question no other tool asks: **which artworks mak
 
 ---
 
+## Horizon — Traffic & Conversion Forecast (Admin → Horizon tab) — NEW TOOL
+
+Answers the one question the entire analytics family structurally cannot: **what happens next?** Every other tab is a rear-view mirror — Spotlight ranks artworks, Journey maps flow, Compass counts sources, Ember scores sessions, Tide compares a recent window to the one before it, Ripple triangulates cohorts. Even Tide, the closest, only measures *direction* between two past windows; none *projects forward*. Horizon is the family's first genuinely **predictive** view: it fits a trend to the historical daily visit series, layers day-of-week seasonality on top, and forecasts the next two weeks of traffic **and** commission inquiries. For an artist deciding when to open commission slots, time an art drop, or schedule a social push, a concrete "expect ~N visits and ~M inquiries next week, concentrated on these days" is the single most actionable output the dashboard can produce.
+
+**Why it's genuinely new:** it is *extrapolation*, not aggregation. Tide reports `recent − prior` (a backward-looking delta between two elapsed windows); Pulse reports the all-time time-of-week rhythm; the Analytics 30-day chart plots raw past volume. None computes a fitted trend or projects a single day into the future. Horizon is the only view whose primary output is dates that **haven't happened yet**.
+
+**No new storage key, no `analytics.js` change** — derived live from `_gam_analytics_v1`, using the `pv` timestamps already recorded for daily volume and the `goal` events (`form_submit`) already recorded for Beacon as the inquiry signal. The same read-only pattern as Tide/Ripple.
+
+**Forecast model:**
+1. `buildHorizon()` tallies visits (`pv`) and inquiries (`goal` where `goal === 'form_submit'`) per **local calendar day**, then builds a contiguous zero-filled daily series from the first recorded day through today (a day with no traffic is a real zero, not a gap).
+2. **Trend:** a least-squares linear regression `visits ≈ a + b·x` over the day series (`x` = day index). `trendAt(x)` clamps the fitted value at ≥ 0.
+3. **Seasonality:** per weekday, the mean daily visits ÷ the overall daily mean gives a multiplier, clamped to `[HORIZON_MULT_MIN 0.25, HORIZON_MULT_MAX 3]` so a sparse weekday can't swing wild. Weekdays never observed default to ×1.
+4. **Projection:** for each of the next `HORIZON_FORECAST_DAYS` (14) days, `projectedVisits = trendAt(futureIndex) × weekdayMultiplier`; `projectedInquiries = projectedVisits × conversionRate`, where `conversionRate = totalInquiries ÷ totalVisits`.
+5. **Trend %/week** = `(slope·7) ÷ today's fitted level`; **confidence** is a qualitative read off the count of days with traffic (`Low < 4 · Building < 10 · Moderate < 21 · Firm ≥ 21`).
+
+**Admin tab sections:**
+- **Stats**: Proj. Visits (7d), Proj. Inquiries (7d), Trend (▲/▼ %/wk), Forecast Confidence
+- **Forecast — Recent History & Projection**: a canvas chart of the last `HORIZON_CHART_HIST` (21) days of recorded visits (solid amber with area fill) carried forward as a dashed projection past a dashed **TODAY** marker, forecast points dotted
+- **Next 14 Days — Day-by-Day Projection**: each upcoming day ranked tallest-first (shared `jBarList`), annotated with expected inquiries at the historical conversion rate
+- **Weekday Seasonality — When the Week Runs Hot**: the seven weekdays (Mon→Sun) as % of an average day, each annotated with its observed avg visits/day and over/under-index %
+- A methodology/caveat line under the chart states the fit basis (days with traffic, span, recent 7-day average, conversion rate) and the confidence level
+
+**Derived schema (for export):**
+```js
+{ totalVisits, daysWithData, spanDays, totalInquiries, conversionRate,
+  trendSlopePerDay, trendPctPerWeek, recentAvgDaily, confidence,
+  next7Visits, next7Inquiries, next14Visits, next14Inquiries,
+  weekdaySeasonality:[{day, multiplier, avgVisits, daysObserved}],
+  forecast:[{date, weekday, projectedVisits, projectedInquiries}] }
+```
+
+**Technical notes:**
+- Chart, projection line, dots, and tags use the warm amber/clay palette (`rgba(201,168,124…)` recorded history, `rgba(176,122,74…)` projection) — no blue/pink. New `.horizon-*` CSS classes; reuses `jBarList()`, `analytics-stat-chip`, and the canvas-line pattern from Tide's momentum chart.
+- It is a forecast from local, often sparse history — a planning aid, not a guarantee. Confidence firms as more days accumulate; the caveat line and the confidence stat make the uncertainty explicit. Inquiry projections stay at zero until the first `form_submit` is recorded.
+- Traffic is counted per pageview (per `sid`-agnostic day tally), consistent with the rest of the family's daily-volume views.
+- Tab renders lazily on click, same pattern as Echo/Arc/Fuse/etc.
+
+**API:** none new on `CommissionData` — uses `CommissionData.getAnalytics()`. Logic lives in `renderHorizonTab()` / `buildHorizon()` / `drawHorizonCanvas()` inside `admin/index.html`.
+
+---
+
 ## Commission System
 
 ### Pages
@@ -1256,4 +1298,4 @@ Stored in `_gam_prices_v1`. Three sections: `digital`, `stickers`, `animation`. 
 
 ---
 
-*Last updated: 2026-08-20*
+*Last updated: 2026-09-07*
