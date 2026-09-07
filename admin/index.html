@@ -1031,6 +1031,20 @@
 		.echo-explore-summary strong { color: #d6a878; }
 		.echo-empty { color: #444; font-size: 0.85em; padding: 0.5em 0; }
 
+		/* Horizon tab — traffic & conversion forecast (warm amber, no blue/pink) */
+		#horizon-canvas { display: block; max-width: 100%; }
+		.horizon-legend { display: flex; gap: 1.2em; flex-wrap: wrap; margin-top: 0.7em; font-family: 'Courier New', monospace; font-size: 0.68em; color: #8c887f; }
+		.horizon-legend span::before { content: ''; display: inline-block; width: 0.9em; height: 0.85em; border-radius: 2px; margin-right: 0.4em; vertical-align: -1px; }
+		.horizon-legend .hz-hist::before { background: #c9a87c; }
+		.horizon-legend .hz-fore::before { background: repeating-linear-gradient(90deg, #b07a4a 0 4px, transparent 4px 7px); }
+		.horizon-tag { font-family: 'Courier New', monospace; font-size: 0.66em; letter-spacing: 0.04em;
+			padding: 0.12em 0.5em; border-radius: 3px; margin-left: 0.5em; white-space: nowrap;
+			background: rgba(176,122,74,0.22); color: #d6a878; border: 1px solid rgba(176,122,74,0.4); }
+		.horizon-tag-quiet { background: rgba(120,116,108,0.18); color: #9a958c; border: 1px solid rgba(120,116,108,0.35); }
+		.horizon-note { font-size: 0.78em; color: #b7b2a8; line-height: 1.55; margin: 0.3em 0 0; }
+		.horizon-note strong { color: #d6a878; }
+		.horizon-empty { color: #444; font-size: 0.85em; padding: 0.5em 0; }
+
 		/* Tide tab — trends & momentum (reuses spotlight bars) */
 		#tide-canvas { display: block; }
 		.tide-win { display: flex; align-items: center; gap: 0.6em; flex-wrap: wrap; margin-bottom: 1em; }
@@ -1169,6 +1183,7 @@
 				<button class="admin-tab" data-tab="fuse">Fuse</button>
 				<button class="admin-tab" data-tab="arc">Arc</button>
 				<button class="admin-tab" data-tab="echo">Echo</button>
+				<button class="admin-tab" data-tab="horizon">Horizon</button>
 			</div>
 
 			<!-- ============ GALLERY TAB ============ -->
@@ -2628,6 +2643,43 @@
 
 						</div>
 
+						<div id="tab-horizon" class="tab-content">
+
+							<div class="admin-card">
+								<h3>Horizon — Traffic &amp; Conversion Forecast</h3>
+								<p class="hint">Every other analytics tab describes the <em>past</em> &mdash; Spotlight ranks artworks, Tide compares recent vs. prior, Ripple triangulates cohorts. None looks <strong>forward</strong>. Horizon is the family&rsquo;s first <em>predictive</em> view: it fits a trend line plus day-of-week seasonality to the historical daily visit series and projects the next two weeks of traffic and commission inquiries. A concrete planning signal &mdash; when to open commission slots, time an art drop, or schedule a social push so it lands when the audience is already arriving. Read-only over <code>_gam_analytics_v1</code> &mdash; no new storage key, no <code>analytics.js</code> change. A forecast from local history: the more days recorded, the firmer it gets (see the confidence stat and the note below the chart).</p>
+								<div id="horizon-stats" class="analytics-stats" style="margin-bottom:1em"></div>
+								<div style="display:flex;gap:0.5em;flex-wrap:wrap">
+									<button class="button small" id="horizon-refresh-btn">Refresh</button>
+									<button class="button small" id="horizon-export-btn">Export JSON</button>
+								</div>
+							</div>
+
+							<div class="admin-card">
+								<h3>Forecast — Recent History &amp; Projection</h3>
+								<p class="hint">Daily visits over recent history (solid amber) carried forward as a projection (dashed) past the &ldquo;today&rdquo; marker. The projection blends the overall trend with each weekday&rsquo;s typical level, so a normally-busy day still reads high even on a gentle downtrend.</p>
+								<canvas id="horizon-canvas" width="620" height="240"></canvas>
+								<div class="horizon-legend">
+									<span class="hz-hist">Recorded visits</span>
+									<span class="hz-fore">Projected</span>
+								</div>
+								<p id="horizon-methodology" class="horizon-note"></p>
+							</div>
+
+							<div class="admin-card">
+								<h3>Next 14 Days — Day-by-Day Projection</h3>
+								<p class="hint">Projected visits for each of the coming fourteen days, tallest first, each annotated with the expected commission inquiries at your historical conversion rate. The days at the top are where attention is most likely to concentrate &mdash; the best windows to publish and to be reachable.</p>
+								<div id="horizon-days"></div>
+							</div>
+
+							<div class="admin-card">
+								<h3>Weekday Seasonality — When the Week Runs Hot</h3>
+								<p class="hint">How each weekday over- or under-indexes against an average day, measured across all recorded history. A bar above 100% is a day that reliably runs busier than usual; below 100% runs quieter. The rhythm behind the forecast &mdash; and the clearest read on which day of the week to aim a launch at.</p>
+								<div id="horizon-weekday"></div>
+							</div>
+
+						</div>
+
 		</div><!-- /#admin-dash -->
 		<input type="file" id="img-file-input" accept="image/*" style="display:none" />
 
@@ -3681,6 +3733,9 @@ document.addEventListener('click', function(e){
   }
   if (e.target.dataset && e.target.dataset.tab === 'echo') {
     renderEchoTab();
+  }
+  if (e.target.dataset && e.target.dataset.tab === 'horizon') {
+    renderHorizonTab();
   }
 });
 
@@ -9825,6 +9880,339 @@ document.getElementById('echo-export-btn').addEventListener('click', function() 
   var url  = URL.createObjectURL(blob);
   var a    = document.createElement('a');
   a.href = url; a.download = 'echo-' + Date.now() + '.json'; a.click();
+  URL.revokeObjectURL(url);
+});
+
+/* ================================================================
+   HORIZON TAB — Traffic & Conversion Forecast
+   The family's first FORWARD-LOOKING view. Every other tab describes
+   the past; Horizon fits a linear trend + day-of-week seasonality to
+   the historical daily visit series and projects the next two weeks
+   of traffic and commission inquiries. Read-only over
+   _gam_analytics_v1 — no new storage key, no analytics.js change.
+   ================================================================ */
+
+var HORIZON_FORECAST_DAYS = 14;   /* days to project forward */
+var HORIZON_CHART_HIST    = 21;   /* recent days of history drawn on the chart */
+var HORIZON_MULT_MIN      = 0.25; /* clamp weekday multipliers to a sane band */
+var HORIZON_MULT_MAX      = 3;
+var HORIZON_WEEKDAYS      = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+function buildHorizon() {
+  var events = CommissionData.getAnalytics() || [];
+  var dayMs  = 86400000;
+
+  /* Tally visits + inquiries per local calendar day. */
+  var visitByDay = {};   /* dateStr -> visit count */
+  var inqByDay   = {};   /* dateStr -> form_submit count */
+  var firstTs = null, lastTs = null;
+  var totalInq = 0;
+
+  events.forEach(function(e) {
+    if (e.type === 'pv') {
+      var ds = new Date(e.ts).toDateString();
+      visitByDay[ds] = (visitByDay[ds] || 0) + 1;
+      if (firstTs === null || e.ts < firstTs) firstTs = e.ts;
+      if (lastTs  === null || e.ts > lastTs)  lastTs  = e.ts;
+    } else if (e.type === 'goal' && e.goal === 'form_submit') {
+      var gs = new Date(e.ts).toDateString();
+      inqByDay[gs] = (inqByDay[gs] || 0) + 1;
+      totalInq++;
+    }
+  });
+
+  var hasData = firstTs !== null;
+
+  /* Contiguous daily series from the first recorded day through today
+     (zero-filled — a day with no visits is a real zero, not a gap). */
+  var now   = new Date();
+  var today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  var start = hasData ? new Date(firstTs) : today;
+  start = new Date(start.getFullYear(), start.getMonth(), start.getDate());
+  var span = Math.max(1, Math.round((today - start) / dayMs) + 1);
+
+  var series = [];              /* {date, dateStr, visits, dow} oldest→today */
+  var totalVisits = 0;
+  var daysWithData = 0;
+  for (var i = 0; i < span; i++) {
+    var d  = new Date(start.getFullYear(), start.getMonth(), start.getDate() + i);
+    var ds2 = d.toDateString();
+    var v  = visitByDay[ds2] || 0;
+    if (v > 0) daysWithData++;
+    totalVisits += v;
+    series.push({ date: d, dateStr: ds2, visits: v, dow: d.getDay() });
+  }
+
+  var N = series.length;
+  var overallMean = N ? totalVisits / N : 0;
+
+  /* Least-squares linear trend  visits ≈ a + b·x  (x = day index). */
+  var a = overallMean, b = 0;
+  if (N >= 2) {
+    var sx = 0, sy = 0, sxx = 0, sxy = 0;
+    series.forEach(function(pt, x) { sx += x; sy += pt.visits; sxx += x * x; sxy += x * pt.visits; });
+    var denom = N * sxx - sx * sx;
+    if (denom !== 0) {
+      b = (N * sxy - sx * sy) / denom;
+      a = (sy - b * sx) / N;
+    }
+  }
+  var trendAt = function(x) { return Math.max(0, a + b * x); };
+
+  /* Day-of-week seasonality multipliers vs. an average day. */
+  var dowSum = [0,0,0,0,0,0,0], dowCnt = [0,0,0,0,0,0,0];
+  series.forEach(function(pt) { dowSum[pt.dow] += pt.visits; dowCnt[pt.dow]++; });
+  var dowMult = [], dowAvg = [];
+  for (var w = 0; w < 7; w++) {
+    var avg = dowCnt[w] ? dowSum[w] / dowCnt[w] : overallMean;
+    dowAvg[w] = avg;
+    var m = overallMean > 0 ? avg / overallMean : 1;
+    dowMult[w] = Math.max(HORIZON_MULT_MIN, Math.min(HORIZON_MULT_MAX, m || 1));
+  }
+
+  var convRate = totalVisits > 0 ? totalInq / totalVisits : 0;
+
+  /* Project the next HORIZON_FORECAST_DAYS days. */
+  var forecast = [];
+  var next7Visits = 0, next7Inq = 0, next14Visits = 0, next14Inq = 0;
+  for (var j = 1; j <= HORIZON_FORECAST_DAYS; j++) {
+    var fd = new Date(today.getFullYear(), today.getMonth(), today.getDate() + j);
+    var base = trendAt((N - 1) + j);
+    var pv = base * dowMult[fd.getDay()];
+    var inq = pv * convRate;
+    forecast.push({ date: fd, dow: fd.getDay(), visits: pv, inq: inq });
+    next14Visits += pv; next14Inq += inq;
+    if (j <= 7) { next7Visits += pv; next7Inq += inq; }
+  }
+
+  /* Trend expressed as % change per week vs. today's fitted level. */
+  var levelToday = trendAt(N - 1);
+  var recent7 = series.slice(-7);
+  var recentAvg = recent7.length ? recent7.reduce(function(s, p){ return s + p.visits; }, 0) / recent7.length : 0;
+  var trendPctWk = levelToday > 0 ? Math.round((b * 7) / levelToday * 100)
+                                  : (b > 0 ? 100 : 0);
+
+  var confidence = daysWithData < 4  ? 'Low'
+                 : daysWithData < 10 ? 'Building'
+                 : daysWithData < 21 ? 'Moderate'
+                 : 'Firm';
+
+  /* Chart series: recent history + the forward projection. */
+  var histTail = series.slice(-HORIZON_CHART_HIST);
+  var chartSeries = histTail.map(function(pt, i) {
+    return {
+      label: (i === histTail.length - 1) ? 'today' : (pt.date.getMonth() + 1) + '/' + pt.date.getDate(),
+      value: pt.visits, forecast: false
+    };
+  });
+  var splitIndex = chartSeries.length; /* first forecast index */
+  forecast.forEach(function(f) {
+    chartSeries.push({
+      label: (f.date.getMonth() + 1) + '/' + f.date.getDate(),
+      value: f.visits, forecast: true
+    });
+  });
+
+  return {
+    hasData: hasData,
+    totalVisits: totalVisits, daysWithData: daysWithData, spanDays: N,
+    totalInquiries: totalInq, convRate: convRate,
+    slope: b, trendPctWk: trendPctWk, levelToday: levelToday, recentAvg: recentAvg,
+    confidence: confidence,
+    dowMult: dowMult, dowAvg: dowAvg, dowCnt: dowCnt, overallMean: overallMean,
+    forecast: forecast,
+    next7Visits: next7Visits, next7Inq: next7Inq,
+    next14Visits: next14Visits, next14Inq: next14Inq,
+    chartSeries: chartSeries, splitIndex: splitIndex
+  };
+}
+
+function drawHorizonCanvas(h) {
+  var canvas = document.getElementById('horizon-canvas');
+  if (!canvas) return;
+  var ctx = canvas.getContext('2d');
+  var W = canvas.width, H = canvas.height;
+  var pad = { t: 16, r: 14, b: 26, l: 34 };
+  var cW = W - pad.l - pad.r, cH = H - pad.t - pad.b;
+  ctx.clearRect(0, 0, W, H);
+
+  var pts = h.chartSeries;
+  if (!pts || pts.length < 2) {
+    ctx.fillStyle = '#444'; ctx.font = '12px -apple-system, sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText('Not enough history to chart a forecast yet.', W / 2, H / 2);
+    return;
+  }
+
+  var maxV = Math.max.apply(null, pts.map(function(p){ return p.value; }).concat([1]));
+  var n = pts.length;
+  var xOf = function(i){ return pad.l + (i / (n - 1)) * cW; };
+  var yOf = function(v){ return pad.t + cH * (1 - v / maxV); };
+
+  /* gridlines + y labels */
+  [0, 0.5, 1].forEach(function(f) {
+    var y = pad.t + cH * (1 - f);
+    ctx.strokeStyle = 'rgba(201,201,201,0.06)'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(pad.l, y); ctx.lineTo(pad.l + cW, y); ctx.stroke();
+    ctx.fillStyle = '#3a3a3a'; ctx.font = '9px monospace'; ctx.textAlign = 'right';
+    ctx.fillText(Math.round(maxV * f), pad.l - 4, y + 3);
+  });
+
+  var split = h.splitIndex; /* first forecast index; today = split-1 */
+
+  /* "today" divider between history and projection */
+  if (split > 0 && split <= n) {
+    var tx = xOf(split - 1);
+    ctx.strokeStyle = 'rgba(201,168,124,0.4)'; ctx.lineWidth = 1;
+    ctx.setLineDash([3, 3]);
+    ctx.beginPath(); ctx.moveTo(tx, pad.t); ctx.lineTo(tx, pad.t + cH); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = '#8c887f'; ctx.font = '8px "Courier New", monospace'; ctx.textAlign = 'center';
+    ctx.fillText('TODAY', tx, pad.t - 6);
+  }
+
+  /* area fill under the recorded-history portion */
+  ctx.beginPath();
+  for (var i = 0; i < split; i++) { (i === 0 ? ctx.moveTo : ctx.lineTo).call(ctx, xOf(i), yOf(pts[i].value)); }
+  ctx.lineTo(xOf(split - 1), pad.t + cH); ctx.lineTo(xOf(0), pad.t + cH); ctx.closePath();
+  var g = ctx.createLinearGradient(0, pad.t, 0, pad.t + cH);
+  g.addColorStop(0, 'rgba(201,168,124,0.20)'); g.addColorStop(1, 'rgba(201,168,124,0.02)');
+  ctx.fillStyle = g; ctx.fill();
+
+  /* recorded-history line (solid amber) */
+  ctx.beginPath();
+  for (var k = 0; k < split; k++) { (k === 0 ? ctx.moveTo : ctx.lineTo).call(ctx, xOf(k), yOf(pts[k].value)); }
+  ctx.strokeStyle = 'rgba(201,168,124,0.92)'; ctx.lineWidth = 1.9; ctx.stroke();
+
+  /* projection line (dashed clay), anchored at today so the two connect */
+  ctx.beginPath();
+  ctx.setLineDash([5, 4]);
+  for (var m = split - 1; m < n; m++) { (m === split - 1 ? ctx.moveTo : ctx.lineTo).call(ctx, xOf(m), yOf(pts[m].value)); }
+  ctx.strokeStyle = 'rgba(176,122,74,0.95)'; ctx.lineWidth = 1.8; ctx.stroke();
+  ctx.setLineDash([]);
+
+  /* forecast dots */
+  for (var p = split; p < n; p++) {
+    ctx.beginPath(); ctx.arc(xOf(p), yOf(pts[p].value), 2, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(176,122,74,0.95)'; ctx.fill();
+  }
+
+  /* x labels — sparse */
+  ctx.fillStyle = '#3a3a3a'; ctx.font = '8px monospace'; ctx.textAlign = 'center';
+  var step = n > 24 ? 5 : (n > 12 ? 3 : 2);
+  pts.forEach(function(p, i) {
+    if (i % step === 0 || i === n - 1) ctx.fillText(p.label, xOf(i), H - 4);
+  });
+}
+
+function renderHorizonTab() {
+  var h = buildHorizon();
+  function chip(num, label) {
+    return '<div class="analytics-stat-chip"><span class="asc-num">' + num +
+      '</span><span class="asc-label">' + label + '</span></div>';
+  }
+  var arrow = function(p){ return p > 0 ? '▲ ' : (p < 0 ? '▼ ' : ''); };
+  var trendStr = h.hasData ? (arrow(h.trendPctWk) + (h.trendPctWk > 0 ? '+' : '') + h.trendPctWk + '%/wk') : '—';
+  var inq7 = h.convRate > 0 ? '~' + (Math.round(h.next7Inq * 10) / 10) : '—';
+
+  document.getElementById('horizon-stats').innerHTML =
+    chip(h.hasData ? Math.round(h.next7Visits) : '—', 'Proj. Visits (7d)') +
+    chip(inq7,                                          'Proj. Inquiries (7d)') +
+    chip(trendStr,                                      'Trend') +
+    chip(h.confidence,                                  'Forecast Confidence');
+
+  drawHorizonCanvas(h);
+
+  /* methodology / caveat note under the chart */
+  var mnote = document.getElementById('horizon-methodology');
+  if (!h.hasData) {
+    mnote.innerHTML = 'No visits recorded yet — the forecast populates once the public pages start collecting pageviews.';
+  } else {
+    mnote.innerHTML =
+      'Fitted from <strong>' + h.daysWithData + '</strong> ' + (h.daysWithData === 1 ? 'day' : 'days') +
+      ' with traffic across a <strong>' + h.spanDays + '-day</strong> span (recent 7-day average <strong>' +
+      (Math.round(h.recentAvg * 10) / 10) + '</strong> visits/day). ' +
+      'Projection = linear trend × each weekday&rsquo;s typical level' +
+      (h.convRate > 0
+        ? ', with inquiries at your <strong>' + (Math.round(h.convRate * 1000) / 10) + '%</strong> historical conversion rate.'
+        : '. No commission inquiries recorded yet, so inquiry projections stay at zero until the first submission.') +
+      ' Confidence is <strong>' + h.confidence + '</strong> — it firms up as more days accumulate.';
+  }
+
+  /* Next 14 days — day-by-day, tallest first */
+  if (!h.hasData) {
+    document.getElementById('horizon-days').innerHTML = '<p class="horizon-empty">No history to project from yet.</p>';
+  } else {
+    var dayRows = h.forecast.map(function(f) {
+      var wd = HORIZON_WEEKDAYS[f.dow];
+      return {
+        label: wd + ' ' + (f.date.getMonth() + 1) + '/' + f.date.getDate(),
+        count: Math.round(f.visits),
+        _inq: f.inq
+      };
+    }).sort(function(x, y){ return y.count - x.count; });
+    var maxDay = dayRows.reduce(function(mx, r){ return Math.max(mx, r.count); }, 1);
+    document.getElementById('horizon-days').innerHTML = jBarList(dayRows, maxDay, {
+      suffix: function(r) {
+        return Math.round(r.count) + ' visits' +
+          (h.convRate > 0
+            ? '<span class="horizon-tag' + (r._inq >= 0.5 ? '' : ' horizon-tag-quiet') + '">~' + (Math.round(r._inq * 10) / 10) + ' inquiries</span>'
+            : '');
+      }
+    });
+  }
+
+  /* Weekday seasonality — Mon→Sun for readability */
+  if (!h.hasData) {
+    document.getElementById('horizon-weekday').innerHTML = '<p class="horizon-empty">No history to profile yet.</p>';
+  } else {
+    var order = [1, 2, 3, 4, 5, 6, 0];
+    var wdRows = order.map(function(w) {
+      return {
+        label: HORIZON_WEEKDAYS[w],
+        count: Math.round(h.dowMult[w] * 100),
+        _pct: Math.round((h.dowMult[w] - 1) * 100),
+        _avg: h.dowAvg[w], _cnt: h.dowCnt[w]
+      };
+    });
+    var maxWd = wdRows.reduce(function(mx, r){ return Math.max(mx, r.count); }, 1);
+    document.getElementById('horizon-weekday').innerHTML = jBarList(wdRows, maxWd, {
+      suffix: function(r) {
+        if (!r._cnt) return 'no data yet';
+        var sign = r._pct > 0 ? '+' : '';
+        return r.count + '% of avg' +
+          '<span class="horizon-tag' + (r._pct >= 0 ? '' : ' horizon-tag-quiet') + '">' + sign + r._pct + '%</span>' +
+          ' · ' + (Math.round(r._avg * 10) / 10) + ' visits/day';
+      }
+    });
+  }
+}
+
+document.getElementById('horizon-refresh-btn').addEventListener('click', renderHorizonTab);
+
+document.getElementById('horizon-export-btn').addEventListener('click', function() {
+  var h = buildHorizon();
+  var out = {
+    totalVisits: h.totalVisits, daysWithData: h.daysWithData, spanDays: h.spanDays,
+    totalInquiries: h.totalInquiries, conversionRate: Math.round(h.convRate * 10000) / 10000,
+    trendSlopePerDay: Math.round(h.slope * 1000) / 1000, trendPctPerWeek: h.trendPctWk,
+    recentAvgDaily: Math.round(h.recentAvg * 100) / 100, confidence: h.confidence,
+    next7Visits: Math.round(h.next7Visits), next7Inquiries: Math.round(h.next7Inq * 10) / 10,
+    next14Visits: Math.round(h.next14Visits), next14Inquiries: Math.round(h.next14Inq * 10) / 10,
+    weekdaySeasonality: HORIZON_WEEKDAYS.map(function(name, w) {
+      return { day: name, multiplier: Math.round(h.dowMult[w] * 1000) / 1000, avgVisits: Math.round(h.dowAvg[w] * 100) / 100, daysObserved: h.dowCnt[w] };
+    }),
+    forecast: h.forecast.map(function(f) {
+      return {
+        date: f.date.toISOString().slice(0, 10), weekday: HORIZON_WEEKDAYS[f.dow],
+        projectedVisits: Math.round(f.visits * 10) / 10,
+        projectedInquiries: Math.round(f.inq * 100) / 100
+      };
+    })
+  };
+  var blob = new Blob([JSON.stringify(out, null, 2)], { type: 'application/json' });
+  var url  = URL.createObjectURL(blob);
+  var a    = document.createElement('a');
+  a.href = url; a.download = 'horizon-' + Date.now() + '.json'; a.click();
   URL.revokeObjectURL(url);
 });
 </script>

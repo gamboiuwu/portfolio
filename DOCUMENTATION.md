@@ -167,6 +167,19 @@ Inquiries, Feedback.
   - **Pages Trending** and **Sources Trending** — pages and acquisition channels moving
     up or down versus the prior window
   - Derived live from `_gam_analytics_v1` + `_gam_spotlight_v1` — no new storage key.
+- **Horizon** *(newest)* — **traffic & conversion forecast**. Every other tool is a
+  rear-view mirror; Horizon is the only *forward-looking* one. It fits a linear trend
+  to the historical daily visit series, layers day-of-week seasonality on top, and
+  projects the next two weeks of traffic and commission inquiries. It surfaces:
+  - Stats: projected visits (7d), projected inquiries (7d), trend %/week, forecast confidence
+  - **Forecast chart** — recorded daily visits (solid) carried forward as a dashed
+    projection past a "today" marker
+  - **Next 14 Days** — a day-by-day projection ranked tallest-first, each annotated with
+    expected inquiries at the historical conversion rate
+  - **Weekday Seasonality** — how each weekday over/under-indexes vs. an average day
+  - A planning aid (not a guarantee) for timing commission openings, drops, and posts;
+    confidence firms up as more days of history accumulate.
+  - Derived live from `_gam_analytics_v1` — no new storage key, no `analytics.js` change.
 - **Revenue** — financial dashboard derived from the commission Queue: total earned,
   pipeline value, monthly earnings chart, revenue by type, top clients.
 - **Palette** — extract dominant colors from an uploaded artwork (k-means), save
