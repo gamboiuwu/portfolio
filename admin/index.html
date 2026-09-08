@@ -1031,6 +1031,28 @@
 		.echo-explore-summary strong { color: #d6a878; }
 		.echo-empty { color: #444; font-size: 0.85em; padding: 0.5em 0; }
 
+		/* Strata tab — engagement by visit number / loyalty depth curve (warm amber, no blue/pink) */
+		#strata-curve { display: block; max-width: 100%; }
+		.strata-curve-wrap { overflow-x: auto; }
+		.strata-scorecard-wrap { overflow-x: auto; }
+		.strata-scorecard { width: 100%; border-collapse: collapse; font-size: 0.82em; }
+		.strata-scorecard th, .strata-scorecard td { padding: 0.55em 0.6em; text-align: left; vertical-align: middle; }
+		.strata-scorecard thead th { font-family: 'Courier New', monospace; font-size: 0.72em; letter-spacing: 0.07em;
+			color: #8c887f; text-transform: uppercase; border-bottom: 1px solid rgba(201,168,124,0.25); }
+		.strata-scorecard tbody tr { border-bottom: 1px solid rgba(255,255,255,0.05); }
+		.strata-scorecard tbody tr:last-child { border-bottom: none; }
+		.strata-metric-name { color: #e7e4de; font-weight: 500; white-space: nowrap; }
+		.strata-metric-note { display: block; font-family: 'Courier New', monospace; font-size: 0.68em; color: #6f6b63; margin-top: 0.15em; text-transform: none; letter-spacing: 0; }
+		.strata-cell-val { font-family: 'Courier New', monospace; font-size: 0.9em; color: #d6a878; }
+		.strata-lift { font-family: 'Courier New', monospace; font-size: 0.78em; letter-spacing: 0.02em; }
+		.strata-lift.strata-up   { color: #c9a87c; }
+		.strata-lift.strata-down { color: #96683e; }
+		.strata-lift.strata-flat { color: #8c887f; }
+		.strata-arrow { margin-right: 0.15em; font-size: 0.82em; }
+		.strata-cmp-note { font-size: 0.8em; color: #b7b2a8; margin: 0.2em 0 0.9em; line-height: 1.5; }
+		.strata-cmp-note strong { color: #d6a878; }
+		.strata-empty { color: #444; font-size: 0.85em; padding: 0.5em 0; }
+
 		/* Tide tab — trends & momentum (reuses spotlight bars) */
 		#tide-canvas { display: block; }
 		.tide-win { display: flex; align-items: center; gap: 0.6em; flex-wrap: wrap; margin-bottom: 1em; }
@@ -1169,6 +1191,7 @@
 				<button class="admin-tab" data-tab="fuse">Fuse</button>
 				<button class="admin-tab" data-tab="arc">Arc</button>
 				<button class="admin-tab" data-tab="echo">Echo</button>
+				<button class="admin-tab" data-tab="strata">Strata</button>
 			</div>
 
 			<!-- ============ GALLERY TAB ============ -->
@@ -2628,6 +2651,52 @@
 
 						</div>
 
+						<div id="tab-strata" class="tab-content">
+
+							<div class="admin-card">
+								<h3>Strata — Engagement by Visit Number &amp; Loyalty Depth</h3>
+								<p class="hint">Orbit counts <em>how many</em> visitors come back; Ripple triangulates <em>which calendar week&rsquo;s</em> arrivals return; Facet cuts by device, Prism by persona. None asks whether a returning visitor engages any <em>differently</em> from a first-timer. Strata is that missing axis: it groups every visit by its <strong>visit number</strong> &mdash; a visitor&rsquo;s 1st ever visit, 2nd, 3rd&hellip; &mdash; and lines up the same engagement signals so you can see whether each successive return goes <em>deeper</em> (more pages, more scroll, more artwork time, more conversion) or fades. That answers a concrete strategic question: is a commission decision impulsive (optimise the first impression) or does familiarity build engagement (a returning-visitor nurture is worth the effort)? Read-only over <code>_gam_analytics_v1</code> (visit number <code>vnum</code>, stamped on every pageview for Orbit) + <code>_gam_spotlight_v1</code> (artwork time) &mdash; no new storage key, no <code>analytics.js</code> change. A composite <strong>depth index</strong> (0&ndash;100) blends six capped signals (pages, time on site, scroll, clicks, artwork attention, commission intent). Keyed by <code>sid</code>, so one visitor across several tabs counts as separate visits; a session&rsquo;s visit number is taken from its first pageview.</p>
+								<div id="strata-stats" class="analytics-stats" style="margin-bottom:1em"></div>
+								<div style="display:flex;gap:0.5em;flex-wrap:wrap">
+									<button class="button small" id="strata-refresh-btn">Refresh</button>
+									<button class="button small" id="strata-export-btn">Export JSON</button>
+								</div>
+							</div>
+
+							<div class="admin-card">
+								<h3>Engagement Depth by Visit Number</h3>
+								<p class="hint">The signature curve: average <strong>depth index</strong> (0&ndash;100) for each visit stage. A line that climbs left-to-right means visitors warm up as they return &mdash; loyalty deepens engagement. A line that sags means later visits are shallower drop-ins. Each point is annotated with the number of sessions behind it; stages with few sessions read as noisier.</p>
+								<div class="strata-curve-wrap">
+									<canvas id="strata-curve" width="640" height="240"></canvas>
+								</div>
+							</div>
+
+							<div class="admin-card">
+								<h3>Depth by Visit Stage</h3>
+								<p class="hint">The same visit stages ranked as bars &mdash; average depth index per stage, annotated with session count and the stage&rsquo;s share of all visits. The deepest-engaging stage is where the audience is most invested.</p>
+								<div id="strata-stages"></div>
+							</div>
+
+							<div class="admin-card">
+								<h3>What Deepens on Return — First Visit vs Returning</h3>
+								<p class="hint">The actionable diagnostic: each engagement signal averaged for <strong>first-ever visits</strong> versus <strong>returning visits</strong> (visit&nbsp;2+), with the lift between them. A positive lift on a signal means returning visitors do more of it &mdash; the behaviours that grow with familiarity, worth designing a return experience around.</p>
+								<div id="strata-compare-note" class="strata-cmp-note"></div>
+								<div class="strata-scorecard-wrap">
+									<table class="strata-scorecard">
+										<thead><tr><th>Signal</th><th>First visit</th><th>Returning</th><th>Lift</th></tr></thead>
+										<tbody id="strata-compare-body"></tbody>
+									</table>
+								</div>
+							</div>
+
+							<div class="admin-card">
+								<h3>Conversion by Visit Number</h3>
+								<p class="hint">The business cut on its own: the share of each visit stage&rsquo;s sessions that fired a commission-intent signal (a CTA click or form step). If conversion climbs with visit number, would-be clients are deciding across repeat visits &mdash; a direct case for nurturing returning visitors rather than betting everything on the first landing.</p>
+								<div id="strata-conversion"></div>
+							</div>
+
+						</div>
+
 		</div><!-- /#admin-dash -->
 		<input type="file" id="img-file-input" accept="image/*" style="display:none" />
 
@@ -3681,6 +3750,9 @@ document.addEventListener('click', function(e){
   }
   if (e.target.dataset && e.target.dataset.tab === 'echo') {
     renderEchoTab();
+  }
+  if (e.target.dataset && e.target.dataset.tab === 'strata') {
+    renderStrataTab();
   }
 });
 
@@ -9825,6 +9897,318 @@ document.getElementById('echo-export-btn').addEventListener('click', function() 
   var url  = URL.createObjectURL(blob);
   var a    = document.createElement('a');
   a.href = url; a.download = 'echo-' + Date.now() + '.json'; a.click();
+  URL.revokeObjectURL(url);
+});
+
+/* ── Strata — Engagement by Visit Number & Loyalty Depth ──
+   Read-only over _gam_analytics_v1 (vnum, stamped on every pageview for Orbit) +
+   _gam_spotlight_v1 (artwork ms). Groups every visit by its persistent-visitor
+   visit ordinal (1st ever, 2nd, 3rd…) and reports whether each successive return
+   engages more deeply. Distinct axis from Orbit (return counts), Ripple (calendar
+   cohorts), Facet (device), Prism (persona): the cut is the VISIT NUMBER. A composite
+   depth index (0–100) blends six capped signals. No new storage key, no analytics.js
+   change. Warm amber palette, no blue/pink. */
+var STRATA_W   = { pages: 20, dwell: 25, scroll: 20, clicks: 10, art: 15, goal: 10 };
+var STRATA_CAP = { pages: 5, dwell: 180000, clicks: 6, art: 60000 };
+var STRATA_BUCKETS = [
+  { key: '1',    label: '1st visit',  min: 1,  max: 1 },
+  { key: '2',    label: '2nd visit',  min: 2,  max: 2 },
+  { key: '3',    label: '3rd visit',  min: 3,  max: 3 },
+  { key: '4-5',  label: '4th–5th',    min: 4,  max: 5 },
+  { key: '6-10', label: '6th–10th',   min: 6,  max: 10 },
+  { key: '11+',  label: '11th+',      min: 11, max: Infinity }
+];
+function strataBucketOf(vnum) {
+  var v = vnum || 1;
+  for (var i = 0; i < STRATA_BUCKETS.length; i++) {
+    if (v >= STRATA_BUCKETS[i].min && v <= STRATA_BUCKETS[i].max) return STRATA_BUCKETS[i].key;
+  }
+  return '1';
+}
+function strataDepth(s) {
+  var c = {
+    pages:  Math.min(s.pv, STRATA_CAP.pages)      / STRATA_CAP.pages  * STRATA_W.pages,
+    dwell:  Math.min(s.dwell, STRATA_CAP.dwell)   / STRATA_CAP.dwell  * STRATA_W.dwell,
+    scroll: Math.min(s.scroll, 100)               / 100              * STRATA_W.scroll,
+    clicks: Math.min(s.clicks, STRATA_CAP.clicks) / STRATA_CAP.clicks * STRATA_W.clicks,
+    art:    Math.min(s.artMs, STRATA_CAP.art)     / STRATA_CAP.art    * STRATA_W.art,
+    goal:   s.goal ? STRATA_W.goal : 0
+  };
+  var d = Math.round(c.pages + c.dwell + c.scroll + c.clicks + c.art + c.goal);
+  return d > 100 ? 100 : d;
+}
+
+function strataAvg(list) {
+  var n = list.length;
+  var base = { n: n, depth: 0, pages: 0, dwell: 0, scroll: 0, clicks: 0, art: 0, conv: 0 };
+  if (!n) return base;
+  list.forEach(function(x) {
+    base.depth  += x.depth;   base.pages  += x.pv;     base.dwell  += x.dwell;
+    base.scroll += x.scroll;  base.clicks += x.clicks; base.art    += x.artMs;
+    base.conv   += x.goal ? 1 : 0;
+  });
+  return {
+    n: n, depth: base.depth / n, pages: base.pages / n, dwell: base.dwell / n,
+    scroll: base.scroll / n, clicks: base.clicks / n, art: base.art / n,
+    conv: base.conv / n * 100
+  };
+}
+
+function buildStrata() {
+  var events = CommissionData.getAnalytics() || [];
+  var spot   = CommissionData.getSpotlight() || [];
+
+  var bySid = {};
+  events.forEach(function(e){ if (e.sid) (bySid[e.sid] = bySid[e.sid] || []).push(e); });
+  var artMsBySid = {};
+  spot.forEach(function(e){ if (e.sid) artMsBySid[e.sid] = (artMsBySid[e.sid] || 0) + (e.ms || 0); });
+
+  var sessions = [];
+  Object.keys(bySid).forEach(function(sid) {
+    var evts = bySid[sid];
+    var pv = 0, clicks = 0, maxScroll = 0, exitMs = 0;
+    var firstTs = null, lastTs = null, goal = false, vnum = null;
+    evts.forEach(function(e) {
+      if (firstTs === null || e.ts < firstTs) firstTs = e.ts;
+      if (lastTs  === null || e.ts > lastTs)  lastTs  = e.ts;
+      if (e.type === 'pv') {
+        pv++;
+        if (vnum === null) vnum = e.vnum || 1;   /* visit number from first pageview */
+      } else if (e.type === 'click')  { clicks++; }
+      else if (e.type === 'scroll') { if ((e.depth || 0) > maxScroll) maxScroll = e.depth; }
+      else if (e.type === 'exit')   { if ((e.ms || 0) > exitMs) exitMs = e.ms; }
+      else if (e.type === 'goal')   { goal = true; }
+    });
+    if (pv === 0) return;
+    var dwell = Math.max((lastTs || 0) - (firstTs || 0), exitMs);
+    var s = { sid: sid, vnum: vnum || 1, pv: pv, clicks: clicks, scroll: maxScroll,
+              dwell: dwell, artMs: artMsBySid[sid] || 0, goal: goal, ts: lastTs || 0 };
+    s.depth  = strataDepth(s);
+    s.bucket = strataBucketOf(s.vnum);
+    sessions.push(s);
+  });
+
+  var total = sessions.length;
+
+  /* Per-bucket aggregation, kept in visit order */
+  var buckets = STRATA_BUCKETS.map(function(b) {
+    var list = sessions.filter(function(s){ return s.bucket === b.key; });
+    var a = strataAvg(list);
+    return {
+      key: b.key, label: b.label, n: a.n, share: total ? Math.round(a.n / total * 100) : 0,
+      avgDepth: a.depth, avgPages: a.pages, avgDwell: a.dwell, avgScroll: a.scroll,
+      avgClicks: a.clicks, avgArt: a.art, convRate: a.conv
+    };
+  });
+
+  var firstAvg     = strataAvg(sessions.filter(function(s){ return s.vnum <= 1; }));
+  var returningAvg = strataAvg(sessions.filter(function(s){ return s.vnum >= 2; }));
+  var returningN   = returningAvg.n;
+  var returningShare = total ? Math.round(returningN / total * 100) : 0;
+  var depthLiftPct = firstAvg.depth > 0
+    ? Math.round((returningAvg.depth - firstAvg.depth) / firstAvg.depth * 100)
+    : (returningAvg.depth > 0 ? 100 : 0);
+
+  var deepest = null;
+  buckets.forEach(function(b){ if (b.n > 0 && (!deepest || b.avgDepth > deepest.avgDepth)) deepest = b; });
+
+  return {
+    total: total, sessions: sessions, buckets: buckets,
+    firstAvg: firstAvg, returningAvg: returningAvg,
+    returningN: returningN, returningShare: returningShare,
+    depthLiftPct: depthLiftPct, deepest: deepest
+  };
+}
+
+function strataLiftTag(first, ret) {
+  if (first <= 0 && ret <= 0) return '<span class="strata-lift strata-flat">—</span>';
+  if (first <= 0)             return '<span class="strata-lift strata-up"><span class="strata-arrow">▲</span>new</span>';
+  var pct = Math.round((ret - first) / first * 100);
+  if (pct > 0)  return '<span class="strata-lift strata-up"><span class="strata-arrow">▲</span>+' + pct + '%</span>';
+  if (pct < 0)  return '<span class="strata-lift strata-down"><span class="strata-arrow">▼</span>' + pct + '%</span>';
+  return '<span class="strata-lift strata-flat">0%</span>';
+}
+
+/* Absolute 0–100 width bar list (bar = value, not relative) — reuses spotlight bar styles. */
+function strataAbsBars(rows) {
+  if (!rows.length) return '<p class="strata-empty">No visits recorded yet — Strata populates as visitors browse the public pages.</p>';
+  return '<div class="spotlight-board">' + rows.map(function(r) {
+    var w = Math.max(2, Math.min(100, r.val));
+    return '<div class="spotlight-row">' +
+      '<div class="sp-info">' +
+        '<div class="sp-label" title="' + escHtml(r.label) + '">' + escHtml(r.label) + '</div>' +
+        '<div class="sp-bar-wrap"><div class="sp-bar" style="width:' + w + '%"></div></div>' +
+      '</div>' +
+      '<div class="sp-meta">' +
+        '<span class="sp-time">' + r.num + '</span>' +
+        '<span class="sp-views">' + r.sub + '</span>' +
+      '</div>' +
+    '</div>';
+  }).join('') + '</div>';
+}
+
+function drawStrataCurve(st) {
+  var c = document.getElementById('strata-curve');
+  if (!c) return;
+  var ctx = c.getContext('2d');
+  var W = c.width, H = c.height;
+  ctx.clearRect(0, 0, W, H);
+
+  var pts = st.buckets.filter(function(b){ return b.n > 0; });
+  if (!pts.length) {
+    ctx.fillStyle = '#444'; ctx.font = '12px -apple-system, sans-serif';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText('No visits recorded yet.', W / 2, H / 2);
+    return;
+  }
+
+  var padL = 40, padR = 20, padT = 24, padB = 46;
+  var plotW = W - padL - padR, plotH = H - padT - padB;
+
+  ctx.textAlign = 'right'; ctx.textBaseline = 'middle'; ctx.font = '9px "Courier New", monospace';
+  [0, 25, 50, 75, 100].forEach(function(g) {
+    var y = padT + plotH - (g / 100) * plotH;
+    ctx.strokeStyle = 'rgba(255,255,255,0.06)';
+    ctx.beginPath(); ctx.moveTo(padL, y); ctx.lineTo(W - padR, y); ctx.stroke();
+    ctx.fillStyle = '#6f6b63'; ctx.fillText(g, padL - 6, y);
+  });
+
+  var n = pts.length;
+  function xAt(i){ return n === 1 ? padL + plotW / 2 : padL + (i / (n - 1)) * plotW; }
+  function yAt(v){ return padT + plotH - (Math.max(0, Math.min(100, v)) / 100) * plotH; }
+
+  /* area */
+  ctx.beginPath();
+  pts.forEach(function(b, i){ var x = xAt(i), y = yAt(b.avgDepth); if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y); });
+  ctx.lineTo(xAt(n - 1), padT + plotH); ctx.lineTo(xAt(0), padT + plotH); ctx.closePath();
+  ctx.fillStyle = 'rgba(201,168,124,0.14)'; ctx.fill();
+
+  /* line */
+  ctx.beginPath();
+  pts.forEach(function(b, i){ var x = xAt(i), y = yAt(b.avgDepth); if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y); });
+  ctx.strokeStyle = '#c9a87c'; ctx.lineWidth = 2; ctx.stroke();
+
+  /* points + labels */
+  ctx.textAlign = 'center';
+  pts.forEach(function(b, i) {
+    var x = xAt(i), y = yAt(b.avgDepth);
+    ctx.beginPath(); ctx.arc(x, y, 4, 0, Math.PI * 2);
+    ctx.fillStyle = '#e6c07a'; ctx.fill();
+    ctx.strokeStyle = '#1a1712'; ctx.lineWidth = 1; ctx.stroke();
+    ctx.fillStyle = '#d6a878'; ctx.font = 'bold 11px "Courier New", monospace'; ctx.textBaseline = 'bottom';
+    ctx.fillText(Math.round(b.avgDepth), x, y - 8);
+    ctx.fillStyle = '#b7b2a8'; ctx.font = '9px "Courier New", monospace'; ctx.textBaseline = 'top';
+    ctx.fillText(b.label, x, padT + plotH + 6);
+    ctx.fillStyle = '#6f6b63';
+    ctx.fillText(b.n + (b.n === 1 ? ' visit' : ' visits'), x, padT + plotH + 18);
+  });
+}
+
+function renderStrataTab() {
+  var st = buildStrata();
+  function chip(num, label) {
+    return '<div class="analytics-stat-chip"><span class="asc-num">' + num +
+      '</span><span class="asc-label">' + label + '</span></div>';
+  }
+  var liftTxt = st.total
+    ? (st.depthLiftPct > 0 ? '▲ +' + st.depthLiftPct + '%'
+        : st.depthLiftPct < 0 ? '▼ ' + st.depthLiftPct + '%' : '±0%')
+    : '—';
+  document.getElementById('strata-stats').innerHTML =
+    chip(st.total,                                    'Sessions Scored')          +
+    chip(st.total ? st.returningShare + '%' : '—',    'Returning-Visit Share')    +
+    chip(liftTxt,                                     'First→Returning Depth')    +
+    chip(st.deepest ? st.deepest.label : '—',         'Deepest Visit Stage');
+
+  /* Depth curve */
+  drawStrataCurve(st);
+
+  /* Depth by visit stage (absolute 0–100 bars, visit order) */
+  var stageRows = st.buckets.filter(function(b){ return b.n > 0; }).map(function(b) {
+    return {
+      label: b.label, val: b.avgDepth, num: Math.round(b.avgDepth),
+      sub: b.n + (b.n === 1 ? ' session' : ' sessions') + ' · ' + b.share + '% of visits'
+    };
+  });
+  document.getElementById('strata-stages').innerHTML = strataAbsBars(stageRows);
+
+  /* First vs returning comparison table */
+  var note = document.getElementById('strata-compare-note');
+  if (!st.total) {
+    note.innerHTML = 'No visits recorded yet — this comparison fills once first-time and returning visits accumulate.';
+    document.getElementById('strata-compare-body').innerHTML =
+      '<tr><td colspan="4" class="strata-empty">No data yet.</td></tr>';
+  } else {
+    note.innerHTML = '<strong>' + st.firstAvg.n + '</strong> first-ever ' +
+      (st.firstAvg.n === 1 ? 'visit' : 'visits') + ' vs <strong>' + st.returningAvg.n +
+      '</strong> returning ' + (st.returningAvg.n === 1 ? 'visit' : 'visits') +
+      (st.returningAvg.n === 0 ? ' — no repeat visits captured yet, so the returning column is empty.' : '.');
+    var sigs = [
+      { label: 'Depth index',       note: 'composite 0–100',     f: 'depth',  fmt: function(v){ return Math.round(v); } },
+      { label: 'Pages / visit',     note: 'pageviews',           f: 'pages',  fmt: function(v){ return Math.round(v * 10) / 10; } },
+      { label: 'Time on site',      note: 'dwell',               f: 'dwell',  fmt: function(v){ return jFmtDur(v); } },
+      { label: 'Scroll depth',      note: 'furthest reached',    f: 'scroll', fmt: function(v){ return Math.round(v) + '%'; } },
+      { label: 'Clicks / visit',    note: 'interactions',        f: 'clicks', fmt: function(v){ return Math.round(v * 10) / 10; } },
+      { label: 'Artwork attention', note: 'viewport time',       f: 'art',    fmt: function(v){ return jFmtDur(v); } },
+      { label: 'Conversion rate',   note: '% firing intent goal', f: 'conv',  fmt: function(v){ return Math.round(v) + '%'; } }
+    ];
+    document.getElementById('strata-compare-body').innerHTML = sigs.map(function(s) {
+      var fv = st.firstAvg[s.f], rv = st.returningAvg[s.f];
+      var rvCell = st.returningAvg.n ? s.fmt(rv) : '—';
+      var liftCell = st.returningAvg.n ? strataLiftTag(fv, rv) : '<span class="strata-lift strata-flat">—</span>';
+      return '<tr>' +
+        '<td><span class="strata-metric-name">' + escHtml(s.label) + '</span>' +
+          '<span class="strata-metric-note">' + escHtml(s.note) + '</span></td>' +
+        '<td><span class="strata-cell-val">' + s.fmt(fv) + '</span></td>' +
+        '<td><span class="strata-cell-val">' + rvCell + '</span></td>' +
+        '<td>' + liftCell + '</td>' +
+      '</tr>';
+    }).join('');
+  }
+
+  /* Conversion by visit number (absolute 0–100 rate bars) */
+  var convRows = st.buckets.filter(function(b){ return b.n > 0; }).map(function(b) {
+    return {
+      label: b.label, val: b.convRate, num: Math.round(b.convRate) + '%',
+      sub: Math.round(b.convRate / 100 * b.n) + '/' + b.n + ' converted'
+    };
+  });
+  document.getElementById('strata-conversion').innerHTML = st.total
+    ? strataAbsBars(convRows)
+    : '<p class="strata-empty">No visits recorded yet.</p>';
+}
+
+document.getElementById('strata-refresh-btn').addEventListener('click', renderStrataTab);
+
+document.getElementById('strata-export-btn').addEventListener('click', function() {
+  var st = buildStrata();
+  function grp(a) {
+    return {
+      sessions: a.n, depthIndex: Math.round(a.depth * 10) / 10,
+      avgPages: Math.round(a.pages * 100) / 100, avgDwellMs: Math.round(a.dwell),
+      avgScroll: Math.round(a.scroll), avgClicks: Math.round(a.clicks * 100) / 100,
+      avgArtMs: Math.round(a.art), conversionRate: Math.round(a.conv * 10) / 10
+    };
+  }
+  var out = {
+    total: st.total, returningSessions: st.returningN, returningShare: st.returningShare,
+    firstToReturningDepthLiftPct: st.depthLiftPct,
+    deepestStage: st.deepest ? st.deepest.label : null,
+    firstVisit: grp(st.firstAvg), returning: grp(st.returningAvg),
+    buckets: st.buckets.map(function(b) {
+      return {
+        stage: b.label, sessions: b.n, share: b.share,
+        avgDepth: Math.round(b.avgDepth * 10) / 10, avgPages: Math.round(b.avgPages * 100) / 100,
+        avgDwellMs: Math.round(b.avgDwell), avgScroll: Math.round(b.avgScroll),
+        avgClicks: Math.round(b.avgClicks * 100) / 100, avgArtMs: Math.round(b.avgArt),
+        conversionRate: Math.round(b.convRate * 10) / 10
+      };
+    })
+  };
+  var blob = new Blob([JSON.stringify(out, null, 2)], { type: 'application/json' });
+  var url  = URL.createObjectURL(blob);
+  var a    = document.createElement('a');
+  a.href = url; a.download = 'strata-' + Date.now() + '.json'; a.click();
   URL.revokeObjectURL(url);
 });
 </script>
