@@ -208,6 +208,7 @@ Password-protected (SHA-256 hash in localStorage, 5-attempt lockout). Session tr
 | Fuse        | Conversion latency & sales-cycle — the missing *time* dimension of Beacon: joins persistent-visitor identity (`vid`/`vfirst`) with `goal` events to measure how long and how many visits it takes a visitor to reach their first commission-intent signal; conversion-speed donut (Instant→7 days+), visits-before-converting distribution, first-intent-signal mix, and a recent-conversions feed |
 | Arc         | Session engagement lifecycle / intra-visit tempo — lines every event up by its offset from its own session's first event to show *when within a visit* activity crests and when sessions go quiet: activity curve by time-bin (0–15s…5m+), in-visit survival (retention within one visit), event-mix-over-time (early scrolls → mid clicks/intent → late exits), and a longest-sustained-visits feed |
 | Echo        | Artwork re-engagement & magnetic pull — the first tool to measure *intra-visit re-visitation of the same piece*: counts how often each artwork is re-entered (scrolled past, then returned to) within one visit; per-artwork **pull rate** (share of viewers who looked twice), attention-split donut (one glance vs came back), most-magnetic (pull rate) and most-re-viewed (raw returns) leaderboards, glance-and-gone cold list, and a per-artwork look-distribution explorer |
+| Strata      | Engagement by visit number & loyalty depth — the first tool to cut the audience by *visit ordinal* (a visitor's 1st ever visit, 2nd, 3rd…, via persistent `vnum`): a composite **depth index** (0–100) per visit stage plotted as a loyalty-depth curve, depth-by-stage bars, a first-visit-vs-returning signal comparison with per-signal lift, and conversion rate by visit number — answers whether returning visitors engage *more deeply* than first-timers |
 
 ---
 
@@ -1179,6 +1180,48 @@ Answers the simplest magnetism question no other tool asks: **which artworks mak
 
 ---
 
+## Strata — Engagement by Visit Number & Loyalty Depth (Admin → Strata tab) — NEW TOOL
+
+Answers the one loyalty question the rest of the family structurally cannot: **do returning visitors engage any *differently* from first-timers?** Orbit counts *how many* visitors come back (new vs. returning, frequency, recency); Ripple triangulates *which calendar week's* arrivals return (cohort retention); Facet cuts by device, Prism by persona, Ember scores each visit on one magnitude axis. None cuts the audience by **visit ordinal** — a visitor's 1st ever visit vs. their 2nd, 3rd, … — and compares engagement across those stages. Strata is that missing axis: it groups every visit by its visit number and lines up the same engagement signals so you can see whether each successive return goes *deeper* (more pages, more scroll, more artwork time, more conversion) or fades into shallow drop-ins. Directly actionable: a rising curve says familiarity builds engagement (a returning-visitor nurture is worth building); a flat/first-visit-heavy curve says the commission decision is impulsive (optimise the first impression).
+
+**Why it's genuinely new:** it is a *visit-ordinal* cut, an axis no existing tool computes. Orbit's "returning %" is a headcount; Ripple groups by *acquisition week*, not by which-numbered-visit; Ember/Prism score/segment the *whole* audience with no loyalty dimension. Strata is the first view that asks *how engagement changes as a given visitor returns* — the loyalty **depth** curve rather than the loyalty **count**.
+
+**No new storage key, no `analytics.js` change** — derived live from `_gam_analytics_v1` (the `vnum` visit-number field already stamped on every `pv` for Orbit, plus `click` / `scroll` / `exit` / `goal`) and `_gam_spotlight_v1` (artwork viewport ms), the same read-only pattern as Ember/Orbit/Ripple.
+
+**Depth index (composite, per session, weights sum to 100):** a lightweight engagement blend (`STRATA_W` / `STRATA_CAP` at the top of the Strata block) — pages viewed (20, caps at 5), time on site (25, caps at 3 min), scroll depth (20, caps at 100%), clicks (10, caps at 6), artwork attention (15, caps at 60 s), commission intent (10, boolean). Each signal is capped, normalized to its weight, summed, and clamped to 100.
+
+**Visit-number buckets** (`STRATA_BUCKETS`): 1st visit / 2nd / 3rd / 4th–5th / 6th–10th / 11th+. A session's visit number is taken from its first pageview's `vnum` (fallback 1 for legacy events).
+
+**How it works:**
+1. `buildStrata()` groups events by `sid`, totals spotlight ms per `sid`, and derives each session's six signals + its `vnum` (same derivation Ember uses), skipping sessions with no pageview.
+2. `strataDepth()` computes the composite; `strataBucketOf(vnum)` assigns the visit-stage bucket.
+3. It aggregates per-bucket averages (depth, pages, dwell, scroll, clicks, artwork, conversion rate) and computes a **first-visit** (`vnum ≤ 1`) vs **returning** (`vnum ≥ 2`) signal comparison with per-signal lift, the overall first→returning depth lift, and the deepest-engaging stage.
+
+**Admin tab sections:**
+- **Stats**: Sessions Scored, Returning-Visit Share %, First→Returning Depth lift (▲/▼ %), Deepest Visit Stage
+- **Engagement Depth by Visit Number**: the signature canvas line chart — average depth index per visit stage, with a filled amber area, per-point value labels, and session counts under each stage (a rising line = loyalty deepens engagement)
+- **Depth by Visit Stage**: the same stages as absolute 0–100 bars (bar width = depth index), annotated with session count + share of visits
+- **What Deepens on Return — First Visit vs Returning**: a scorecard table, one row per signal, first-visit avg vs returning avg with the lift between them (the behaviours that grow with familiarity)
+- **Conversion by Visit Number**: commission-intent rate per visit stage (does conversion climb across repeat visits?)
+
+**Derived schema (for export):**
+```js
+{ total, returningSessions, returningShare, firstToReturningDepthLiftPct, deepestStage,
+  firstVisit:{sessions,depthIndex,avgPages,avgDwellMs,avgScroll,avgClicks,avgArtMs,conversionRate},
+  returning:{…same…},
+  buckets:[{stage, sessions, share, avgDepth, avgPages, avgDwellMs, avgScroll, avgClicks, avgArtMs, conversionRate}] }
+```
+
+**Technical notes:**
+- Line/area, bars, and lift tags use the warm amber palette (`#c9a87c` line, `rgba(201,168,124,0.14)` area, `#e6c07a` points; ▲ amber up / ▼ clay `#96683e` down) — no blue/pink. New `.strata-*` CSS classes; reuses the `spotlight-board`/`sp-*` bar styles, `analytics-stat-chip`, `jFmtDur()`, `escHtml()`, and the canvas-line pattern from the Analytics/Tide charts.
+- Depth-index and conversion bars use an *absolute* 0–100 scale (bar width = value), so stages read consistently against each other, unlike the relative bars elsewhere.
+- Scoring is per session (`sid`), so one visitor across several tabs may count more than once; a session's visit number is fixed at its first pageview (consistent with the rest of the family).
+- Tab renders lazily on click, same pattern as Echo/Arc/Fuse/Facet/etc.
+
+**API:** none new on `CommissionData` — uses `CommissionData.getAnalytics()` + `.getSpotlight()`. Logic lives in `renderStrataTab()` / `buildStrata()` inside `admin/index.html`.
+
+---
+
 ## Commission System
 
 ### Pages
@@ -1256,4 +1299,4 @@ Stored in `_gam_prices_v1`. Three sections: `digital`, `stickers`, `animation`. 
 
 ---
 
-*Last updated: 2026-08-20*
+*Last updated: 2026-09-08*
