@@ -154,7 +154,7 @@ Inquiries, Feedback.
   - **Companions Explorer** — pick any artwork, see what visitors most view alongside it
   - A curation signal for sequencing the portfolio and deciding what to hang next to what.
   - Derived live from `_gam_spotlight_v1` — no new storage key.
-- **Tide** *(newest)* — **trends & momentum**. Every other analytics tool aggregates
+- **Tide** — **trends & momentum**. Every other analytics tool aggregates
   all-time totals; Tide is the only one with a sense of **direction**. It splits the data
   into a recent window and the equal-length window immediately before it and reports the
   deltas — what's rising, what's fading, and whether the site overall is gaining ground.
@@ -166,6 +166,19 @@ Inquiries, Feedback.
     attention this window (from Spotlight's events)
   - **Pages Trending** and **Sources Trending** — pages and acquisition channels moving
     up or down versus the prior window
+  - Derived live from `_gam_analytics_v1` + `_gam_spotlight_v1` — no new storage key.
+- **Vector** *(newest)* — **engagement trajectory across visits**. Orbit counts how *many*
+  times a visitor returns, Ripple whether a cohort returns at all, Fuse how *long* until they
+  convert — none follows a single returning visitor **across their own visits** to ask whether
+  a returning audience **deepens or fades**. Keyed by the persistent visitor id (`vid`/`vnum`),
+  it orders each visitor's sessions by visit number, scores each with Ember's 0–100 six-signal
+  model, and surfaces:
+  - Stats: multi-visit visitors, rising %, cooling %, avg score change (first→latest)
+  - **Trajectory Mix** — a donut of rising / steady / cooling returning visitors
+  - **Engagement by Visit Number** — a line of average engagement at visit 1, 2, 3… (does the
+    audience invest more the more it returns?)
+  - **Which Signals Deepen on Return** — per-signal first→latest change (▲ more / ▼ less)
+  - **Deepening / Fading Visitors** — the returning visitors gaining or losing the most engagement
   - Derived live from `_gam_analytics_v1` + `_gam_spotlight_v1` — no new storage key.
 - **Revenue** — financial dashboard derived from the commission Queue: total earned,
   pipeline value, monthly earnings chart, revenue by type, top clients.

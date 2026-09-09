@@ -208,6 +208,7 @@ Password-protected (SHA-256 hash in localStorage, 5-attempt lockout). Session tr
 | Fuse        | Conversion latency & sales-cycle — the missing *time* dimension of Beacon: joins persistent-visitor identity (`vid`/`vfirst`) with `goal` events to measure how long and how many visits it takes a visitor to reach their first commission-intent signal; conversion-speed donut (Instant→7 days+), visits-before-converting distribution, first-intent-signal mix, and a recent-conversions feed |
 | Arc         | Session engagement lifecycle / intra-visit tempo — lines every event up by its offset from its own session's first event to show *when within a visit* activity crests and when sessions go quiet: activity curve by time-bin (0–15s…5m+), in-visit survival (retention within one visit), event-mix-over-time (early scrolls → mid clicks/intent → late exits), and a longest-sustained-visits feed |
 | Echo        | Artwork re-engagement & magnetic pull — the first tool to measure *intra-visit re-visitation of the same piece*: counts how often each artwork is re-entered (scrolled past, then returned to) within one visit; per-artwork **pull rate** (share of viewers who looked twice), attention-split donut (one glance vs came back), most-magnetic (pull rate) and most-re-viewed (raw returns) leaderboards, glance-and-gone cold list, and a per-artwork look-distribution explorer |
+| Vector      | Engagement trajectory across visits — the first *longitudinal per-visitor* view: orders each persistent visitor's sessions by visit number (`vid`/`vnum`), scores each with Ember's 0–100 six-signal model, and reports whether a returning audience **deepens or fades**: trajectory-mix donut (rising / steady / cooling), an average engagement curve by visit number (V1→V8+), per-signal first→latest deltas (what a return visit is made of), and deepening / fading visitor leaderboards |
 
 ---
 
@@ -1179,6 +1180,47 @@ Answers the simplest magnetism question no other tool asks: **which artworks mak
 
 ---
 
+## Vector — Engagement Trajectory Across Visits (Admin → Vector tab) — NEW TOOL
+
+Answers the loyalty question every retention tool in the family structurally leaves open: **when a visitor comes back, do they engage more deeply or less?** Orbit counts *how many* times a visitor returns (frequency, recency); Ripple asks *whether* an acquisition week's arrivals return at all (cohort retention); Fuse measures *how long* until a visitor converts; Tide reads the *whole audience's* recent-vs-prior momentum; Arc maps tempo *within a single visit*. **None follows one returning visitor across their own successive visits** to see whether engagement rises or fades over their lifetime. Vector is that missing **longitudinal per-visitor** view — the truest read on whether familiarity is deepening the audience's investment or wearing it thin.
+
+**Why it's genuinely new:** it's a *per-visitor time-series* keyed on the persistent visitor id, not another all-time aggregate, snapshot count, or single-visit score. Orbit's "returning %" and Ripple's triangle measure *return*, never the *shape of engagement across a visitor's own visits*; Ember scores a *single* session; Tide compares *audience-wide* windows, not an individual's arc. Vector orders each visitor's sessions by visit number and reports the first→latest engagement delta and the average engagement curve by visit number — dimensions no existing tool computes.
+
+**No new storage key, no `analytics.js` change** — derived live from `_gam_analytics_v1` (using the `vid` / `vnum` fields already stamped on every `pv` for Orbit, plus `click` / `scroll` / `exit` / `goal`) and `_gam_spotlight_v1` (artwork viewport ms). The same read-only pattern as Ember/Ripple/Fuse.
+
+**How it works:**
+1. `buildVector()` groups events by `sid` and derives each session's engagement with the **same six-signal model as Ember** (`vectorSessionScore` → 0–100 from pages, dwell, scroll, clicks, artwork ms, goal), tagging each session with its `vid` and `vnum` (from the first `pv`). Legacy pageviews without a `vid` fold in as single-visit visitors keyed by `sid`.
+2. Sessions are grouped by `vid` and ordered by `vnum` (tie-broken by ts). A visitor with `< 2` visits is skipped (no trajectory to measure).
+3. Per multi-visit visitor it takes the **first** and **latest** visit, computes `delta = lastScore − firstScore`, and classifies the trajectory: **Rising** (`delta ≥ VEC_BAND`, 8 pts), **Cooling** (`delta ≤ −VEC_BAND`), or **Steady**. It also records each session's normalized per-signal values for first→latest signal deltas.
+4. Separately, every scored session is bucketed by `vnum` (1…8+) to build the **engagement-by-visit-number curve** — the audience-wide average score at each visit number.
+
+**Admin tab sections:**
+- **Stats**: Multi-Visit Visitors, Rising %, Cooling %, Avg Score Δ (first→latest)
+- **Trajectory Mix**: canvas donut + legend (rising / steady / cooling); centre shows the rising %
+- **Engagement by Visit Number**: canvas line of average engagement score at visit 1, 2, 3, … 8+ — does the audience invest more the more it returns? Each point averages only visitors who reached that visit number
+- **Which Signals Deepen on Return**: per-signal average first→latest change (percentage points), amber ▲ for more-on-return, clay ▼ for less — *what* a returning visit is made of
+- **Deepening Visitors**: returning visitors whose score climbed the most (visit count + first→latest scores)
+- **Fading Visitors**: returning visitors whose score dropped the most (the quiet retention leak)
+
+**Derived schema (for export):**
+```js
+{ sessionCount, uniqueVisitors, multiVisitVisitors, rising, steady, cooling,
+  risingPct, coolingPct, avgScoreDelta,
+  engagementByVisitNumber:[{visit:"V1", avgScore, visitors}],
+  signalDeltas:[{signal, label, avgDeltaPts}],
+  deepening:[{vid, visits, firstScore, lastScore, delta, trajectory}], fading:[…] }
+```
+
+**Technical notes:**
+- Donut, curve, bars and tags use the warm amber/sand/clay palette (`rgba(176,122,74…)` rising, `rgba(214,190,150…)` steady, `rgba(150,104,62…)` cooling) — no blue/pink. New `.vector-*` / `.vec-*` CSS classes; reuses `jBarList()` (extended with an additive `opts.barClass` hook so up/down bars can be tinted), `analytics-stat-chip`, `compass-legend`/`compass-donut-row`, `escHtml()`, `EMBER_W`/`EMBER_CAP`.
+- Keyed by the **persistent visitor** (`vid`), so a return in a new tab/session correctly counts as the *same* person — the whole point of a trajectory view. It compares the first and latest visit (not adjacent pairs), so a single deep-then-shallow swing reads as cooling.
+- A visitor needs ≥ 2 recorded sessions to have a trajectory; `vnum` supplies the visit number, session count is the fallback.
+- Tab renders lazily on click, same pattern as Echo/Arc/Fuse/etc.
+
+**API:** none new on `CommissionData` — uses `CommissionData.getAnalytics()` + `.getSpotlight()`. Logic lives in `renderVectorTab()` / `buildVector()` inside `admin/index.html`.
+
+---
+
 ## Commission System
 
 ### Pages
@@ -1256,4 +1298,4 @@ Stored in `_gam_prices_v1`. Three sections: `digital`, `stickers`, `animation`. 
 
 ---
 
-*Last updated: 2026-08-20*
+*Last updated: 2026-09-09*
