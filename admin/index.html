@@ -1031,6 +1031,30 @@
 		.echo-explore-summary strong { color: #d6a878; }
 		.echo-empty { color: #444; font-size: 0.85em; padding: 0.5em 0; }
 
+		/* Patina tab — visit-ordinal engagement maturation (warm amber, no blue/pink) */
+		#patina-curve { display: block; }
+		.patina-sig-row { display: flex; align-items: center; gap: 0.6em; padding: 0.55em 0;
+			border-bottom: 1px solid rgba(255,255,255,0.05); flex-wrap: wrap; }
+		.patina-sig-row:last-child { border-bottom: none; }
+		.patina-sig-name { font-size: 0.82em; color: #cfc9bf; min-width: 132px; flex: 0 0 auto; }
+		.patina-sig-val { font-family: 'Courier New', monospace; font-size: 0.78em; color: #b7b2a8; }
+		.patina-sig-arrow { color: #6f6b63; font-size: 0.9em; }
+		.patina-tag { font-family: 'Courier New', monospace; font-size: 0.66em; letter-spacing: 0.04em;
+			padding: 0.12em 0.5em; border-radius: 3px; margin-left: auto; white-space: nowrap; }
+		.patina-tag-up { background: rgba(176,122,74,0.22); color: #d6a878; border: 1px solid rgba(176,122,74,0.4); }
+		.patina-tag-down { background: rgba(150,104,62,0.18); color: #c08a5a; border: 1px solid rgba(150,104,62,0.35); }
+		.patina-tag-flat { background: rgba(120,116,108,0.18); color: #9a958c; border: 1px solid rgba(120,116,108,0.35); }
+		.patina-fp { display: flex; gap: 0.5em; flex-wrap: wrap; margin-top: 0.4em; }
+		.patina-fp-chip { display: flex; flex-direction: column; align-items: center; gap: 0.15em;
+			padding: 0.5em 0.8em; background: rgba(255,255,255,0.03); border: 1px solid rgba(201,168,124,0.18);
+			border-radius: 5px; min-width: 4.8em; }
+		.patina-fp-num { font-size: 1.1em; font-weight: 600; color: #d6a878; font-family: 'Courier New', monospace; }
+		.patina-fp-lbl { font-size: 0.62em; color: #8c887f; font-family: 'Courier New', monospace;
+			letter-spacing: 0.03em; text-transform: uppercase; }
+		.patina-note { font-size: 0.8em; color: #b7b2a8; margin: 0.7em 0 0.2em; line-height: 1.5; }
+		.patina-note strong { color: #d6a878; }
+		.patina-empty { color: #444; font-size: 0.85em; padding: 0.5em 0; }
+
 		/* Tide tab — trends & momentum (reuses spotlight bars) */
 		#tide-canvas { display: block; }
 		.tide-win { display: flex; align-items: center; gap: 0.6em; flex-wrap: wrap; margin-bottom: 1em; }
@@ -1169,6 +1193,7 @@
 				<button class="admin-tab" data-tab="fuse">Fuse</button>
 				<button class="admin-tab" data-tab="arc">Arc</button>
 				<button class="admin-tab" data-tab="echo">Echo</button>
+				<button class="admin-tab" data-tab="patina">Patina</button>
 			</div>
 
 			<!-- ============ GALLERY TAB ============ -->
@@ -2628,6 +2653,46 @@
 
 						</div>
 
+						<div id="tab-patina" class="tab-content">
+
+							<div class="admin-card">
+								<h3>Patina — Visit-Ordinal Engagement Maturation</h3>
+								<p class="hint">Orbit counts <em>how many</em> visitors return; Ripple tracks <em>whether</em> a week&rsquo;s arrivals come back; Fuse clocks <em>how long</em> to a first commission signal; Arc reads the tempo <em>within</em> one visit. None asks whether the relationship <strong>deepens</strong> as someone keeps coming back &mdash; do second- and third-time visitors read further, linger on the art longer, and convert more than first-timers? Patina groups every session by its <code>vnum</code> visit ordinal (1st, 2nd, 3rd&hellip;) and lines the same six-signal engagement blend up across them, so warming curves (a nurture that&rsquo;s working) separate from cooling ones (returning visitors losing interest). Named for the sheen a surface earns through age and handling &mdash; the character a visit acquires with familiarity. Read-only over <code>_gam_analytics_v1</code> + <code>_gam_spotlight_v1</code> &mdash; no new storage key, no <code>analytics.js</code> change; reuses Ember&rsquo;s composite so scores read consistently. Keyed by <code>sid</code>; each session carries one visit ordinal (legacy pageviews with no <code>vnum</code> fold in as 1st visits).</p>
+								<div id="patina-stats" class="analytics-stats" style="margin-bottom:1em"></div>
+								<div style="display:flex;gap:0.5em;flex-wrap:wrap">
+									<button class="button small" id="patina-refresh-btn">Refresh</button>
+									<button class="button small" id="patina-export-btn">Export JSON</button>
+								</div>
+							</div>
+
+							<div class="admin-card">
+								<h3>Engagement Maturation Curve</h3>
+								<p class="hint">Average engagement quality (0&ndash;100, the same composite Ember scores) for every visit ordinal &mdash; a first visit next to a second, third, fourth, and fifth-or-later. A curve that <em>climbs</em> means the audience warms as it returns (leading with a hook, then rewarding the come-back, is working); a curve that <em>sinks</em> means repeat visitors are disengaging. The count under each bar is how many sessions landed at that ordinal.</p>
+								<canvas id="patina-curve" width="640" height="210" style="width:100%;max-width:640px;height:auto"></canvas>
+								<div id="patina-trend" class="patina-note"></div>
+							</div>
+
+							<div class="admin-card">
+								<h3>What Deepens, What Fades — First Visit vs. Return</h3>
+								<p class="hint">The diagnostic behind the curve: each engagement signal averaged across <strong>first visits</strong> (<code>vnum</code> 1) versus <strong>return visits</strong> (<code>vnum</code> 2+), with the direction and size of the shift. Some signals grow with familiarity (a returning visitor scrolls deeper) while others fade (fewer pages, they know where to go) &mdash; this splits them apart so the maturation story isn&rsquo;t a single number.</p>
+								<div id="patina-signals"></div>
+							</div>
+
+							<div class="admin-card">
+								<h3>Conversion by Visit Number</h3>
+								<p class="hint">The business cut: the share of sessions at each visit ordinal that fired a commission-intent goal. If conversion is near-zero on the first visit but climbs by the third, the decision is <em>considered</em> &mdash; a returning-visitor nurture earns its keep. If it&rsquo;s all first-visit, the opening impression is where the commission is won or lost.</p>
+								<div id="patina-conversion"></div>
+							</div>
+
+							<div class="admin-card">
+								<h3>Visit-Ordinal Explorer</h3>
+								<p class="hint">Pick any visit ordinal to see the full behavioural fingerprint of visits at that stage &mdash; average pages, time on site, scroll depth, clicks, artwork attention, and conversion rate, plus how many sessions it&rsquo;s built from.</p>
+								<select id="patina-explore-select" class="journey-select" style="margin-bottom:0.9em"></select>
+								<div id="patina-explore"></div>
+							</div>
+
+						</div>
+
 		</div><!-- /#admin-dash -->
 		<input type="file" id="img-file-input" accept="image/*" style="display:none" />
 
@@ -3681,6 +3746,9 @@ document.addEventListener('click', function(e){
   }
   if (e.target.dataset && e.target.dataset.tab === 'echo') {
     renderEchoTab();
+  }
+  if (e.target.dataset && e.target.dataset.tab === 'patina') {
+    renderPatinaTab();
   }
 });
 
@@ -9825,6 +9893,368 @@ document.getElementById('echo-export-btn').addEventListener('click', function() 
   var url  = URL.createObjectURL(blob);
   var a    = document.createElement('a');
   a.href = url; a.download = 'echo-' + Date.now() + '.json'; a.click();
+  URL.revokeObjectURL(url);
+});
+
+/* ================================================================
+   PATINA TAB — visit-ordinal engagement maturation
+   ----------------------------------------------------------------
+   The retention family answers "do they come back?" (Orbit, Ripple)
+   and "how fast do they convert?" (Fuse), and Arc reads tempo WITHIN
+   one visit. None asks whether engagement DEEPENS across a visitor's
+   own repeat visits. Patina groups each session by its vnum visit
+   ordinal (1st, 2nd, 3rd…) and lines up the same six-signal composite
+   Ember uses, so a warming relationship (a nurture that works) reads
+   apart from a cooling one. Read-only over _gam_analytics_v1 +
+   _gam_spotlight_v1; reuses EMBER_W/EMBER_CAP so scores stay
+   consistent. No new storage key, no analytics.js change. Warm amber
+   palette, no blue/pink. */
+
+/* Visit-ordinal buckets: exact 1–4, then 5+ (key = sort order). */
+var PATINA_BUCKETS = [
+  { key: 1, label: '1st visit',   short: 'V1',  match: function(v){ return v === 1; } },
+  { key: 2, label: '2nd visit',   short: 'V2',  match: function(v){ return v === 2; } },
+  { key: 3, label: '3rd visit',   short: 'V3',  match: function(v){ return v === 3; } },
+  { key: 4, label: '4th visit',   short: 'V4',  match: function(v){ return v === 4; } },
+  { key: 5, label: '5+ visits',   short: 'V5+', match: function(v){ return v >= 5; } }
+];
+
+/* Ember-consistent composite score from a session's six signals. */
+function patinaScore(s) {
+  var c =
+    Math.min(s.pv, EMBER_CAP.pages)     / EMBER_CAP.pages  * EMBER_W.pages +
+    Math.min(s.dwell, EMBER_CAP.dwell)  / EMBER_CAP.dwell  * EMBER_W.dwell +
+    Math.min(s.scroll, 100)             / 100              * EMBER_W.scroll +
+    Math.min(s.clicks, EMBER_CAP.clicks) / EMBER_CAP.clicks * EMBER_W.clicks +
+    Math.min(s.artMs, EMBER_CAP.art)    / EMBER_CAP.art    * EMBER_W.art +
+    (s.goal ? EMBER_W.goal : 0);
+  var score = Math.round(c);
+  return score > 100 ? 100 : score;
+}
+
+/* Signals compared in the first-vs-return progression. */
+var PATINA_SIGNALS = [
+  { key: 'score',  name: 'Engagement score', fmt: function(v){ return Math.round(v); },        up: true },
+  { key: 'pv',     name: 'Pages / visit',    fmt: function(v){ return (Math.round(v*10)/10); }, up: true },
+  { key: 'dwell',  name: 'Time on site',     fmt: function(v){ return jFmtDur(v); },            up: true },
+  { key: 'scroll', name: 'Scroll depth',     fmt: function(v){ return Math.round(v) + '%'; },   up: true },
+  { key: 'clicks', name: 'Clicks / visit',   fmt: function(v){ return (Math.round(v*10)/10); }, up: true },
+  { key: 'artMs',  name: 'Artwork attention',fmt: function(v){ return jFmtDur(v); },            up: true },
+  { key: 'conv',   name: 'Conversion rate',  fmt: function(v){ return Math.round(v) + '%'; },   up: true }
+];
+
+function buildPatina() {
+  var events = CommissionData.getAnalytics() || [];
+  var spot   = CommissionData.getSpotlight() || [];
+
+  /* Group events by session; total artwork ms per session. */
+  var bySid = {};
+  events.forEach(function(e){ if (e.sid) (bySid[e.sid] = bySid[e.sid] || []).push(e); });
+  var artMsBySid = {};
+  spot.forEach(function(e){ if (e.sid) artMsBySid[e.sid] = (artMsBySid[e.sid] || 0) + (e.ms || 0); });
+
+  var sessions = [];
+  Object.keys(bySid).forEach(function(sid) {
+    var evts = bySid[sid];
+    var pv = 0, clicks = 0, maxScroll = 0, exitMs = 0;
+    var firstTs = null, lastTs = null, goal = false, vnum = null;
+
+    evts.forEach(function(e) {
+      if (firstTs === null || e.ts < firstTs) firstTs = e.ts;
+      if (lastTs  === null || e.ts > lastTs)  lastTs  = e.ts;
+      if (e.type === 'pv') {
+        pv++;
+        if (vnum === null) { var v = parseInt(e.vnum, 10); vnum = (isNaN(v) || v < 1) ? 1 : v; }
+      } else if (e.type === 'click')  { clicks++; }
+      else if (e.type === 'scroll') { if ((e.depth || 0) > maxScroll) maxScroll = e.depth; }
+      else if (e.type === 'exit')   { if ((e.ms || 0) > exitMs) exitMs = e.ms; }
+      else if (e.type === 'goal')   { goal = true; }
+    });
+    if (pv === 0) return; /* no pageview → not a real visit */
+    if (vnum === null) vnum = 1;
+
+    var dwell = Math.max((lastTs || 0) - (firstTs || 0), exitMs);
+    var s = {
+      sid: sid, vnum: vnum, pv: pv, clicks: clicks, scroll: maxScroll,
+      dwell: dwell, artMs: artMsBySid[sid] || 0, goal: goal, ts: lastTs || 0
+    };
+    s.score = patinaScore(s);
+    sessions.push(s);
+  });
+
+  /* Bucket by visit ordinal. */
+  var buckets = PATINA_BUCKETS.map(function(b) {
+    return { key: b.key, label: b.label, short: b.short, count: 0,
+             sum: { score: 0, pv: 0, dwell: 0, scroll: 0, clicks: 0, artMs: 0 }, conv: 0 };
+  });
+  function bucketFor(v) {
+    for (var i = 0; i < PATINA_BUCKETS.length; i++) if (PATINA_BUCKETS[i].match(v)) return buckets[i];
+    return buckets[buckets.length - 1];
+  }
+  sessions.forEach(function(s) {
+    var b = bucketFor(s.vnum);
+    b.count++;
+    b.sum.score  += s.score;
+    b.sum.pv     += s.pv;
+    b.sum.dwell  += s.dwell;
+    b.sum.scroll += s.scroll;
+    b.sum.clicks += s.clicks;
+    b.sum.artMs  += s.artMs;
+    if (s.goal) b.conv++;
+  });
+  buckets.forEach(function(b) {
+    var n = b.count || 1;
+    b.avg = {
+      score:  b.sum.score  / n,
+      pv:     b.sum.pv     / n,
+      dwell:  b.sum.dwell  / n,
+      scroll: b.sum.scroll / n,
+      clicks: b.sum.clicks / n,
+      artMs:  b.sum.artMs  / n,
+      conv:   b.count ? (b.conv / b.count * 100) : 0
+    };
+  });
+
+  /* First (vnum 1) vs Return (vnum ≥ 2) aggregates for the signal progression. */
+  function aggOf(pred) {
+    var subset = sessions.filter(pred);
+    var n = subset.length || 1;
+    var a = { count: subset.length, score: 0, pv: 0, dwell: 0, scroll: 0, clicks: 0, artMs: 0, conv: 0 };
+    subset.forEach(function(s) {
+      a.score += s.score; a.pv += s.pv; a.dwell += s.dwell; a.scroll += s.scroll;
+      a.clicks += s.clicks; a.artMs += s.artMs; if (s.goal) a.conv++;
+    });
+    var convCount = a.conv;
+    ['score','pv','dwell','scroll','clicks','artMs'].forEach(function(k){ a[k] = a[k] / n; });
+    a.conv = subset.length ? (convCount / subset.length * 100) : 0;
+    return a;
+  }
+  var first  = aggOf(function(s){ return s.vnum === 1; });
+  var ret    = aggOf(function(s){ return s.vnum >= 2; });
+
+  var signals = PATINA_SIGNALS.map(function(sig) {
+    var f = first[sig.key], r = ret[sig.key];
+    var delta = r - f;
+    var pct = f ? (delta / f * 100) : (r ? 100 : 0);
+    var dir = 'flat';
+    if (Math.abs(pct) >= 3) dir = (delta >= 0) === sig.up ? 'up' : 'down';
+    return { key: sig.key, name: sig.name, fmt: sig.fmt, first: f, ret: r, delta: delta, pct: pct, dir: dir };
+  });
+
+  /* Overall trend: return avg score vs first avg score. */
+  var total       = sessions.length;
+  var retSessions = sessions.filter(function(s){ return s.vnum >= 2; }).length;
+  var trendPct    = first.score ? Math.round((ret.score - first.score) / first.score * 100) : 0;
+  var nonEmpty    = buckets.filter(function(b){ return b.count > 0; });
+  var peak = nonEmpty.slice().sort(function(x, y){ return y.avg.score - x.avg.score; })[0];
+
+  return {
+    sessions: sessions, total: total, retSessions: retSessions,
+    buckets: buckets, nonEmpty: nonEmpty,
+    first: first, ret: ret, signals: signals,
+    trendPct: trendPct, peak: peak || null
+  };
+}
+
+function drawPatinaCurve(pt) {
+  var canvas = document.getElementById('patina-curve');
+  if (!canvas) return;
+  var ctx = canvas.getContext('2d');
+  var W = canvas.width, H = canvas.height;
+  ctx.clearRect(0, 0, W, H);
+
+  var bins = pt.nonEmpty;
+  if (!bins.length) {
+    ctx.fillStyle = '#444';
+    ctx.font = '13px -apple-system, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('No visits recorded yet.', W / 2, H / 2);
+    return;
+  }
+
+  var padL = 34, padR = 16, padT = 22, padB = 40;
+  var plotW = W - padL - padR, plotH = H - padT - padB;
+  var n = bins.length;
+  var slot = plotW / n;
+  var barW = Math.min(slot * 0.6, 74);
+  /* fixed 0–100 score scale so the maturation reads absolutely */
+  var scaleMax = 100;
+
+  /* gridlines at 25/50/75/100 */
+  [0, 25, 50, 75, 100].forEach(function(g) {
+    var y = padT + plotH - (g / scaleMax) * plotH;
+    ctx.strokeStyle = g === 0 ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.05)';
+    ctx.beginPath(); ctx.moveTo(padL, y); ctx.lineTo(padL + plotW, y); ctx.stroke();
+    ctx.fillStyle = '#6f6b63';
+    ctx.font = '9px "Courier New", monospace';
+    ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+    ctx.fillText(String(g), padL - 5, y);
+  });
+
+  /* amber ramp deepening with ordinal */
+  var ramp = ['rgba(214,190,150,0.9)','rgba(201,168,124,0.92)','rgba(184,140,92,0.92)','rgba(158,113,70,0.92)','rgba(132,92,54,0.94)'];
+  bins.forEach(function(b, i) {
+    var sc = Math.round(b.avg.score);
+    var h = Math.round((sc / scaleMax) * plotH);
+    var x = padL + i * slot + (slot - barW) / 2;
+    var y = padT + plotH - h;
+    ctx.fillStyle = ramp[Math.min(b.key - 1, ramp.length - 1)];
+    ctx.fillRect(x, y, barW, h);
+    /* score above */
+    ctx.fillStyle = '#c9a87c';
+    ctx.font = 'bold 12px -apple-system, sans-serif';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
+    ctx.fillText(String(sc), x + barW / 2, y - 3);
+    /* ordinal label below */
+    ctx.fillStyle = '#b7b2a8';
+    ctx.font = '10px "Courier New", monospace';
+    ctx.textBaseline = 'top';
+    ctx.fillText(b.short, x + barW / 2, padT + plotH + 6);
+    /* session count below label */
+    ctx.fillStyle = '#6f6b63';
+    ctx.font = '9px "Courier New", monospace';
+    ctx.fillText('n=' + b.count, x + barW / 2, padT + plotH + 21);
+  });
+
+  /* connecting trend line across bar tops */
+  if (bins.length > 1) {
+    ctx.strokeStyle = 'rgba(201,168,124,0.55)';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    bins.forEach(function(b, i) {
+      var sc = Math.round(b.avg.score);
+      var x = padL + i * slot + slot / 2;
+      var y = padT + plotH - (sc / scaleMax) * plotH;
+      if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    });
+    ctx.stroke();
+    ctx.lineWidth = 1;
+  }
+}
+
+function renderPatinaTab() {
+  var pt = buildPatina();
+  function chip(num, label) {
+    return '<div class="analytics-stat-chip"><span class="asc-num">' + num +
+      '</span><span class="asc-label">' + label + '</span></div>';
+  }
+  var trendStr = pt.retSessions
+    ? (pt.trendPct > 0 ? '▲ +' + pt.trendPct + '%' : (pt.trendPct < 0 ? '▼ ' + pt.trendPct + '%' : '± 0%'))
+    : '—';
+  document.getElementById('patina-stats').innerHTML =
+    chip(pt.total,                          'Sessions Analyzed') +
+    chip(pt.retSessions,                    'Return Sessions')   +
+    chip(trendStr,                          'Engagement Trend')  +
+    chip(pt.peak ? pt.peak.short : '—',     'Peak Visit');
+
+  /* Maturation curve */
+  drawPatinaCurve(pt);
+  var trendEl = document.getElementById('patina-trend');
+  if (!pt.retSessions) {
+    trendEl.innerHTML = 'Not enough return visits yet to read a maturation trend &mdash; this fills in once visitors start coming back (the persistent <code>vid</code> in <code>analytics.js</code> marks a returning tab-session).';
+  } else {
+    var word = pt.trendPct > 4 ? 'warming' : (pt.trendPct < -4 ? 'cooling' : 'holding steady');
+    var reads = pt.trendPct > 4
+      ? 'return visits engage <strong>more</strong> than first visits &mdash; the come-back is being rewarded. Keep leading with a strong hook and giving returning visitors a reason to go deeper.'
+      : (pt.trendPct < -4
+        ? 'return visits engage <strong>less</strong> than first visits &mdash; repeat visitors are disengaging. Fresh work on the entry pages and a clearer next step may re-earn their attention.'
+        : 'return visits engage about the same as first visits &mdash; a stable relationship with room to turn steady interest into deeper engagement.');
+    trendEl.innerHTML = 'Across <strong>' + pt.retSessions + '</strong> return session' + (pt.retSessions === 1 ? '' : 's') +
+      ', engagement is <strong>' + word + '</strong> (' + (pt.trendPct >= 0 ? '+' : '') + pt.trendPct +
+      '% average score, return vs. first visit): ' + reads;
+  }
+
+  /* Signal progression */
+  var sigEl = document.getElementById('patina-signals');
+  if (!pt.ret.count) {
+    sigEl.innerHTML = '<p class="patina-empty">No return visits recorded yet. This comparison appears once at least one visitor comes back.</p>';
+  } else {
+    sigEl.innerHTML = pt.signals.map(function(s) {
+      var tagClass = s.dir === 'up' ? 'patina-tag-up' : (s.dir === 'down' ? 'patina-tag-down' : 'patina-tag-flat');
+      var arrow = s.dir === 'up' ? '▲' : (s.dir === 'down' ? '▼' : '±');
+      var pctTxt = (s.pct >= 0 ? '+' : '') + Math.round(s.pct) + '%';
+      return '<div class="patina-sig-row">' +
+        '<span class="patina-sig-name">' + escHtml(s.name) + '</span>' +
+        '<span class="patina-sig-val">' + s.fmt(s.first) + '</span>' +
+        '<span class="patina-sig-arrow">→</span>' +
+        '<span class="patina-sig-val">' + s.fmt(s.ret) + '</span>' +
+        '<span class="patina-tag ' + tagClass + '">' + arrow + ' ' + pctTxt + '</span>' +
+      '</div>';
+    }).join('');
+  }
+
+  /* Conversion by visit number */
+  var convRows = pt.nonEmpty.map(function(b) {
+    return { label: b.label, count: Math.round(b.avg.conv * 10) / 10, _b: b };
+  });
+  document.getElementById('patina-conversion').innerHTML = pt.nonEmpty.length
+    ? jBarList(convRows, 100, { suffix: function(r) {
+        var b = r._b;
+        return (Math.round(b.avg.conv * 10) / 10) + '% converted · ' + b.conv + '/' + b.count + ' sessions';
+      } })
+    : '<p class="patina-empty">No visits recorded yet. Patina populates as visitors browse the public pages.</p>';
+
+  /* Explorer */
+  var sel = document.getElementById('patina-explore-select');
+  var prev = sel.value;
+  sel.innerHTML = pt.nonEmpty.map(function(b) {
+    return '<option value="' + b.key + '">' + escHtml(b.label) + ' (' + b.count + ')</option>';
+  }).join('');
+  if (prev && pt.nonEmpty.some(function(b){ return String(b.key) === prev; })) sel.value = prev;
+
+  function drawExplore() {
+    var el = document.getElementById('patina-explore');
+    var b = pt.nonEmpty.filter(function(x){ return String(x.key) === sel.value; })[0];
+    if (!b) {
+      el.innerHTML = '<p class="patina-empty">Pick a visit ordinal above to inspect its behavioural fingerprint.</p>';
+      return;
+    }
+    el.innerHTML =
+      '<p class="patina-note"><strong>' + escHtml(b.label) + '</strong> &mdash; ' + b.count +
+        ' session' + (b.count === 1 ? '' : 's') + ', averaging an engagement score of <strong>' +
+        Math.round(b.avg.score) + '/100</strong>.</p>' +
+      '<div class="patina-fp">' +
+        '<div class="patina-fp-chip"><span class="patina-fp-num">' + Math.round(b.avg.score) + '</span><span class="patina-fp-lbl">Score</span></div>' +
+        '<div class="patina-fp-chip"><span class="patina-fp-num">' + (Math.round(b.avg.pv * 10) / 10) + '</span><span class="patina-fp-lbl">Pages</span></div>' +
+        '<div class="patina-fp-chip"><span class="patina-fp-num">' + jFmtDur(b.avg.dwell) + '</span><span class="patina-fp-lbl">On Site</span></div>' +
+        '<div class="patina-fp-chip"><span class="patina-fp-num">' + Math.round(b.avg.scroll) + '%</span><span class="patina-fp-lbl">Scroll</span></div>' +
+        '<div class="patina-fp-chip"><span class="patina-fp-num">' + (Math.round(b.avg.clicks * 10) / 10) + '</span><span class="patina-fp-lbl">Clicks</span></div>' +
+        '<div class="patina-fp-chip"><span class="patina-fp-num">' + jFmtDur(b.avg.artMs) + '</span><span class="patina-fp-lbl">Artwork</span></div>' +
+        '<div class="patina-fp-chip"><span class="patina-fp-num">' + (Math.round(b.avg.conv * 10) / 10) + '%</span><span class="patina-fp-lbl">Convert</span></div>' +
+      '</div>';
+  }
+  sel.onchange = drawExplore;
+  drawExplore();
+}
+
+document.getElementById('patina-refresh-btn').addEventListener('click', renderPatinaTab);
+
+document.getElementById('patina-export-btn').addEventListener('click', function() {
+  var pt = buildPatina();
+  var out = {
+    total: pt.total, returnSessions: pt.retSessions, trendPct: pt.trendPct,
+    peakVisit: pt.peak ? pt.peak.label : null,
+    buckets: pt.buckets.map(function(b) {
+      return {
+        ordinal: b.label, sessions: b.count,
+        avgScore:  Math.round(b.avg.score * 10) / 10,
+        avgPages:  Math.round(b.avg.pv * 100) / 100,
+        avgDwellMs: Math.round(b.avg.dwell),
+        avgScroll: Math.round(b.avg.scroll * 10) / 10,
+        avgClicks: Math.round(b.avg.clicks * 100) / 100,
+        avgArtMs:  Math.round(b.avg.artMs),
+        conversionRate: Math.round(b.avg.conv * 10) / 10
+      };
+    }),
+    firstVsReturn: pt.signals.map(function(s) {
+      return { signal: s.name, first: Math.round(s.first * 100) / 100,
+               ret: Math.round(s.ret * 100) / 100, deltaPct: Math.round(s.pct * 10) / 10, direction: s.dir };
+    })
+  };
+  var blob = new Blob([JSON.stringify(out, null, 2)], { type: 'application/json' });
+  var url  = URL.createObjectURL(blob);
+  var a    = document.createElement('a');
+  a.href = url; a.download = 'patina-' + Date.now() + '.json'; a.click();
   URL.revokeObjectURL(url);
 });
 </script>
