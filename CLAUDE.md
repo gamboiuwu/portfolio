@@ -208,6 +208,7 @@ Password-protected (SHA-256 hash in localStorage, 5-attempt lockout). Session tr
 | Fuse        | Conversion latency & sales-cycle — the missing *time* dimension of Beacon: joins persistent-visitor identity (`vid`/`vfirst`) with `goal` events to measure how long and how many visits it takes a visitor to reach their first commission-intent signal; conversion-speed donut (Instant→7 days+), visits-before-converting distribution, first-intent-signal mix, and a recent-conversions feed |
 | Arc         | Session engagement lifecycle / intra-visit tempo — lines every event up by its offset from its own session's first event to show *when within a visit* activity crests and when sessions go quiet: activity curve by time-bin (0–15s…5m+), in-visit survival (retention within one visit), event-mix-over-time (early scrolls → mid clicks/intent → late exits), and a longest-sustained-visits feed |
 | Echo        | Artwork re-engagement & magnetic pull — the first tool to measure *intra-visit re-visitation of the same piece*: counts how often each artwork is re-entered (scrolled past, then returned to) within one visit; per-artwork **pull rate** (share of viewers who looked twice), attention-split donut (one glance vs came back), most-magnetic (pull rate) and most-re-viewed (raw returns) leaderboards, glance-and-gone cold list, and a per-artwork look-distribution explorer |
+| Patina      | Visit-ordinal engagement maturation — groups every session by its `vnum` visit ordinal (1st / 2nd / 3rd / 4th / 5+) and lines the same six-signal engagement composite (Ember's) up across them: maturation curve (avg score per ordinal), first-visit-vs-return signal progression (what deepens, what fades), conversion by visit number, and a per-ordinal fingerprint explorer — the only view of whether engagement *deepens* as a visitor keeps returning |
 
 ---
 
@@ -1179,6 +1180,46 @@ Answers the simplest magnetism question no other tool asks: **which artworks mak
 
 ---
 
+## Patina — Visit-Ordinal Engagement Maturation (Admin → Patina tab) — NEW TOOL
+
+Answers the one relationship question the retention family structurally cannot: **does a visitor's engagement *deepen* as they keep coming back?** Orbit reports an all-time loyalty *snapshot* (new vs. returning, frequency, recency — counts); Ripple triangulates *whether* a weekly cohort returns (return counts by calendar week); Fuse clocks *how long* to a first commission signal; Arc reads the tempo *within* a single visit. None indexes *engagement depth by visit ordinal* — do second- and third-time visitors read further, linger on the artwork longer, and convert more than first-timers, or do returning visitors quietly disengage? Patina is that missing **maturation** view: it groups every session by its `vnum` visit ordinal (1st, 2nd, 3rd…) and lines the same six-signal engagement composite up across them, so a *warming* curve (a nurture that's working) reads apart from a *cooling* one. Named for the sheen a surface earns through age and handling — the character a visit acquires with familiarity.
+
+**Why it's genuinely new:** it is a *per-visit-ordinal* aggregate, an axis no existing tool computes. Ember scores a session's magnitude and tiers by quality but treats every visit as standalone; Orbit counts loyalty but never measures how engaged each successive visit *is*; Ripple measures *return* but not *depth*. Patina holds the segmentation dimension fixed (visit number) and compares the full engagement blend across it — the only view with a sense of relationship *trajectory*.
+
+**No new storage key, no `analytics.js` change** — derived live from `_gam_analytics_v1` (`pv` carries `vnum`, added for Orbit; plus `click` / `scroll` / `exit` / `goal`) and `_gam_spotlight_v1` (artwork viewport ms), the same read-only pattern as Ember/Orbit/Fuse. It reuses `EMBER_W` / `EMBER_CAP` so a Patina score reads identically to an Ember score.
+
+**Visit-ordinal buckets (`PATINA_BUCKETS`):** 1st / 2nd / 3rd / 4th / 5+ visits — exact ordinals 1–4, then a 5-or-later catch-all. Each session carries exactly one ordinal (from its first `pv`'s `vnum`); legacy pageviews without a `vnum` fold in as 1st visits.
+
+**How it works:**
+1. `buildPatina()` groups events by `sid`, totals spotlight ms per `sid`, and derives each session's six signals (pages, dwell = `max(event-span, longest exit.ms)`, max scroll, clicks, artwork ms, goal flag) plus its `vnum` — the same derivation Ember uses.
+2. `patinaScore(session)` computes the Ember-consistent 0–100 composite; sessions are bucketed by ordinal and each bucket's per-signal averages + conversion rate are accumulated.
+3. **First-vs-return progression**: it aggregates all `vnum === 1` sessions against all `vnum ≥ 2` sessions and, per signal, reports the averaged first value, the averaged return value, and the direction/size of the shift (`up` / `down` / `flat`, thresholded at ±3%).
+4. Overall trend = return-visit average score vs. first-visit average score (`trendPct`), and the peak ordinal is the bucket with the highest average score.
+
+**Admin tab sections:**
+- **Stats**: Sessions Analyzed, Return Sessions (`vnum ≥ 2`), Engagement Trend (▲/▼ % return-vs-first score), Peak Visit (the ordinal that engages most)
+- **Engagement Maturation Curve**: canvas bar chart of average composite score (fixed 0–100 scale) per visit ordinal, warm-amber ramp deepening with the ordinal, a connecting trend line across the bar tops, `n=` session count under each bar, and a written warming/cooling/steady read below
+- **What Deepens, What Fades — First Visit vs. Return**: each engagement signal (score, pages, time, scroll, clicks, artwork, conversion) shown as `first → return` with a ▲/▼ delta tag — the diagnostic splitting the single trend into which signals grow with familiarity and which fade
+- **Conversion by Visit Number**: the business cut — share of sessions at each ordinal that fired a commission-intent goal (is the decision impulsive or considered?)
+- **Visit-Ordinal Explorer**: pick any ordinal → its full behavioral fingerprint (avg score, pages, time on site, scroll, clicks, artwork attention, conversion, session count)
+
+**Derived schema (for export):**
+```js
+{ total, returnSessions, trendPct, peakVisit,
+  buckets:[{ ordinal, sessions, avgScore, avgPages, avgDwellMs, avgScroll, avgClicks, avgArtMs, conversionRate }],
+  firstVsReturn:[{ signal, first, ret, deltaPct, direction }] }
+```
+
+**Technical notes:**
+- Curve bars, ramp, trend line, and delta tags use the warm amber/sand/clay palette (`rgba(214,190,150…)` 1st → `rgba(132,92,54…)` 5+; `up` amber `#d6a878`, `down` clay `#c08a5a`, `flat` muted grey) — no blue/pink. New `.patina-*` CSS classes; reuses `jBarList()`, `analytics-stat-chip`, `journey-select`, `jFmtDur()`, `escHtml()`, and Ember's `EMBER_W`/`EMBER_CAP` constants.
+- The maturation curve uses an *absolute* 0–100 score scale (bar height = score) so ordinals read consistently, unlike the relative bars elsewhere.
+- Each session carries one visit ordinal (from its first `pv`'s `vnum`); keyed by `sid`, so one visitor across several tabs counts as separate sessions, but the *ordinal* correctly reflects the persistent-visitor visit number (`vnum` is stamped from the `localStorage._gam_visitor_v1` count).
+- Tab renders lazily on click, same pattern as Echo/Arc/Fuse/etc.
+
+**API:** none new on `CommissionData` — uses `CommissionData.getAnalytics()` + `.getSpotlight()`. Logic lives in `renderPatinaTab()` / `buildPatina()` / `patinaScore()` inside `admin/index.html`.
+
+---
+
 ## Commission System
 
 ### Pages
@@ -1256,4 +1297,4 @@ Stored in `_gam_prices_v1`. Three sections: `digital`, `stickers`, `animation`. 
 
 ---
 
-*Last updated: 2026-08-20*
+*Last updated: 2026-09-10*
