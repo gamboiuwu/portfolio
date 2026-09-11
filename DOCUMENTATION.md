@@ -167,6 +167,20 @@ Inquiries, Feedback.
   - **Pages Trending** and **Sources Trending** — pages and acquisition channels moving
     up or down versus the prior window
   - Derived live from `_gam_analytics_v1` + `_gam_spotlight_v1` — no new storage key.
+- **Fathom** *(newest)* — **reading cadence & section dwell**. Depth measures how *far*
+  down a page visitors reach; Fathom measures how *long* the viewport lingers in each
+  vertical quarter, reconstructed from the *timing* between the 25/50/75/100% scroll
+  milestones. It shows where reading time actually lands on a page:
+  - Stats: pages tracked, page-visits, top-section share, avg time / visit
+  - **Attention Layers** — one page drawn as four stacked layers, each shaded by its
+    share of all dwell time (top-heavy = front-loaded, warm-to-bottom = read-through)
+  - **Section Dwell by Page** — each page as a four-segment bar (top→bottom), widths ∝
+    average time in that section, dominant section tagged
+  - **Skim vs Read** — pages ranked by read-depth (share of dwell below the top quarter)
+    with an attention centre-of-gravity readout
+  - **Section Explorer** — pick a page, break its four sections apart (avg dwell, visits
+    reached, share, CoG)
+  - Derived live from `_gam_analytics_v1` — no new storage key, no `analytics.js` change.
 - **Revenue** — financial dashboard derived from the commission Queue: total earned,
   pipeline value, monthly earnings chart, revenue by type, top clients.
 - **Palette** — extract dominant colors from an uploaded artwork (k-means), save
