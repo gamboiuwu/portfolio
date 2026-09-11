@@ -208,6 +208,7 @@ Password-protected (SHA-256 hash in localStorage, 5-attempt lockout). Session tr
 | Fuse        | Conversion latency & sales-cycle — the missing *time* dimension of Beacon: joins persistent-visitor identity (`vid`/`vfirst`) with `goal` events to measure how long and how many visits it takes a visitor to reach their first commission-intent signal; conversion-speed donut (Instant→7 days+), visits-before-converting distribution, first-intent-signal mix, and a recent-conversions feed |
 | Arc         | Session engagement lifecycle / intra-visit tempo — lines every event up by its offset from its own session's first event to show *when within a visit* activity crests and when sessions go quiet: activity curve by time-bin (0–15s…5m+), in-visit survival (retention within one visit), event-mix-over-time (early scrolls → mid clicks/intent → late exits), and a longest-sustained-visits feed |
 | Echo        | Artwork re-engagement & magnetic pull — the first tool to measure *intra-visit re-visitation of the same piece*: counts how often each artwork is re-entered (scrolled past, then returned to) within one visit; per-artwork **pull rate** (share of viewers who looked twice), attention-split donut (one glance vs came back), most-magnetic (pull rate) and most-re-viewed (raw returns) leaderboards, glance-and-gone cold list, and a per-artwork look-distribution explorer |
+| Strata      | Reading cadence & vertical section dwell — the first tool to measure *where on a page reading time lands*: reconstructs how long the viewport lingers in each vertical quarter (top/upper-mid/lower-mid/bottom) from the *timing between* the 25/50/75/100% scroll milestones; signature stacked "strata" column shaded by share of all dwell, per-page four-segment dwell bars, a skim-vs-read ranking by read-depth (share of dwell below the top quarter) with attention centre-of-gravity, and a per-page section explorer |
 
 ---
 
@@ -1179,6 +1180,45 @@ Answers the simplest magnetism question no other tool asks: **which artworks mak
 
 ---
 
+## Strata — Reading Cadence & Vertical Section Dwell (Admin → Strata tab) — NEW TOOL
+
+Answers a question no other tool asks: **where on a page does the reading time actually land?** Depth measures how *far* down a page a visit reaches (reach %); Arc bins activity across the *whole visit*; Latch clocks the *first* interaction. None measures *how long the viewport lingers in each vertical section of a single page*. Strata is that missing **within-page dwell** view — the section that slows readers down (worth leading with) versus the one they skim past, and whether attention is front-loaded at the top or travels deep. For an artist arranging work on a page, it is a direct read on which vertical zone earns the eye-time.
+
+**Why it's genuinely new:** it is a *timing* view over scroll events, not a *reach* view. Depth counts the share of sessions that cross each of the 25/50/75/100% thresholds (how far); Strata reads the **timestamps** of those same milestone events and takes the *gaps between them* to measure how long a visit dwells in each vertical quarter (how long, and where). No existing tool computes per-page section dwell time.
+
+**No new storage key, no `analytics.js` change** — derived live from `_gam_analytics_v1`, using the `ts` already stamped on every `pv` / `scroll` / `exit` event (the same read-only pattern as Depth/Journey/Arc).
+
+**The four bands (top → bottom of a page):** Top (0–25%), Upper-mid (25–50%), Lower-mid (50–75%), Bottom (75–100%). Constants live in `STRATA_BANDS` / `STRATA_BAND_COLORS` at the top of the Strata block.
+
+**How it works:**
+1. `buildStrata()` sorts all events by `ts`, groups by `sid`, then walks each session splitting it into **page-visit segments** — each `pv` opens a segment; the `scroll`/`exit` events until the next `pv` belong to it (correctly handling multi-page sessions and revisits to the same page).
+2. Per segment it records the first timestamp of each scroll milestone and the segment `end` (`start + exit.ms`, or the last event). Band dwell is the gap between consecutive milestones: Top = `start → t25`, Upper-mid = `t25 → t50`, Lower-mid = `t50 → t75`, Bottom = `t75 → end`. A band whose next milestone is absent **falls through to `end`**, so the last-reached section absorbs the remaining dwell (a visitor who stops at 50% spends their tail time in the lower-mid band they're viewing). Each span is clamped ≥0 and capped at `STRATA_MAX_MS` (15 min) so one abandoned tab can't dominate. A page that fits the viewport with no scroll counts entirely as top-band dwell (consistent with Depth's caveat).
+3. Per page it aggregates band totals, per-band visits-reached, average dwell per visit, each band's share of the page's dwell, **read-depth** (share of dwell below the top quarter), and an attention **centre of gravity** (1.0 = all top, 4.0 = all bottom).
+
+**Admin tab sections:**
+- **Stats**: Pages Tracked, Page-Visits, Top-Section Share (% of all dwell in the top quarter), Avg Time / Visit
+- **Attention Strata**: the signature visual — a single page drawn as four stacked layers (top→bottom), each height- and shade-scaled by its share of *all* dwell time across the site; a top-heavy column is front-loaded, one warm to the bottom reads through
+- **Section Dwell by Page**: each page as a compact four-segment bar (top quarter left → bottom quarter right), widths ∝ average dwell per visit, the dominant section tagged; ranked by total held attention
+- **Skim vs Read — Depth of Attention**: pages ranked by read-depth (share of dwell below the top quarter), annotated with centre of gravity; pages need ≥ `STRATA_MIN_VISITS` (3) scroll-tracked visits to rank
+- **Section Explorer**: pick any page → its four sections broken apart (avg dwell/visit, visits reached, share) plus a plain-language centre-of-gravity readout
+
+**Derived schema (for export):**
+```js
+{ pagesTracked, pageVisits, scrollTrackedVisits, grandTotalMs, busiestBand,
+  overallShare:{top,upperMid,lowerMid,bottom},
+  byAttention:[{page, visits, totalMs, bandMs, avgMsPerVisit, share, reached, readDepth, cog}],
+  byReadDepth:[…] }
+```
+
+**Technical notes:**
+- Stacked column, segment bars, and detail bars use the warm sand→amber→clay ramp (`rgba(214,190,150…)` top → `rgba(140,96,54…)` bottom) — no blue/pink. New `.strata-*` CSS classes; reuses `jBarList()`, `jFmtDur()`, `jPageLabel()`, `escHtml()`, `analytics-stat-chip`, and the `journey-select` dropdown.
+- Dwell is per page-visit segment keyed within a `sid` (per-tab), so one visitor across several tabs counts as separate visits (consistent with the rest of the family). Scroll events fire at the 25/50/75/100% thresholds, so section dwell is a proxy read on where the viewport sits, not a literal pixel-time measure (consistent with Depth's caveat).
+- Tab renders lazily on click, same pattern as Echo/Arc/Fuse/etc.
+
+**API:** none new on `CommissionData` — uses `CommissionData.getAnalytics()`. Logic lives in `renderStrataTab()` / `buildStrata()` inside `admin/index.html`.
+
+---
+
 ## Commission System
 
 ### Pages
@@ -1256,4 +1296,4 @@ Stored in `_gam_prices_v1`. Three sections: `digital`, `stickers`, `animation`. 
 
 ---
 
-*Last updated: 2026-08-20*
+*Last updated: 2026-09-11*
