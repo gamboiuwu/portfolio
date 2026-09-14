@@ -208,6 +208,7 @@ Password-protected (SHA-256 hash in localStorage, 5-attempt lockout). Session tr
 | Fuse        | Conversion latency & sales-cycle — the missing *time* dimension of Beacon: joins persistent-visitor identity (`vid`/`vfirst`) with `goal` events to measure how long and how many visits it takes a visitor to reach their first commission-intent signal; conversion-speed donut (Instant→7 days+), visits-before-converting distribution, first-intent-signal mix, and a recent-conversions feed |
 | Arc         | Session engagement lifecycle / intra-visit tempo — lines every event up by its offset from its own session's first event to show *when within a visit* activity crests and when sessions go quiet: activity curve by time-bin (0–15s…5m+), in-visit survival (retention within one visit), event-mix-over-time (early scrolls → mid clicks/intent → late exits), and a longest-sustained-visits feed |
 | Echo        | Artwork re-engagement & magnetic pull — the first tool to measure *intra-visit re-visitation of the same piece*: counts how often each artwork is re-entered (scrolled past, then returned to) within one visit; per-artwork **pull rate** (share of viewers who looked twice), attention-split donut (one glance vs came back), most-magnetic (pull rate) and most-re-viewed (raw returns) leaderboards, glance-and-gone cold list, and a per-artwork look-distribution explorer |
+| Glide       | Reading pace & scroll velocity — the first tool to measure *how fast a reader moves down a single page*: reconstructs scroll velocity from the timestamps between the 25/50/75/100% scroll milestones as **time per quarter-page**, classifies each read skim/steady/deep, pace-mix donut, per-quarter **reading-rhythm** curve (where the page slows down), slowest-read & fastest-skimmed page boards, and a per-page pace explorer |
 
 ---
 
@@ -1179,6 +1180,47 @@ Answers the simplest magnetism question no other tool asks: **which artworks mak
 
 ---
 
+## Glide — Reading Pace & Scroll Velocity (Admin → Glide tab) — NEW TOOL
+
+Answers a question no other tool in the family measures: **how fast does a reader move down a single page?** Depth measures how *far* a visitor scrolls (spatial reach); Latch clocks the *first* interaction (activation latency); Arc charts the *whole visit's* event tempo; Ember/Prism score/segment the whole session. None measures the *velocity of scrolling within a page* — the difference between a skim and a genuine read. Glide is that missing **intra-page reading-pace** view: for every page a visit scrolls through, it clocks the time between consecutive scroll milestones and reports it as **time per quarter-page**, then sorts reads into skim / steady / deep-read bands. For a portfolio whose words — project statements, bio, commission terms — matter, it's the clearest read on which writing gets read and which gets blown past.
+
+**Why it's genuinely new:** it is a *velocity* metric, an axis no existing tool computes. Depth reports the *furthest point* reached (a static maximum); Glide reports *how quickly* the reader travelled between milestones (a rate). A page can be read to 100% fast (skim) or slow (deep read) — Depth cannot tell those apart; Glide is built precisely to. Latch measures only the *first* action's latency; Arc buckets *all* events by session offset without a per-page scroll-rate; Glide measures the *pace between scroll tiers* on one page.
+
+**No new storage key, no `analytics.js` change** — derived live from `_gam_analytics_v1`, using the `depth` field and `ts` already stamped on every `scroll` event (logged at the 25/50/75/100% thresholds) plus the `pv` timestamp, the same read-only pattern as Depth/Latch/Arc.
+
+**How it works:**
+1. `buildGlide()` groups events by session×page, capturing the earliest `pv` ts and the earliest ts per depth tier.
+2. A **paced read** = one session×page that crossed **≥2 distinct depth tiers** (`GLIDE_MIN_TIERS`). Sessions with one tier or no scroll are excluded (that's Depth's 0%-reach territory).
+3. Per read it sums the gaps between consecutive logged tiers — each gap **capped at 5 min** (`GLIDE_GAP_CAP`) — for a robust `spanMs`, and drops the read if the *raw uncapped* span exceeds 30 min (`GLIDE_MAX_SPAN`, an idle tab left open, so the cap can't disguise it as deep reading).
+4. **Pace** = `spanMs / quartersCovered`, where `quartersCovered = (maxDepth − minDepth) / 25` — average time to advance one quarter of the page.
+5. Each read is banded: **skim** (`< 3s`/quarter, `GLIDE_FAST_MS`), **steady**, or **deep read** (`≥ 12s`/quarter, `GLIDE_SLOW_MS`). Per-quarter **reading rhythm** only counts gaps between *adjacent* thresholds (25→50, 50→75, 75→100), so a read that jumps 25→100 contributes to none of the specific bands.
+
+**Admin tab sections:**
+- **Stats**: Paced Reads, Median Pace / Quarter, Deep-Read Rate %, Skim Rate %
+- **Pace Mix**: canvas donut + legend (deep read / steady / skim); centre shows the deep-read rate %
+- **Reading Rhythm — Where the Page Slows Down**: average time to cross each quarter-band (Upper 25→50 / Middle 50→75 / Lower 75→100) across all reads — a rising curve = people read deeper as they descend; a collapsing tail = the lower page is skimmed
+- **Slowest-Read Pages — Deepest Engagement**: pages ranked by median pace (slowest first, fuller bar = slower/deeper read), annotated with deep-read share
+- **Fastest-Skimmed Pages — Blown Past**: the inverse cut, fastest per quarter first
+- **Reading Pace Explorer**: pick any page → its skim/steady/deep split, median pace, and per-quarter rhythm down that specific page
+
+**Derived schema (for export):**
+```js
+{ pacedReads, mix:{skim,steady,deep}, medianPaceMs, deepReadRate, skimRate,
+  rhythm:[{band,label,avgMs,reads}],
+  slowestPages:[{page,reads,medianPaceMs,deep,steady,skim,deepPct,skimPct}], fastestPages:[…] }
+```
+
+**Technical notes:**
+- Donut, rhythm bars, and tags use the warm sand→clay ramp (`rgba(214,190,150…)` skim → `rgba(150,104,62…)` deep read) — no blue/pink. New `.glide-*` CSS classes; reuses `jBarList()`, `analytics-stat-chip`, `compass-legend`/`compass-donut-row`, the `journey-select` dropdown, `jFmtDur()`, `jPageLabel()`, `escHtml()`, and the `.echo-dist` chip styles.
+- A scroll milestone fires only when the visitor actually scrolls past that threshold, so the gap between milestones is genuine scroll-and-dwell time; the 5-min gap cap and 30-min idle drop keep an abandoned tab from skewing the pace (noted in the tab hint).
+- Reads need ≥2 paced reads (`GLIDE_MIN_PAGE`) for a page to appear on the slowest/fastest boards, so one visit can't top the ranking; the explorer shows every page.
+- Pace is per session (`sid`), so one visitor across several tabs counts as separate reads (consistent with the rest of the family).
+- Tab renders lazily on click, same pattern as Echo/Arc/Fuse/etc.
+
+**API:** none new on `CommissionData` — uses `CommissionData.getAnalytics()`. Logic lives in `renderGlideTab()` / `buildGlide()` inside `admin/index.html`.
+
+---
+
 ## Commission System
 
 ### Pages
@@ -1256,4 +1298,4 @@ Stored in `_gam_prices_v1`. Three sections: `digital`, `stickers`, `animation`. 
 
 ---
 
-*Last updated: 2026-08-20*
+*Last updated: 2026-09-14*
