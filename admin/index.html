@@ -1031,6 +1031,22 @@
 		.echo-explore-summary strong { color: #d6a878; }
 		.echo-empty { color: #444; font-size: 0.85em; padding: 0.5em 0; }
 
+		/* Glide tab — reading pace & scroll velocity (warm amber, no blue/pink) */
+		.glide-tag { font-family: 'Courier New', monospace; font-size: 0.66em; letter-spacing: 0.04em;
+			padding: 0.12em 0.5em; border-radius: 3px; margin-left: 0.5em; white-space: nowrap; }
+		.glide-tag-deep { background: rgba(150,104,62,0.22); color: #d6a878; border: 1px solid rgba(150,104,62,0.42); }
+		.glide-tag-skim { background: rgba(214,190,150,0.16); color: #cbb488; border: 1px solid rgba(214,190,150,0.34); }
+		.glide-band { display: flex; flex-direction: column; gap: 0.6em; }
+		.glide-band-row { display: flex; align-items: center; gap: 0.8em; }
+		.glide-band-lbl { font-family: 'Courier New', monospace; font-size: 0.72em; color: #b7b2a8; min-width: 8.5em; }
+		.glide-band-wrap { flex: 1; height: 16px; border-radius: 3px; background: rgba(255,255,255,0.04); overflow: hidden; }
+		.glide-band-fill { height: 100%; border-radius: 3px; }
+		.glide-band-val { font-family: 'Courier New', monospace; font-size: 0.75em; color: #d6a878; min-width: 6.6em; text-align: right; }
+		.glide-band-sub { font-family: 'Courier New', monospace; font-size: 0.66em; color: #6f6b63; min-width: 5.4em; text-align: right; }
+		.glide-explore-summary { font-size: 0.8em; color: #b7b2a8; margin: 0.2em 0 0.7em; line-height: 1.5; }
+		.glide-explore-summary strong { color: #d6a878; }
+		.glide-empty { color: #444; font-size: 0.85em; padding: 0.5em 0; }
+
 		/* Tide tab — trends & momentum (reuses spotlight bars) */
 		#tide-canvas { display: block; }
 		.tide-win { display: flex; align-items: center; gap: 0.6em; flex-wrap: wrap; margin-bottom: 1em; }
@@ -1169,6 +1185,7 @@
 				<button class="admin-tab" data-tab="fuse">Fuse</button>
 				<button class="admin-tab" data-tab="arc">Arc</button>
 				<button class="admin-tab" data-tab="echo">Echo</button>
+				<button class="admin-tab" data-tab="glide">Glide</button>
 			</div>
 
 			<!-- ============ GALLERY TAB ============ -->
@@ -2628,6 +2645,54 @@
 
 						</div>
 
+						<div id="tab-glide" class="tab-content">
+
+							<div class="admin-card">
+								<h3>Glide &mdash; Reading Pace &amp; Scroll Velocity</h3>
+								<p class="hint">Depth measures how <em>far</em> down a page visitors scroll; Latch clocks the <em>first</em> interaction; Arc charts the whole visit&rsquo;s tempo. None measures <strong>how fast a reader moves down a single page</strong> &mdash; the difference between a skim and a genuine read. Glide reconstructs the <em>velocity</em> of scrolling from the timestamps between the 25 / 50 / 75 / 100&thinsp;% scroll milestones <code>analytics.js</code> already records, and reports it as time per quarter-page: which pieces of writing get read slowly and which get blown past. Read-only over <code>_gam_analytics_v1</code> &mdash; no new storage key, no <code>analytics.js</code> change. A <strong>paced read</strong> = one session&rsquo;s scroll through one page that crossed at least two depth milestones. Inter-tier gaps are capped (5&thinsp;min) and idle reads (span &gt; 30&thinsp;min) dropped so a tab left open can&rsquo;t masquerade as deep reading. Keyed by <code>sid</code>, so one visitor across several tabs counts as separate reads (consistent with the rest of the family).</p>
+								<div id="glide-stats" class="analytics-stats" style="margin-bottom:1em"></div>
+								<div style="display:flex;gap:0.5em;flex-wrap:wrap">
+									<button class="button small" id="glide-refresh-btn">Refresh</button>
+									<button class="button small" id="glide-export-btn">Export JSON</button>
+								</div>
+							</div>
+
+							<div class="admin-card">
+								<h3>Pace Mix &mdash; Skim vs Steady vs Deep Read</h3>
+								<p class="hint">Every paced read falls into a velocity band by its average time per quarter-page: a <strong>skim</strong> (blew through), a <strong>steady</strong> pass, or a <strong>deep read</strong> (lingered). The share reading slowly is the clearest signal that the words &mdash; project statements, bios, commission terms &mdash; are actually being read rather than scrolled past.</p>
+								<div class="compass-donut-row">
+									<canvas id="glide-donut" width="180" height="180"></canvas>
+									<div id="glide-legend" class="compass-legend"></div>
+								</div>
+							</div>
+
+							<div class="admin-card">
+								<h3>Reading Rhythm &mdash; Where the Page Slows Down</h3>
+								<p class="hint">Average time visitors take to cross each quarter of a page, from the upper third to the tail. A rising curve means people slow down and read deeper as they go; a curve that collapses toward the bottom means the lower page is skimmed. Only reads that stepped through both ends of a band contribute, so the averages stay clean.</p>
+								<div id="glide-rhythm" class="glide-band"></div>
+							</div>
+
+							<div class="admin-card">
+								<h3>Slowest-Read Pages &mdash; Deepest Engagement</h3>
+								<p class="hint">Pages ranked by median reading pace &mdash; where visitors move slowest per quarter-page, a proxy for pages whose content genuinely holds the eye. Bars are sized by pace (fuller = slower / deeper read), annotated with each page&rsquo;s deep-read share.</p>
+								<div id="glide-pages"></div>
+							</div>
+
+							<div class="admin-card">
+								<h3>Fastest-Skimmed Pages &mdash; Blown Past</h3>
+								<p class="hint">The inverse cut: pages read fastest per quarter &mdash; scrolled through with little dwell. Candidates to tighten, re-sequence, or lead with a stronger hook so visitors slow down before they reach the exit.</p>
+								<div id="glide-skimmed"></div>
+							</div>
+
+							<div class="admin-card">
+								<h3>Reading Pace Explorer</h3>
+								<p class="hint">Pick any page to see exactly how its readers moved &mdash; the skim / steady / deep-read split, its median pace, and the per-quarter rhythm down that specific page.</p>
+								<select id="glide-explore-select" class="journey-select" style="margin-bottom:0.9em"></select>
+								<div id="glide-explore"></div>
+							</div>
+
+						</div>
+
 		</div><!-- /#admin-dash -->
 		<input type="file" id="img-file-input" accept="image/*" style="display:none" />
 
@@ -3681,6 +3746,9 @@ document.addEventListener('click', function(e){
   }
   if (e.target.dataset && e.target.dataset.tab === 'echo') {
     renderEchoTab();
+  }
+  if (e.target.dataset && e.target.dataset.tab === 'glide') {
+    renderGlideTab();
   }
 });
 
@@ -9825,6 +9893,324 @@ document.getElementById('echo-export-btn').addEventListener('click', function() 
   var url  = URL.createObjectURL(blob);
   var a    = document.createElement('a');
   a.href = url; a.download = 'echo-' + Date.now() + '.json'; a.click();
+  URL.revokeObjectURL(url);
+});
+
+/* ================================================================
+   GLIDE TAB — reading pace & scroll velocity
+   ----------------------------------------------------------------
+   Read-only over _gam_analytics_v1. Every scroll event carries a
+   depth tier (25/50/75/100) and a ts; the gaps between consecutive
+   milestones within one session×page reconstruct how FAST a reader
+   moved down that page — the velocity of scrolling, reported as time
+   per quarter-page. Distinct from Depth (how far), Latch (first
+   action latency), Arc (whole-visit tempo): the novel axis is
+   intra-page scroll velocity. No new storage key, no analytics.js
+   change. Warm amber/clay palette, no blue/pink. */
+var GLIDE_FAST_MS  = 3000;      /* < 3s per quarter  → skim         */
+var GLIDE_SLOW_MS  = 12000;     /* ≥ 12s per quarter → deep read    */
+var GLIDE_GAP_CAP  = 300000;    /* cap one inter-tier gap at 5 min  */
+var GLIDE_MAX_SPAN = 1800000;   /* drop idle reads (> 30 min span)  */
+var GLIDE_MIN_TIERS = 2;        /* need ≥2 distinct depth tiers      */
+var GLIDE_MIN_PAGE  = 2;        /* min reads for a page to rank      */
+
+function glideBandOf(pace) {
+  if (pace < GLIDE_FAST_MS) return 'skim';
+  if (pace >= GLIDE_SLOW_MS) return 'deep';
+  return 'steady';
+}
+
+function glideMedian(arr) {
+  if (!arr.length) return 0;
+  var a = arr.slice().sort(function(x, y){ return x - y; });
+  var m = Math.floor(a.length / 2);
+  return a.length % 2 ? a[m] : (a[m - 1] + a[m]) / 2;
+}
+
+function glideRhythm(reads) {
+  var order = ['25-50', '50-75', '75-100'];
+  var lbl = { '25-50': 'Upper · 25→50%', '50-75': 'Middle · 50→75%', '75-100': 'Lower · 75→100%' };
+  var agg = {};
+  order.forEach(function(b){ agg[b] = { sum: 0, n: 0 }; });
+  reads.forEach(function(r) {
+    order.forEach(function(b) {
+      if (r.bands[b] != null) { agg[b].sum += r.bands[b]; agg[b].n++; }
+    });
+  });
+  return order.map(function(b) {
+    return { band: b, label: lbl[b], avg: agg[b].n ? agg[b].sum / agg[b].n : 0, count: agg[b].n };
+  });
+}
+
+function buildGlide() {
+  var events = CommissionData.getAnalytics() || [];
+
+  /* group by session×page → earliest pv ts + earliest ts per depth tier */
+  var groups = {};
+  events.forEach(function(e) {
+    if (!e || !e.sid) return;
+    var page = e.page || '/';
+    var k = e.sid + '|' + page;
+    var g = groups[k] || (groups[k] = { sid: e.sid, page: page, pvTs: null, tiers: {} });
+    if (e.type === 'pv') {
+      if (g.pvTs == null || e.ts < g.pvTs) g.pvTs = e.ts;
+    } else if (e.type === 'scroll' && e.depth) {
+      var d = e.depth;
+      if (g.tiers[d] == null || e.ts < g.tiers[d]) g.tiers[d] = e.ts;
+    }
+  });
+
+  /* one paced read per qualifying session×page */
+  var reads = [];
+  Object.keys(groups).forEach(function(k) {
+    var g = groups[k];
+    var depths = Object.keys(g.tiers).map(Number).sort(function(a, b){ return a - b; });
+    if (depths.length < GLIDE_MIN_TIERS) return;
+    var minD = depths[0], maxD = depths[depths.length - 1];
+    if (maxD <= minD) return;
+    var spanMs = 0, rawSpan = 0, bands = {};
+    for (var i = 1; i < depths.length; i++) {
+      var lo = depths[i - 1], hi = depths[i];
+      var gap = g.tiers[hi] - g.tiers[lo];
+      if (gap < 0) gap = 0;
+      rawSpan += gap;
+      var capped = Math.min(gap, GLIDE_GAP_CAP);
+      spanMs += capped;
+      if (hi - lo === 25) bands[lo + '-' + hi] = capped;   /* adjacent-threshold band */
+    }
+    if (rawSpan > GLIDE_MAX_SPAN) return;   /* idle tab (real elapsed time), not a read */
+    var quarters = (maxD - minD) / 25;
+    var pace = quarters > 0 ? spanMs / quarters : 0;
+    reads.push({
+      sid: g.sid, page: g.page, minD: minD, maxD: maxD, tiers: depths.length,
+      spanMs: spanMs, pace: pace, band: glideBandOf(pace), bands: bands,
+      entryTs: g.pvTs || g.tiers[minD]
+    });
+  });
+
+  var total = reads.length;
+  var mix = { skim: 0, steady: 0, deep: 0 };
+  reads.forEach(function(r){ mix[r.band]++; });
+  var paces = reads.map(function(r){ return r.pace; });
+  var medianPace = glideMedian(paces);
+  var deepRate = total ? Math.round(mix.deep / total * 1000) / 10 : 0;
+  var skimRate = total ? Math.round(mix.skim / total * 1000) / 10 : 0;
+
+  /* per-page aggregation */
+  var byPage = {};
+  reads.forEach(function(r) {
+    var p = byPage[r.page] || (byPage[r.page] = { page: r.page, paces: [], reads: [], skim: 0, steady: 0, deep: 0 });
+    p.paces.push(r.pace); p.reads.push(r); p[r.band]++;
+  });
+  var pages = Object.keys(byPage).map(function(pg) {
+    var p = byPage[pg];
+    p.n = p.paces.length;
+    p.median = glideMedian(p.paces);
+    p.deepPct = p.n ? Math.round(p.deep / p.n * 100) : 0;
+    p.skimPct = p.n ? Math.round(p.skim / p.n * 100) : 0;
+    p.label = jPageLabel(pg);
+    return p;
+  });
+
+  var ranked = pages.filter(function(p){ return p.n >= GLIDE_MIN_PAGE; });
+  var slowest = ranked.slice().sort(function(a, b){ return (b.median - a.median) || (b.n - a.n); });
+  var fastest = ranked.slice().sort(function(a, b){ return (a.median - b.median) || (b.n - a.n); });
+  var explore = pages.slice().sort(function(a, b){ return b.n - a.n; });
+
+  return {
+    reads: reads, total: total, mix: mix, medianPace: medianPace,
+    deepRate: deepRate, skimRate: skimRate,
+    rhythm: glideRhythm(reads), pages: pages,
+    slowest: slowest, fastest: fastest, explore: explore
+  };
+}
+
+function drawGlideDonut(g) {
+  var canvas = document.getElementById('glide-donut');
+  if (!canvas) return;
+  var ctx = canvas.getContext('2d');
+  var W = canvas.width, H = canvas.height;
+  ctx.clearRect(0, 0, W, H);
+  var cx = W / 2, cy = H / 2, rOut = 78, rIn = 46;
+
+  var tot = g.total;
+  if (!tot) {
+    ctx.fillStyle = '#444';
+    ctx.font = '12px -apple-system, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('No paced reads yet.', cx, cy);
+    return;
+  }
+
+  var slices = [
+    { v: g.mix.deep,   color: 'rgba(150,104,62,0.92)' },   /* deep read */
+    { v: g.mix.steady, color: 'rgba(201,168,124,0.9)'  },   /* steady    */
+    { v: g.mix.skim,   color: 'rgba(214,190,150,0.9)'  }    /* skim      */
+  ];
+  var start = -Math.PI / 2;
+  slices.forEach(function(s) {
+    if (!s.v) return;
+    var ang = (s.v / tot) * Math.PI * 2;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.arc(cx, cy, rOut, start, start + ang);
+    ctx.closePath();
+    ctx.fillStyle = s.color;
+    ctx.fill();
+    start += ang;
+  });
+
+  ctx.globalCompositeOperation = 'destination-out';
+  ctx.beginPath();
+  ctx.arc(cx, cy, rIn, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.globalCompositeOperation = 'source-over';
+
+  ctx.fillStyle = '#c9a87c';
+  ctx.font = 'bold 22px -apple-system, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(g.deepRate + '%', cx, cy - 6);
+  ctx.fillStyle = '#8c887f';
+  ctx.font = '9px "Courier New", monospace';
+  ctx.fillText('READ DEEP', cx, cy + 12);
+}
+
+function glideRenderRhythm(el, rhythm) {
+  if (!rhythm.some(function(b){ return b.count > 0; })) {
+    el.innerHTML = '<p class="glide-empty">Not enough stepped reads yet — this fills once visitors scroll through consecutive milestones within a page.</p>';
+    return;
+  }
+  var max = rhythm.reduce(function(m, b){ return Math.max(m, b.avg); }, 1);
+  var cols = ['rgba(214,190,150,0.85)', 'rgba(201,168,124,0.9)', 'rgba(150,104,62,0.92)'];
+  el.innerHTML = rhythm.map(function(b, i) {
+    var w = b.count ? Math.max(3, Math.round(b.avg / max * 100)) : 0;
+    return '<div class="glide-band-row">' +
+      '<span class="glide-band-lbl">' + escHtml(b.label) + '</span>' +
+      '<span class="glide-band-wrap"><span class="glide-band-fill" style="width:' + w + '%;background:' + cols[i] + '"></span></span>' +
+      '<span class="glide-band-val">' + (b.count ? jFmtDur(b.avg) : '—') + '</span>' +
+      '<span class="glide-band-sub">' + b.count + (b.count === 1 ? ' read' : ' reads') + '</span>' +
+    '</div>';
+  }).join('');
+}
+
+function glidePaceBoard(pages) {
+  return jBarList(
+    pages.slice(0, 12).map(function(p) {
+      return { label: p.label, count: Math.round(p.median / 100) / 10, _p: p };
+    }),
+    0,
+    { suffix: function(r) {
+        var p = r._p;
+        return 's / quarter · ' + p.deepPct + '% deep · ' + p.n + (p.n === 1 ? ' read' : ' reads');
+      } }
+  );
+}
+
+function renderGlideTab() {
+  var g = buildGlide();
+  function chip(num, label) {
+    return '<div class="analytics-stat-chip"><span class="asc-num">' + num +
+      '</span><span class="asc-label">' + label + '</span></div>';
+  }
+  document.getElementById('glide-stats').innerHTML =
+    chip(g.total,                              'Paced Reads')            +
+    chip(g.total ? jFmtDur(g.medianPace) : '—', 'Median Pace / Quarter') +
+    chip(g.total ? g.deepRate + '%' : '—',     'Deep-Read Rate')         +
+    chip(g.total ? g.skimRate + '%' : '—',     'Skim Rate');
+
+  /* Pace-mix donut */
+  drawGlideDonut(g);
+  document.getElementById('glide-legend').innerHTML = g.total
+    ? [
+        { label: 'Deep read (lingered)', v: g.mix.deep,   color: 'rgba(150,104,62,0.92)' },
+        { label: 'Steady pass',          v: g.mix.steady, color: 'rgba(201,168,124,0.9)'  },
+        { label: 'Skim (blew through)',  v: g.mix.skim,   color: 'rgba(214,190,150,0.9)'  }
+      ].map(function(s) {
+        var share = g.total ? Math.round(s.v / g.total * 100) : 0;
+        return '<div class="compass-legend-item">' +
+          '<span class="compass-legend-swatch" style="background:' + s.color + '"></span>' +
+          '<span>' + escHtml(s.label) + '</span>' +
+          '<span class="compass-legend-val">' + s.v + ' · ' + share + '%</span>' +
+        '</div>';
+      }).join('')
+    : '<p class="glide-empty">No paced reads recorded yet. Glide populates as visitors scroll through the public pages.</p>';
+
+  /* Reading rhythm (all reads) */
+  glideRenderRhythm(document.getElementById('glide-rhythm'), g.rhythm);
+
+  /* Slowest-read pages */
+  document.getElementById('glide-pages').innerHTML = g.slowest.length
+    ? glidePaceBoard(g.slowest)
+    : '<p class="glide-empty">No page has ' + GLIDE_MIN_PAGE + '+ paced reads yet. This ranks once a few scroll-throughs accumulate.</p>';
+
+  /* Fastest-skimmed pages */
+  document.getElementById('glide-skimmed').innerHTML = g.fastest.length
+    ? glidePaceBoard(g.fastest)
+    : '<p class="glide-empty">Nothing to rank yet — needs pages with ' + GLIDE_MIN_PAGE + '+ paced reads.</p>';
+
+  /* Explorer */
+  var sel = document.getElementById('glide-explore-select');
+  var opts = g.explore;
+  var prev = sel.value;
+  sel.innerHTML = opts.map(function(p) {
+    return '<option value="' + escHtml(p.page) + '">' + escHtml(p.label) + ' (' + p.n + ')</option>';
+  }).join('');
+  if (prev && opts.some(function(p){ return p.page === prev; })) sel.value = prev;
+
+  function drawExplore() {
+    var id = sel.value;
+    var el = document.getElementById('glide-explore');
+    var p = g.pages.filter(function(x){ return x.page === id; })[0];
+    if (!p) {
+      el.innerHTML = '<p class="glide-empty">Pick a page above to inspect how its readers moved.</p>';
+      return;
+    }
+    var band = glideBandOf(p.median);
+    var tag = band === 'deep'
+      ? '<span class="glide-tag glide-tag-deep">DEEP READ</span>'
+      : (band === 'skim' ? '<span class="glide-tag glide-tag-skim">SKIMMED</span>' : '');
+    el.innerHTML =
+      '<p class="glide-explore-summary"><strong>' + escHtml(p.label) + '</strong> had <strong>' + p.n +
+        '</strong> paced ' + (p.n === 1 ? 'read' : 'reads') + ', at a median <strong>' + jFmtDur(p.median) +
+        '</strong> per quarter-page' + tag + '. Split: <strong>' + p.deep + '</strong> deep · <strong>' +
+        p.steady + '</strong> steady · <strong>' + p.skim + '</strong> skim.</p>' +
+      '<div class="echo-dist">' +
+        '<div class="echo-dist-chip"><span class="echo-dist-num">' + p.deep   + '</span><span class="echo-dist-lbl">DEEP</span></div>' +
+        '<div class="echo-dist-chip"><span class="echo-dist-num">' + p.steady + '</span><span class="echo-dist-lbl">STEADY</span></div>' +
+        '<div class="echo-dist-chip"><span class="echo-dist-num">' + p.skim   + '</span><span class="echo-dist-lbl">SKIM</span></div>' +
+      '</div>' +
+      '<div class="glide-band" style="margin-top:0.9em" id="glide-explore-rhythm"></div>';
+    glideRenderRhythm(document.getElementById('glide-explore-rhythm'), glideRhythm(p.reads));
+  }
+  sel.onchange = drawExplore;
+  drawExplore();
+}
+
+document.getElementById('glide-refresh-btn').addEventListener('click', renderGlideTab);
+
+document.getElementById('glide-export-btn').addEventListener('click', function() {
+  var g = buildGlide();
+  function pageRow(p) {
+    return {
+      page: p.page, reads: p.n, medianPaceMs: Math.round(p.median),
+      deep: p.deep, steady: p.steady, skim: p.skim, deepPct: p.deepPct, skimPct: p.skimPct
+    };
+  }
+  var out = {
+    pacedReads: g.total,
+    mix: g.mix,
+    medianPaceMs: Math.round(g.medianPace),
+    deepReadRate: g.deepRate,
+    skimRate: g.skimRate,
+    rhythm: g.rhythm.map(function(b){ return { band: b.band, label: b.label, avgMs: Math.round(b.avg), reads: b.count }; }),
+    slowestPages: g.slowest.slice(0, 50).map(pageRow),
+    fastestPages: g.fastest.slice(0, 50).map(pageRow)
+  };
+  var blob = new Blob([JSON.stringify(out, null, 2)], { type: 'application/json' });
+  var url  = URL.createObjectURL(blob);
+  var a    = document.createElement('a');
+  a.href = url; a.download = 'glide-' + Date.now() + '.json'; a.click();
   URL.revokeObjectURL(url);
 });
 </script>
