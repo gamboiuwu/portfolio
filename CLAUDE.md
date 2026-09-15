@@ -208,6 +208,7 @@ Password-protected (SHA-256 hash in localStorage, 5-attempt lockout). Session tr
 | Fuse        | Conversion latency & sales-cycle — the missing *time* dimension of Beacon: joins persistent-visitor identity (`vid`/`vfirst`) with `goal` events to measure how long and how many visits it takes a visitor to reach their first commission-intent signal; conversion-speed donut (Instant→7 days+), visits-before-converting distribution, first-intent-signal mix, and a recent-conversions feed |
 | Arc         | Session engagement lifecycle / intra-visit tempo — lines every event up by its offset from its own session's first event to show *when within a visit* activity crests and when sessions go quiet: activity curve by time-bin (0–15s…5m+), in-visit survival (retention within one visit), event-mix-over-time (early scrolls → mid clicks/intent → late exits), and a longest-sustained-visits feed |
 | Echo        | Artwork re-engagement & magnetic pull — the first tool to measure *intra-visit re-visitation of the same piece*: counts how often each artwork is re-entered (scrolled past, then returned to) within one visit; per-artwork **pull rate** (share of viewers who looked twice), attention-split donut (one glance vs came back), most-magnetic (pull rate) and most-re-viewed (raw returns) leaderboards, glance-and-gone cold list, and a per-artwork look-distribution explorer |
+| Stride      | Repeat-visit engagement progression — the first *by-visit-number* comparative view: buckets every visit by its visit number (1st / 2nd / 3rd–5th / 6th+ via the persistent-visitor `vnum`) and lines the same engagement + conversion signals up across them to show whether returning visitors engage more deeply than first-timers; audience-by-visit-number donut, an **engagement curve** (composite score per visit bucket), a direction-aware behavior scorecard (PEAK per metric), a "what deepens on return" delta ranking, and conversion by visit number |
 
 ---
 
@@ -1179,6 +1180,50 @@ Answers the simplest magnetism question no other tool asks: **which artworks mak
 
 ---
 
+## Stride — Repeat-Visit Engagement Progression (Admin → Stride tab) — NEW TOOL
+
+Answers the one loyalty question the rest of the family structurally cannot: **does a returning visitor actually engage more deeply than a first-timer?** Orbit counts *how many* visitors come back (new vs returning, frequency, recency); Ripple triangulates *which acquisition week* retains (cohort decay); Fuse times *how long* a buyer takes to convert. None of them lines the *same engagement signals up across a visitor's 1st, 2nd, 3rd… visit* to see whether familiarity deepens attention or whether returns are idle fly-bys. Stride is that missing **progression-by-visit-number** view — the behavioral companion to Orbit's *count* and Ripple's *retention*. For an artist deciding whether to chase new traffic or give the existing audience a reason to come back, it's the direct read: if a 3rd visit reads and converts far above a 1st, nurturing returns pays; if it doesn't, the front door is doing all the work.
+
+**Why it's genuinely new:** it is a *comparative cut by visit number*, an axis no existing tool computes. Facet compares engagement across *devices*; Ember scores each session on one all-audience axis; Orbit/Ripple/Fuse read the persistent visitor for *counts*, *cohort retention*, and *conversion latency* respectively — never for *engagement depth as a function of how many times someone has already visited*. Stride is the first tool to hold visit number fixed and compare every behavioral metric across the buckets.
+
+**No new storage key, no `analytics.js` change** — derived live from `_gam_analytics_v1` (`pv` carries the persistent-visitor **`vnum`** visit number, plus `click` / `scroll` / `exit` / `goal`) and `_gam_spotlight_v1` (artwork viewport ms), the same read-only pattern as Ember/Facet. The `vnum` field has been stamped on every pageview since Orbit introduced the persistent visitor id.
+
+**Visit-number buckets:** 1st visit (`vnum === 1`), 2nd visit, 3rd–5th, 6th+. Constants live in `STRIDE_BUCKETS` at the top of the Stride block. Legacy pageviews without a `vnum` fold in as 1st visits.
+
+**How it works:**
+1. `buildStride()` groups events by `sid`, totals spotlight ms per `sid`, and derives each session's signals (pages, dwell = max of event-span & longest `exit.ms`, max scroll, clicks, artwork ms, goal flag, bounce = `pv ≤ 1`) — the same derivation Ember/Facet use. A session's **visit number** is taken from its first `pv`'s `vnum`.
+2. Each session is bucketed by visit number and its metrics accumulated into that bucket, along with a composite **engagement score** (0–100) computed with the exact Ember weights/caps (`strideScore()` reuses `EMBER_W` / `EMBER_CAP`).
+3. Per **metric × bucket** it computes the averaged value and a **direction-aware peak** (for bounce rate *lower* wins, every other metric *higher* wins). It also folds the 2nd/3rd–5th/6th+ buckets into a single **return (V2+)** aggregate to compute engagement- and conversion-lift versus first visits, and a per-metric "what deepens on return" delta.
+
+**Metrics compared:** Sessions (context), Engagement Score, Pages / Visit, Scroll Depth, Time on Site, Clicks / Visit, Artwork Attention, Conversion Rate, Bounce Rate.
+
+**Admin tab sections:**
+- **Stats**: Visits Analyzed, Repeat-Visit Share %, Engagement Lift on Return %, Conversion Lift on Return % (each the V2+ aggregate vs first visits)
+- **Audience by Visit Number**: canvas donut + legend of session share per visit bucket; centre shows the repeat-visit share %
+- **Engagement Curve by Visit Number**: the signature view — a canvas line of the composite engagement score averaged per visit bucket, plotted in order (a rising curve = visitors investing more each return)
+- **Behavior by Visit Number**: the scorecard matrix — one row per metric, one column per bucket, each cell value + an in-row-scaled bar, the strongest bucket tagged `PEAK` (direction-aware)
+- **What Deepens on Return**: comparable metrics ranked by % change from a first visit to a return visit, ▲ improved / ▼ weakened (a drop in bounce rate counts as an improvement)
+- **Conversion by Visit Number**: share of each bucket's sessions that fired a commission-intent goal — the business cut
+
+**Derived schema (for export):**
+```js
+{ total, repeatShare, engagementLiftOnReturn, conversionLiftOnReturn,
+  buckets:[{bucket,label,sessions,share}],
+  metrics:[{metric,label,higherBetter,peak,values:{bucket:value}}],
+  deepensOnReturn:[{metric,label,firstVisit,returnVisit,pctChange,improved}],
+  conversionByVisit:[{bucket,label,sessions,inquiries,rate}] }
+```
+
+**Technical notes:**
+- Donut, curve, scorecard bars and tags use the warm amber/sand/clay ramp (`rgba(214,190,150…)` 1st → `rgba(150,104,62…)` 6th+; `PEAK` amber, improved ▲ amber / weakened ▼ clay) — no blue/pink. New `.stride-*` CSS classes; reuses `jBarList()`, `jFmtDur()`, `escHtml()`, the `spotlight-board`/`sp-*` bar styles, `analytics-stat-chip`, `compass-legend`, and the `EMBER_W`/`EMBER_CAP` scoring constants.
+- Scorecard bars are scaled **within each metric row** (bar = value ÷ row-max), so a short 1st-visit bar against a full 3rd–5th bar is exactly the gap; the direction of "good" is carried by the `PEAK` tag and metric note, not bar length.
+- Comparison is per session (`sid`); visit number is fixed at the session's first pageview. One visitor across several tabs in the *same* visit counts once, but `vnum` correctly increments per new tab-session (the same "visit" definition Orbit uses).
+- Tab renders lazily on click, same pattern as Echo/Facet/Ember/etc.
+
+**API:** none new on `CommissionData` — uses `CommissionData.getAnalytics()` + `.getSpotlight()`. Logic lives in `renderStrideTab()` / `buildStride()` inside `admin/index.html`.
+
+---
+
 ## Commission System
 
 ### Pages
@@ -1256,4 +1301,4 @@ Stored in `_gam_prices_v1`. Three sections: `digital`, `stickers`, `animation`. 
 
 ---
 
-*Last updated: 2026-08-20*
+*Last updated: 2026-09-15*

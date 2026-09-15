@@ -1031,6 +1031,35 @@
 		.echo-explore-summary strong { color: #d6a878; }
 		.echo-empty { color: #444; font-size: 0.85em; padding: 0.5em 0; }
 
+		/* Stride tab — repeat-visit engagement progression (warm amber, no blue/pink) */
+		.stride-donut-row { display: flex; gap: 1.4em; align-items: center; flex-wrap: wrap; }
+		#stride-donut, #stride-curve { display: block; flex-shrink: 0; max-width: 100%; }
+		.stride-curve-wrap { overflow-x: auto; }
+		.stride-scorecard-wrap { overflow-x: auto; }
+		.stride-scorecard { width: 100%; border-collapse: collapse; font-size: 0.82em; }
+		.stride-scorecard th, .stride-scorecard td { padding: 0.55em 0.6em; text-align: left; vertical-align: middle; }
+		.stride-scorecard thead th { font-family: 'Courier New', monospace; font-size: 0.72em; letter-spacing: 0.07em;
+			text-transform: uppercase; color: #8c887f; border-bottom: 1px solid rgba(255,255,255,0.12); }
+		.stride-scorecard tbody tr { border-bottom: 1px solid rgba(255,255,255,0.05); }
+		.stride-scorecard tbody tr:last-child { border-bottom: none; }
+		.stride-metric-name { color: #e7e4de; font-weight: 500; white-space: nowrap; }
+		.stride-metric-note { display: block; font-family: 'Courier New', monospace; font-size: 0.68em; color: #6f6b63; margin-top: 0.15em; text-transform: none; letter-spacing: 0; }
+		.stride-cell { min-width: 5.2em; }
+		.stride-cell-val { font-family: 'Courier New', monospace; font-size: 0.9em; color: #d6a878; }
+		.stride-cell-bar-wrap { height: 0.42em; background: rgba(255,255,255,0.05); border-radius: 3px; overflow: hidden; margin-top: 0.28em; }
+		.stride-cell-bar { height: 100%; border-radius: 3px; background: linear-gradient(to right, rgba(201,168,124,0.4), #c9a87c); transition: width 0.4s ease; }
+		.stride-cell.stride-peak .stride-cell-val { color: #e6c07a; font-weight: 700; }
+		.stride-tag { font-family: 'Courier New', monospace; font-size: 0.6em; letter-spacing: 0.05em; padding: 0.05em 0.35em;
+			border-radius: 2px; margin-left: 0.4em; vertical-align: middle; background: rgba(201,168,124,0.18); color: #d6a878; }
+		.stride-arrow { font-size: 0.82em; margin-right: 0.15em; }
+		.stride-up { color: #c9a87c; }
+		.stride-down { color: #96683e; }
+		.sp-bar.stride-up   { background: linear-gradient(to right, rgba(201,168,124,0.45), #c9a87c); }
+		.sp-bar.stride-down { background: linear-gradient(to right, rgba(150,104,62,0.35), #96683e); }
+		.sp-time.stride-up   { color: #c9a87c; }
+		.sp-time.stride-down { color: #96683e; }
+		.stride-empty { color: #444; font-size: 0.85em; padding: 0.5em 0; }
+
 		/* Tide tab — trends & momentum (reuses spotlight bars) */
 		#tide-canvas { display: block; }
 		.tide-win { display: flex; align-items: center; gap: 0.6em; flex-wrap: wrap; margin-bottom: 1em; }
@@ -1169,6 +1198,7 @@
 				<button class="admin-tab" data-tab="fuse">Fuse</button>
 				<button class="admin-tab" data-tab="arc">Arc</button>
 				<button class="admin-tab" data-tab="echo">Echo</button>
+				<button class="admin-tab" data-tab="stride">Stride</button>
 			</div>
 
 			<!-- ============ GALLERY TAB ============ -->
@@ -2628,6 +2658,57 @@
 
 						</div>
 
+						<div id="tab-stride" class="tab-content">
+
+							<div class="admin-card">
+								<h3>Stride — Repeat-Visit Engagement Progression</h3>
+								<p class="hint">Orbit counts <em>how many</em> visitors come back, Ripple triangulates <em>which acquisition week</em> retains, Fuse times <em>how long</em> a buyer takes to convert &mdash; but none asks whether a returning visitor actually <strong>engages more deeply than a first-timer</strong>. Stride is that missing progression axis: it groups every visit by its <strong>visit number</strong> (1st, 2nd, 3rd&ndash;5th, 6th+) and lines the same engagement + conversion signals up across them, so you can see whether familiarity deepens attention or whether returns are just idle fly-bys. If a 3rd visit reads and converts far above a 1st, giving people a reason to come back is worth more than chasing new traffic; if it doesn&rsquo;t, the front door is doing all the work. Read-only over <code>_gam_analytics_v1</code> + <code>_gam_spotlight_v1</code> &mdash; no new storage key, no <code>analytics.js</code> change &mdash; using the <code>vnum</code> visit number already stamped on every pageview. Bucketed per session (<code>sid</code>); visit number is taken from the session&rsquo;s first pageview.</p>
+								<div id="stride-stats" class="analytics-stats" style="margin-bottom:1em"></div>
+								<div style="display:flex;gap:0.5em;flex-wrap:wrap">
+									<button class="button small" id="stride-refresh-btn">Refresh</button>
+									<button class="button small" id="stride-export-btn">Export JSON</button>
+								</div>
+							</div>
+
+							<div class="admin-card">
+								<h3>Audience by Visit Number</h3>
+								<p class="hint">How the audience splits across first-time and returning visits &mdash; the size of each bucket compared below. The donut centre shows the repeat-visit share: the fraction of all visits that are someone coming back. A portfolio living on one-off social clicks skews hard to the 1st-visit slice; a healthy following builds a returning tail.</p>
+								<div class="stride-donut-row">
+									<canvas id="stride-donut" width="180" height="180"></canvas>
+									<div id="stride-legend" class="compass-legend"></div>
+								</div>
+							</div>
+
+							<div class="admin-card">
+								<h3>Engagement Curve by Visit Number</h3>
+								<p class="hint">The signature view: the composite engagement score (0&ndash;100, same six-signal blend as Ember) averaged for each visit-number bucket, plotted in order. A curve that climbs left-to-right is the shape you want &mdash; visitors investing more each time they return. A flat or falling curve means repeat visits aren&rsquo;t deepening, and the case for a returning-visitor hook (new work, a series, a reason to check back) is strongest.</p>
+								<div class="stride-curve-wrap">
+									<canvas id="stride-curve" width="620" height="200"></canvas>
+								</div>
+							</div>
+
+							<div class="admin-card">
+								<h3>Behavior by Visit Number</h3>
+								<p class="hint">Every engagement metric, one row per metric, one column per visit-number bucket. The strongest bucket in each row is flagged <span class="stride-tag">PEAK</span> &mdash; direction-aware, so for bounce rate <em>lower</em> wins. Bars are scaled within each row, so a short 1st-visit bar against a full 3rd&ndash;5th bar is exactly how much deeper returning visitors go on that signal. Only buckets with at least one visit appear.</p>
+								<div class="stride-scorecard-wrap">
+									<table class="stride-scorecard"><thead id="stride-score-head"></thead><tbody id="stride-score-body"></tbody></table>
+								</div>
+							</div>
+
+							<div class="admin-card">
+								<h3>What Deepens on Return</h3>
+								<p class="hint">Each engagement signal&rsquo;s change from a first visit to a returning one (2nd visit onward), ranked by how much it moves. <span class="stride-arrow stride-up">▲</span> marks a signal that improves on return (a drop in bounce rate counts as an improvement); <span class="stride-arrow stride-down">▼</span> one that weakens. The top of this list is what repeat exposure is actually buying you &mdash; and what a first visit leaves on the table.</p>
+								<div id="stride-deltas"></div>
+							</div>
+
+							<div class="admin-card">
+								<h3>Conversion by Visit Number</h3>
+								<p class="hint">The business cut on its own: the share of visits in each bucket that fired a commission-intent goal (CTA click or inquiry-form engagement). If conversion climbs with visit number, returning visitors are your warmest leads and worth nurturing; if the 1st visit converts best, the decision is impulsive and the first impression is everything.</p>
+								<div id="stride-conv"></div>
+							</div>
+
+						</div>
+
 		</div><!-- /#admin-dash -->
 		<input type="file" id="img-file-input" accept="image/*" style="display:none" />
 
@@ -3681,6 +3762,9 @@ document.addEventListener('click', function(e){
   }
   if (e.target.dataset && e.target.dataset.tab === 'echo') {
     renderEchoTab();
+  }
+  if (e.target.dataset && e.target.dataset.tab === 'stride') {
+    renderStrideTab();
   }
 });
 
@@ -9825,6 +9909,425 @@ document.getElementById('echo-export-btn').addEventListener('click', function() 
   var url  = URL.createObjectURL(blob);
   var a    = document.createElement('a');
   a.href = url; a.download = 'echo-' + Date.now() + '.json'; a.click();
+  URL.revokeObjectURL(url);
+});
+
+/* ================================================================
+   STRIDE — Repeat-Visit Engagement Progression
+   Read-only over _gam_analytics_v1 + _gam_spotlight_v1. Groups sessions
+   by visit number (vnum, stamped on every pv) and compares engagement +
+   conversion across a visitor's first vs return visits — the progression
+   axis Orbit (counts), Ripple (cohort decay) and Fuse (conversion latency)
+   never measure. No new storage key, no analytics.js change. Warm amber,
+   no blue/pink.
+   ================================================================ */
+var STRIDE_BUCKETS = [
+  { key: 'v1',  label: '1st visit',      test: function(n){ return n === 1; } },
+  { key: 'v2',  label: '2nd visit',      test: function(n){ return n === 2; } },
+  { key: 'v35', label: '3rd–5th visit',  test: function(n){ return n >= 3 && n <= 5; } },
+  { key: 'v6',  label: '6th+ visit',     test: function(n){ return n >= 6; } }
+];
+var STRIDE_BCOLOR = {
+  v1:  'rgba(214,190,150,0.85)',
+  v2:  'rgba(201,168,124,0.9)',
+  v35: 'rgba(176,122,74,0.92)',
+  v6:  'rgba(150,104,62,0.9)'
+};
+function strideBucketOf(vnum) {
+  for (var i = 0; i < STRIDE_BUCKETS.length; i++) { if (STRIDE_BUCKETS[i].test(vnum)) return STRIDE_BUCKETS[i].key; }
+  return 'v6';
+}
+/* Composite 0–100 engagement score for a session — same weights/caps as Ember. */
+function strideScore(s) {
+  var c = Math.min(s.pv, EMBER_CAP.pages)      / EMBER_CAP.pages  * EMBER_W.pages
+        + Math.min(s.dwell, EMBER_CAP.dwell)   / EMBER_CAP.dwell  * EMBER_W.dwell
+        + Math.min(s.scroll, 100)              / 100              * EMBER_W.scroll
+        + Math.min(s.clicks, EMBER_CAP.clicks) / EMBER_CAP.clicks * EMBER_W.clicks
+        + Math.min(s.artMs, EMBER_CAP.art)     / EMBER_CAP.art    * EMBER_W.art
+        + (s.goal ? EMBER_W.goal : 0);
+  c = Math.round(c);
+  return c > 100 ? 100 : c;
+}
+/* Metrics compared per visit bucket. compare:false = context only. */
+var STRIDE_METRICS = [
+  { key: 'sessions', label: 'Sessions',          note: 'visits in bucket',           higherBetter: true,  compare: false, fmt: function(v){ return String(Math.round(v)); } },
+  { key: 'score',    label: 'Engagement Score',   note: 'composite 0–100',            higherBetter: true,  compare: true,  fmt: function(v){ return String(Math.round(v)); } },
+  { key: 'pages',    label: 'Pages / Visit',      note: 'avg pageviews',              higherBetter: true,  compare: true,  fmt: function(v){ return v.toFixed(1); } },
+  { key: 'scroll',   label: 'Scroll Depth',       note: 'avg furthest reach',         higherBetter: true,  compare: true,  fmt: function(v){ return Math.round(v) + '%'; } },
+  { key: 'dwell',    label: 'Time on Site',       note: 'avg session span',           higherBetter: true,  compare: true,  fmt: function(v){ return jFmtDur(v); } },
+  { key: 'clicks',   label: 'Clicks / Visit',     note: 'avg interactions',           higherBetter: true,  compare: true,  fmt: function(v){ return v.toFixed(1); } },
+  { key: 'art',      label: 'Artwork Attention',  note: 'avg viewport time',          higherBetter: true,  compare: true,  fmt: function(v){ return v >= 1000 ? jFmtDur(v) : '0s'; } },
+  { key: 'conv',     label: 'Conversion Rate',    note: 'commission-goal visits',     higherBetter: true,  compare: true,  fmt: function(v){ return (Math.round(v * 10) / 10) + '%'; } },
+  { key: 'bounce',   label: 'Bounce Rate',        note: 'single-page · lower better', higherBetter: false, compare: true,  fmt: function(v){ return Math.round(v) + '%'; } }
+];
+
+function buildStride() {
+  var events = CommissionData.getAnalytics() || [];
+  var spot   = CommissionData.getSpotlight() || [];
+
+  var bySid = {};
+  events.forEach(function(e){ if (e.sid) (bySid[e.sid] = bySid[e.sid] || []).push(e); });
+  var artMsBySid = {};
+  spot.forEach(function(e){ if (e.sid) artMsBySid[e.sid] = (artMsBySid[e.sid] || 0) + (e.ms || 0); });
+
+  function blank(){ return { n: 0, bounce: 0, pages: 0, scroll: 0, dwell: 0, clicks: 0, art: 0, conv: 0, score: 0 }; }
+  var acc = {};
+  STRIDE_BUCKETS.forEach(function(b){ acc[b.key] = blank(); });
+  var sessions = [];
+
+  Object.keys(bySid).forEach(function(sid) {
+    var evts = bySid[sid];
+    var pv = 0, clicks = 0, maxScroll = 0, exitMs = 0;
+    var firstTs = null, lastTs = null, goal = false, vnum = null;
+
+    evts.forEach(function(e) {
+      if (firstTs === null || e.ts < firstTs) firstTs = e.ts;
+      if (lastTs  === null || e.ts > lastTs)  lastTs  = e.ts;
+      if (e.type === 'pv') {
+        pv++;
+        if (vnum === null) vnum = (e.vnum != null ? e.vnum : 1);
+      } else if (e.type === 'click')  { clicks++; }
+      else if (e.type === 'scroll') { if ((e.depth || 0) > maxScroll) maxScroll = e.depth; }
+      else if (e.type === 'exit')   { if ((e.ms || 0) > exitMs) exitMs = e.ms; }
+      else if (e.type === 'goal')   { goal = true; }
+    });
+    if (pv === 0) return;               /* no pageview → not a real visit */
+    if (vnum == null || vnum < 1) vnum = 1;
+
+    var dwell = Math.max((lastTs || 0) - (firstTs || 0), exitMs);
+    var s = { sid: sid, vnum: vnum, pv: pv, clicks: clicks, scroll: maxScroll,
+              dwell: dwell, artMs: artMsBySid[sid] || 0, goal: goal, bounce: pv <= 1 };
+    s.score  = strideScore(s);
+    s.bucket = strideBucketOf(vnum);
+    sessions.push(s);
+
+    var a = acc[s.bucket];
+    a.n++;
+    if (s.bounce) a.bounce++;
+    a.pages  += pv;
+    a.scroll += maxScroll;
+    a.dwell  += dwell;
+    a.clicks += clicks;
+    a.art    += s.artMs;
+    a.score  += s.score;
+    if (goal) a.conv++;
+  });
+
+  var total = sessions.length;
+  var present = STRIDE_BUCKETS.filter(function(b){ return acc[b.key].n > 0; })
+    .map(function(b){ return { key: b.key, label: b.label, color: STRIDE_BCOLOR[b.key], n: acc[b.key].n,
+                               share: total ? Math.round((acc[b.key].n / total) * 100) : 0 }; });
+
+  function valOf(metricKey, a) {
+    var n = a.n || 1;
+    switch (metricKey) {
+      case 'sessions': return a.n;
+      case 'score':    return a.score / n;
+      case 'pages':    return a.pages / n;
+      case 'scroll':   return a.scroll / n;
+      case 'dwell':    return a.dwell / n;
+      case 'clicks':   return a.clicks / n;
+      case 'art':      return a.art / n;
+      case 'conv':     return (a.conv / n) * 100;
+      case 'bounce':   return (a.bounce / n) * 100;
+    }
+    return 0;
+  }
+
+  /* Scorecard metrics with direction-aware peak bucket. */
+  var metrics = STRIDE_METRICS.map(function(m) {
+    var cells = {}, vals = [];
+    present.forEach(function(b){ var v = valOf(m.key, acc[b.key]); cells[b.key] = v; vals.push({ key: b.key, v: v }); });
+    var maxVal = vals.reduce(function(x, o){ return Math.max(x, o.v); }, 0);
+    var minVal = vals.length ? vals.reduce(function(x, o){ return Math.min(x, o.v); }, Infinity) : 0;
+    var peakKey = null;
+    if (m.compare && present.length >= 2 && maxVal !== minVal) {
+      var target = m.higherBetter ? maxVal : minVal;
+      vals.forEach(function(o){ if (o.v === target && peakKey === null) peakKey = o.key; });
+    }
+    return { key: m.key, label: m.label, note: m.note, higherBetter: m.higherBetter,
+             compare: m.compare, fmt: m.fmt, cells: cells, maxVal: maxVal, minVal: minVal, peakKey: peakKey };
+  });
+
+  /* First-visit vs return (V2+) aggregate for lift + deltas. */
+  var ret = blank(), first = acc.v1;
+  ['v2', 'v35', 'v6'].forEach(function(k){
+    var a = acc[k];
+    ret.n += a.n; ret.bounce += a.bounce; ret.pages += a.pages; ret.scroll += a.scroll;
+    ret.dwell += a.dwell; ret.clicks += a.clicks; ret.art += a.art; ret.conv += a.conv; ret.score += a.score;
+  });
+
+  var repeatShare = total ? Math.round((ret.n / total) * 100) : 0;
+  var scoreV1  = first.n ? first.score / first.n : 0;
+  var scoreRet = ret.n   ? ret.score   / ret.n   : 0;
+  var engLift  = (first.n && ret.n && scoreV1) ? Math.round(((scoreRet - scoreV1) / scoreV1) * 100) : null;
+  var convV1   = first.n ? (first.conv / first.n) * 100 : 0;
+  var convRet  = ret.n   ? (ret.conv   / ret.n)   * 100 : 0;
+  var convLift = (first.n && ret.n && convV1) ? Math.round(((convRet - convV1) / convV1) * 100)
+                 : ((first.n && ret.n && !convV1 && convRet) ? 100 : null);
+
+  /* What deepens on return — per comparable metric, % change V1 → return. */
+  var deltas = (first.n && ret.n)
+    ? STRIDE_METRICS.filter(function(m){ return m.compare; }).map(function(m) {
+        var v1v  = valOf(m.key, first);
+        var retv = valOf(m.key, ret);
+        var raw  = retv - v1v;
+        var improved = m.higherBetter ? raw > 0 : raw < 0;
+        var pct = v1v ? Math.round((raw / v1v) * 100) : (retv ? (m.higherBetter ? 100 : -100) : 0);
+        return { key: m.key, label: m.label, fmt: m.fmt, v1: v1v, ret: retv, raw: raw, pct: pct, improved: improved };
+      }).sort(function(a, b){ return Math.abs(b.pct) - Math.abs(a.pct); })
+    : [];
+
+  var convByBucket = present.map(function(b) {
+    var a = acc[b.key];
+    return { key: b.key, label: b.label, conv: a.conv, n: a.n, rate: a.n ? (a.conv / a.n) * 100 : 0 };
+  });
+
+  return {
+    total: total, present: present, metrics: metrics, deltas: deltas,
+    convByBucket: convByBucket, acc: acc, ret: ret, first: first,
+    repeatShare: repeatShare, engLift: engLift, convLift: convLift,
+    scoreV1: scoreV1, scoreRet: scoreRet
+  };
+}
+
+function drawStrideDonut(sd) {
+  var canvas = document.getElementById('stride-donut');
+  if (!canvas) return;
+  var ctx = canvas.getContext('2d');
+  var W = canvas.width, H = canvas.height;
+  ctx.clearRect(0, 0, W, H);
+  var cx = W / 2, cy = H / 2, rOut = 78, rIn = 46;
+
+  if (!sd.total) {
+    ctx.fillStyle = '#444';
+    ctx.font = '12px -apple-system, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('No visits yet.', cx, cy);
+    return;
+  }
+
+  var start = -Math.PI / 2;
+  sd.present.forEach(function(b) {
+    var ang = (b.n / sd.total) * Math.PI * 2;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.arc(cx, cy, rOut, start, start + ang);
+    ctx.closePath();
+    ctx.fillStyle = b.color;
+    ctx.fill();
+    start += ang;
+  });
+
+  ctx.globalCompositeOperation = 'destination-out';
+  ctx.beginPath();
+  ctx.arc(cx, cy, rIn, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.globalCompositeOperation = 'source-over';
+
+  ctx.fillStyle = '#c9a87c';
+  ctx.font = 'bold 22px -apple-system, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(sd.repeatShare + '%', cx, cy - 6);
+  ctx.fillStyle = '#8c887f';
+  ctx.font = '9px "Courier New", monospace';
+  ctx.fillText('RETURNING', cx, cy + 12);
+}
+
+function drawStrideCurve(sd) {
+  var canvas = document.getElementById('stride-curve');
+  if (!canvas) return;
+  var ctx = canvas.getContext('2d');
+  var W = canvas.width, H = canvas.height;
+  ctx.clearRect(0, 0, W, H);
+
+  var pts = sd.present.map(function(b){
+    var a = sd.acc[b.key];
+    return { label: b.label, score: a.n ? a.score / a.n : 0 };
+  });
+  if (!pts.length) {
+    ctx.fillStyle = '#444';
+    ctx.font = '12px -apple-system, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('No visits yet.', W / 2, H / 2);
+    return;
+  }
+
+  var padL = 34, padR = 16, padT = 16, padB = 30;
+  var plotW = W - padL - padR, plotH = H - padT - padB, maxY = 100;
+
+  /* gridlines + y labels */
+  ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+  ctx.lineWidth = 1;
+  ctx.fillStyle = '#6f6b63';
+  ctx.font = '9px "Courier New", monospace';
+  ctx.textAlign = 'right';
+  ctx.textBaseline = 'middle';
+  [0, 25, 50, 75, 100].forEach(function(g) {
+    var y = padT + plotH - (g / maxY) * plotH;
+    ctx.beginPath(); ctx.moveTo(padL, y); ctx.lineTo(W - padR, y); ctx.stroke();
+    ctx.fillText(String(g), padL - 6, y);
+  });
+
+  function xAt(i){ return pts.length === 1 ? padL + plotW / 2 : padL + (i / (pts.length - 1)) * plotW; }
+  function yAt(v){ return padT + plotH - (Math.min(v, maxY) / maxY) * plotH; }
+
+  /* area fill under the line */
+  if (pts.length > 1) {
+    ctx.beginPath();
+    ctx.moveTo(xAt(0), padT + plotH);
+    pts.forEach(function(p, i){ ctx.lineTo(xAt(i), yAt(p.score)); });
+    ctx.lineTo(xAt(pts.length - 1), padT + plotH);
+    ctx.closePath();
+    ctx.fillStyle = 'rgba(201,168,124,0.12)';
+    ctx.fill();
+  }
+
+  /* line */
+  ctx.strokeStyle = '#c9a87c';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  pts.forEach(function(p, i){ var x = xAt(i), y = yAt(p.score); if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y); });
+  ctx.stroke();
+
+  /* points + value + x labels */
+  ctx.textAlign = 'center';
+  pts.forEach(function(p, i) {
+    var x = xAt(i), y = yAt(p.score);
+    ctx.fillStyle = '#c9a87c';
+    ctx.beginPath(); ctx.arc(x, y, 3.5, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#d6a878';
+    ctx.font = 'bold 11px -apple-system, sans-serif';
+    ctx.textBaseline = 'bottom';
+    ctx.fillText(String(Math.round(p.score)), x, y - 6);
+    ctx.fillStyle = '#8c887f';
+    ctx.font = '9px "Courier New", monospace';
+    ctx.textBaseline = 'top';
+    ctx.fillText(p.label, x, H - padB + 7);
+  });
+}
+
+function strideScorecardHtml(sd) {
+  if (!sd.present.length) {
+    return { head: '', body: '<tr><td>No visits segmented yet. Browse the public pages and repeat-visit progression will populate automatically.</td></tr>' };
+  }
+  var head = '<tr><th>Metric</th>' + sd.present.map(function(b) {
+    return '<th><span class="compass-legend-swatch" style="display:inline-block;width:0.7em;height:0.7em;border-radius:2px;background:' +
+      b.color + ';margin-right:0.4em;vertical-align:middle"></span>' + escHtml(b.label) +
+      ' <span style="color:#6f6b63">(' + b.n + ')</span></th>';
+  }).join('') + '</tr>';
+
+  var body = sd.metrics.map(function(m) {
+    var cells = sd.present.map(function(b) {
+      var v   = m.cells[b.key];
+      var bar = m.maxVal > 0 ? Math.max(3, Math.round((v / m.maxVal) * 100)) : 0;
+      var cls = 'stride-cell', tag = '';
+      if (m.peakKey === b.key) { cls += ' stride-peak'; tag = '<span class="stride-tag">PEAK</span>'; }
+      return '<td class="' + cls + '">' +
+        '<span class="stride-cell-val">' + m.fmt(v) + '</span>' + tag +
+        '<div class="stride-cell-bar-wrap"><div class="stride-cell-bar" style="width:' + bar + '%"></div></div>' +
+      '</td>';
+    }).join('');
+    return '<tr><td><span class="stride-metric-name">' + escHtml(m.label) + '</span>' +
+      '<span class="stride-metric-note">' + escHtml(m.note) + '</span></td>' + cells + '</tr>';
+  }).join('');
+
+  return { head: head, body: body };
+}
+
+function renderStrideTab() {
+  var sd = buildStride();
+  function chip(num, label) {
+    return '<div class="analytics-stat-chip"><span class="asc-num">' + num +
+      '</span><span class="asc-label">' + label + '</span></div>';
+  }
+  function signed(pct) { return (pct > 0 ? '+' : '') + pct + '%'; }
+
+  document.getElementById('stride-stats').innerHTML =
+    chip(sd.total,                                    'Visits Analyzed')          +
+    chip(sd.repeatShare + '%',                        'Repeat-Visit Share')       +
+    chip(sd.engLift  == null ? '—' : signed(sd.engLift),  'Engagement Lift on Return') +
+    chip(sd.convLift == null ? '—' : signed(sd.convLift), 'Conversion Lift on Return');
+
+  drawStrideDonut(sd);
+  document.getElementById('stride-legend').innerHTML = sd.present.length
+    ? sd.present.map(function(b) {
+        return '<div class="compass-legend-item">' +
+          '<span class="compass-legend-swatch" style="background:' + b.color + '"></span>' +
+          '<span>' + escHtml(b.label) + '</span>' +
+          '<span class="compass-legend-val">' + b.n + ' · ' + b.share + '%</span>' +
+        '</div>';
+      }).join('')
+    : '<p class="stride-empty">No visits yet.</p>';
+
+  drawStrideCurve(sd);
+
+  var sc = strideScorecardHtml(sd);
+  document.getElementById('stride-score-head').innerHTML = sc.head;
+  document.getElementById('stride-score-body').innerHTML = sc.body;
+
+  /* What deepens on return — custom coloured bars (up = amber, down = clay) */
+  var deltaEl = document.getElementById('stride-deltas');
+  if (!sd.deltas.length) {
+    deltaEl.innerHTML = '<p class="stride-empty">Need both first-time and returning visits to compare. This populates once at least one visitor comes back.</p>';
+  } else {
+    var maxAbs = sd.deltas.reduce(function(m, d){ return Math.max(m, Math.abs(d.pct)); }, 1);
+    deltaEl.innerHTML = '<div class="spotlight-board">' + sd.deltas.map(function(d) {
+      var cls  = d.improved ? 'stride-up' : 'stride-down';
+      var w    = Math.round((Math.abs(d.pct) / maxAbs) * 100);
+      var arrow = d.raw === 0 ? '' : (d.improved ? '▲' : '▼');
+      return '<div class="spotlight-row">' +
+        '<div class="sp-info">' +
+          '<div class="sp-label" title="' + escHtml(d.label) + '">' +
+            (arrow ? '<span class="stride-arrow ' + cls + '">' + arrow + '</span>' : '') +
+            escHtml(d.label) + '</div>' +
+          '<div class="sp-bar-wrap"><div class="sp-bar ' + cls + '" style="width:' + w + '%"></div></div>' +
+        '</div>' +
+        '<div class="sp-meta">' +
+          '<span class="sp-time ' + cls + '">' + signed(d.pct) + '</span>' +
+          '<span class="sp-views">' + d.fmt(d.v1) + ' → ' + d.fmt(d.ret) + '</span>' +
+        '</div>' +
+      '</div>';
+    }).join('') + '</div>';
+  }
+
+  /* Conversion by visit number */
+  var anyConv = sd.convByBucket.some(function(c){ return c.conv > 0; });
+  document.getElementById('stride-conv').innerHTML = (sd.present.length && anyConv)
+    ? jBarList(
+        sd.convByBucket.map(function(c){ return { label: c.label, count: c.conv, _c: c }; }),
+        0,
+        { suffix: function(r){ var c = r._c; return (Math.round(c.rate * 10) / 10) + '% of ' + c.n + ' visits'; } }
+      )
+    : '<p class="stride-empty">No commission-goal events recorded yet — conversion by visit number will populate once visitors engage a CTA or the inquiry form.</p>';
+}
+
+document.getElementById('stride-refresh-btn').addEventListener('click', renderStrideTab);
+
+document.getElementById('stride-export-btn').addEventListener('click', function() {
+  var sd = buildStride();
+  var out = {
+    total: sd.total, repeatShare: sd.repeatShare,
+    engagementLiftOnReturn: sd.engLift, conversionLiftOnReturn: sd.convLift,
+    buckets: sd.present.map(function(b){ return { bucket: b.key, label: b.label, sessions: b.n, share: b.share }; }),
+    metrics: sd.metrics.map(function(m) {
+      var vals = {};
+      sd.present.forEach(function(b){ vals[b.key] = +(m.cells[b.key]).toFixed(2); });
+      return { metric: m.key, label: m.label, higherBetter: m.higherBetter, peak: m.peakKey, values: vals };
+    }),
+    deepensOnReturn: sd.deltas.map(function(d) {
+      return { metric: d.key, label: d.label, firstVisit: +d.v1.toFixed(2), returnVisit: +d.ret.toFixed(2),
+               pctChange: d.pct, improved: d.improved };
+    }),
+    conversionByVisit: sd.convByBucket.map(function(c) {
+      return { bucket: c.key, label: c.label, sessions: c.n, inquiries: c.conv, rate: +c.rate.toFixed(2) };
+    })
+  };
+  var blob = new Blob([JSON.stringify(out, null, 2)], { type: 'application/json' });
+  var url  = URL.createObjectURL(blob);
+  var a    = document.createElement('a');
+  a.href = url; a.download = 'stride-' + Date.now() + '.json'; a.click();
   URL.revokeObjectURL(url);
 });
 </script>
