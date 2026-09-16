@@ -208,6 +208,7 @@ Password-protected (SHA-256 hash in localStorage, 5-attempt lockout). Session tr
 | Fuse        | Conversion latency & sales-cycle — the missing *time* dimension of Beacon: joins persistent-visitor identity (`vid`/`vfirst`) with `goal` events to measure how long and how many visits it takes a visitor to reach their first commission-intent signal; conversion-speed donut (Instant→7 days+), visits-before-converting distribution, first-intent-signal mix, and a recent-conversions feed |
 | Arc         | Session engagement lifecycle / intra-visit tempo — lines every event up by its offset from its own session's first event to show *when within a visit* activity crests and when sessions go quiet: activity curve by time-bin (0–15s…5m+), in-visit survival (retention within one visit), event-mix-over-time (early scrolls → mid clicks/intent → late exits), and a longest-sustained-visits feed |
 | Echo        | Artwork re-engagement & magnetic pull — the first tool to measure *intra-visit re-visitation of the same piece*: counts how often each artwork is re-entered (scrolled past, then returned to) within one visit; per-artwork **pull rate** (share of viewers who looked twice), attention-split donut (one glance vs came back), most-magnetic (pull rate) and most-re-viewed (raw returns) leaderboards, glance-and-gone cold list, and a per-artwork look-distribution explorer |
+| Tether      | Cross-visit artwork recall & loyalty — the *inter-visit* sibling of Echo: joins the artwork viewport log to the persistent visitor id (`vid`, resolved from each spotlight `sid` via the pageview stream) to measure which pieces the *same person* returns to across *separate visits*: per-artwork **recall rate** (share of viewers who came back on a later visit), recall-split donut, most-memorable (recall rate) & most-recalled (raw cross-visit returns) leaderboards, forgotten cold list, and a per-artwork visit-distribution explorer |
 
 ---
 
@@ -1179,6 +1180,45 @@ Answers the simplest magnetism question no other tool asks: **which artworks mak
 
 ---
 
+## Tether — Cross-Visit Artwork Recall & Loyalty (Admin → Tether tab) — NEW TOOL
+
+Answers the one artwork question every existing tool structurally cannot: **which pieces are memorable enough to pull the *same person* back on a *later day*?** Every artwork tool to date is locked inside a single session — Spotlight ranks each piece by *total* attention, Mosaic pairs pieces seen *together*, Thread *orders* them, Muse ties them to *conversion*, and even Echo — the closest sibling — counts re-views only *within one visit* (keyed by `sid`, a per-tab session). None follows a piece *across* visits. Tether is that missing **inter-visit** dimension: it measures whether a work lodged in memory strongly enough that the same visitor returned to it on a separate visit. Cross-visit recall is the strongest passive signal of a lasting favourite — the truest guide to what to anchor a series or a print run on.
+
+**Why it's genuinely new:** it is the first tool to **join the artwork viewport log to the persistent visitor identity**. Spotlight events (`_gam_spotlight_v1`) carry only `sid`; the persistent `vid` lives only on pageviews (`_gam_analytics_v1`). Tether resolves each spotlight `sid` to its `vid` via the pageview stream, then groups artwork views by *visitor* rather than *session* — so a return in a new tab or on a new day correctly counts as the **same** person. Echo's own tab hint flags exactly this gap ("keyed by `sid`, so one visitor across several tabs counts as separate visits"); Tether closes it for the artwork dimension. Where Echo asks *did this piece make you look twice in one sitting?*, Tether asks *did this piece bring you back?* — orthogonal signals (a piece can be re-scanned in one visit yet never recalled, or glanced once per visit yet returned to for weeks).
+
+**No new storage key, no `analytics.js` change** — derived live from `_gam_spotlight_v1` (artwork views) + `_gam_analytics_v1` (`pv` events for the `sid`→`vid` map), the same read-only cross-stream pattern as Muse/Loom.
+
+**How it works:**
+1. `buildTether()` walks `pv` events to build a `sidToVid` map (each session belongs to one persistent visitor).
+2. It groups spotlight events into one record per **visitor × artwork** (`vid|artId`), collecting the *set of distinct sessions* (`sid`s) that visitor viewed the piece in — i.e. how many separate **visits** — plus total held ms. A view whose `sid` has no resolvable `vid` folds in as a single-visit visitor keyed by `legacy:<sid>`.
+3. Per artwork it aggregates: `viewers` (distinct visitors), `recallViewers` (viewers with ≥2 visits to the piece), `returns` (Σ `visits − 1`, the cross-visit returns), `totalVisits`, `totalMs`, and a visit-distribution (`one` / `two` / `many`).
+4. **Recall rate** = `recallViewers / viewers`. **Avg visits** = `totalVisits / viewers`. Pieces need ≥ `TETHER_MIN_VIEWERS` (2) distinct viewers to rank on the memorable/forgotten boards, so one devoted fan can't top the leaderboard. Global tallies use the visitor×piece pair as the unit: **overall recall rate** = multi-visit pairs ÷ all art-viewing pairs.
+
+**Admin tab sections:**
+- **Stats**: Recalled Pieces, Cross-Visit Returns, Overall Recall Rate %, Avg Visits / Viewer
+- **Recall Split**: canvas donut + legend (came back on a later visit vs single visit only); centre shows the overall recall rate %
+- **Most Memorable Pieces — Highest Recall**: artworks ranked by recall rate, annotated `×avg-visits` and *returning / total* viewers
+- **Most Recalled — Raw Cross-Visit Returns**: artworks ranked by total return visits (volume, complementing the recall-rate quality signal)
+- **Forgotten — Seen Once, Never Returned**: pieces with ≥2 viewers and the lowest recall rate (first-glance draw that never brings anyone back)
+- **Recall Explorer**: pick any artwork → its recall rate, avg visits, total held attention, and the 1-visit / 2-visit / 3+-visit viewer distribution
+
+**Derived schema (for export):**
+```js
+{ recalledPieces, totalReturns, totalPairs, overallRecallRate, avgVisitsAll,
+  memorable:[{artId,label,viewers,recallViewers,totalVisits,returns,totalMs,recallRate,avgVisits,visitDist:{one,two,many}}],
+  mostRecalled:[…], forgotten:[…] }
+```
+
+**Technical notes:**
+- Donut + swatches use the warm amber/sand palette (`rgba(176,122,74…)` came back, `rgba(214,190,150…)` single visit) — no blue/pink. New `.tether-*` CSS classes; reuses `jBarList()`, `analytics-stat-chip`, `compass-legend`/`compass-donut-row`, the `journey-select` dropdown, `jFmtDur()`, and `escHtml()`.
+- Keyed by the **persistent visitor** (`vid`), so unlike the `sid`-keyed artwork tools a return in a new tab/session is correctly counted as the *same* person — that is the whole point of a recall view. Views with no resolvable `vid` fold in as single-visit visitors keyed by `sid`.
+- A "visit" is a distinct `sid`; recall is *association*, not proof — it says the same person viewed the piece in two separate sessions, matched by `vid`.
+- Tab renders lazily on click, same pattern as Echo/Arc/Fuse/etc.
+
+**API:** none new on `CommissionData` — uses `CommissionData.getSpotlight()` + `.getAnalytics()`. Logic lives in `renderTetherTab()` / `buildTether()` inside `admin/index.html`.
+
+---
+
 ## Commission System
 
 ### Pages
@@ -1256,4 +1296,4 @@ Stored in `_gam_prices_v1`. Three sections: `digital`, `stickers`, `animation`. 
 
 ---
 
-*Last updated: 2026-08-20*
+*Last updated: 2026-09-16*
