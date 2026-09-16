@@ -167,6 +167,22 @@ Inquiries, Feedback.
   - **Pages Trending** and **Sources Trending** — pages and acquisition channels moving
     up or down versus the prior window
   - Derived live from `_gam_analytics_v1` + `_gam_spotlight_v1` — no new storage key.
+- **Tether** *(newest)* — **cross-visit artwork recall & loyalty**. Every artwork tool
+  (Spotlight, Mosaic, Thread, Muse, and even Echo) is locked inside a single visit;
+  none asks whether a piece is memorable enough to pull the *same person* back on a
+  *later day*. Tether is that missing inter-visit dimension: it joins the artwork
+  viewport log to the persistent visitor id (resolving each spotlight `sid` to its
+  `vid` via the pageview stream) and counts how many *separate visits* each person
+  spent with a piece. It surfaces:
+  - Stats: recalled pieces, cross-visit returns, overall recall rate %, avg visits/viewer
+  - **Recall Split** — a donut of viewer-impressions that came back on a later visit vs.
+    single-visit only (the overall recall rate)
+  - **Most Memorable / Most Recalled** — pieces ranked by recall rate (quality) and by raw
+    cross-visit returns (volume)
+  - **Forgotten** — pieces seen by several people yet never revisited on a later day
+  - **Recall Explorer** — per-artwork 1-visit / 2-visit / 3+-visit viewer distribution
+  - Derived live from `_gam_spotlight_v1` + `_gam_analytics_v1` — no new storage key,
+    no `analytics.js` change; keyed by the persistent `vid` so a return counts as the same person.
 - **Revenue** — financial dashboard derived from the commission Queue: total earned,
   pipeline value, monthly earnings chart, revenue by type, top clients.
 - **Palette** — extract dominant colors from an uploaded artwork (k-means), save
