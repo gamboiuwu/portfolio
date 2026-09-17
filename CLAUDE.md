@@ -208,6 +208,7 @@ Password-protected (SHA-256 hash in localStorage, 5-attempt lockout). Session tr
 | Fuse        | Conversion latency & sales-cycle — the missing *time* dimension of Beacon: joins persistent-visitor identity (`vid`/`vfirst`) with `goal` events to measure how long and how many visits it takes a visitor to reach their first commission-intent signal; conversion-speed donut (Instant→7 days+), visits-before-converting distribution, first-intent-signal mix, and a recent-conversions feed |
 | Arc         | Session engagement lifecycle / intra-visit tempo — lines every event up by its offset from its own session's first event to show *when within a visit* activity crests and when sessions go quiet: activity curve by time-bin (0–15s…5m+), in-visit survival (retention within one visit), event-mix-over-time (early scrolls → mid clicks/intent → late exits), and a longest-sustained-visits feed |
 | Echo        | Artwork re-engagement & magnetic pull — the first tool to measure *intra-visit re-visitation of the same piece*: counts how often each artwork is re-entered (scrolled past, then returned to) within one visit; per-artwork **pull rate** (share of viewers who looked twice), attention-split donut (one glance vs came back), most-magnetic (pull rate) and most-re-viewed (raw returns) leaderboards, glance-and-gone cold list, and a per-artwork look-distribution explorer |
+| Cascade     | Scroll velocity & reading pace — the *rate-of-descent* dimension: reconstructs each page-visit's scroll timeline from the 25/50/75/100% depth events and clocks the **time between milestones**, separating skimmers (raced to the bottom) from readers (lingered). Pace-mix donut across four tempos (Blitz / Skim / Steady / Studied), slowest-read & fastest-consumed page boards, a per-segment **Descent** breakdown (time per quarter-page), and a per-page pace explorer |
 
 ---
 
@@ -1256,4 +1257,46 @@ Stored in `_gam_prices_v1`. Three sections: `digital`, `stickers`, `animation`. 
 
 ---
 
-*Last updated: 2026-08-20*
+## Cascade — Scroll Velocity & Reading Pace (Admin → Cascade tab) — NEW TOOL
+
+Answers the one thing the scroll family structurally cannot: **how fast is each page consumed?** Depth measures *how far* a visitor scrolls (spatial reach); Arc measures *when* within a visit activity crests (event tempo over the whole visit); Latch clocks the *time-to-first* interaction. None measures the **rate of descent** — the pace at which a visitor moves *through* a page. Cascade is that missing velocity axis: it reconstructs each page-visit's scroll timeline from the 25/50/75/100% depth milestones and clocks the time between them, separating **skimmers** (raced to the bottom) from **readers** (lingered). A page blown through in seconds is content that isn't landing; a page read slowly is one that holds.
+
+**Why it's genuinely new:** it's a *temporal-velocity* view of scroll, not another reach or tempo aggregate. Depth reports the furthest point reached (a distance); Arc buckets events by offset-from-session-start across the *whole visit* (not per-page descent); Latch reads only the first event's latency. Cascade is the first to compute *pace* — elapsed time per unit of scroll depth — per page.
+
+**No new storage key, no `analytics.js` change** — derived live from `_gam_analytics_v1` using the `pv` (load) and `scroll` (25/50/75/100%) events with the `ts` already stamped on each, the same read-only pattern as Depth/Arc.
+
+**How it works:**
+1. `buildCascade()` groups `pv` + `scroll` events by `sid|page`, capturing the load time (`t0` = earliest `pv`) and the **first-crossing** timestamp of each depth milestone.
+2. A page-visit counts only if it has a pageview **and** ≥1 scroll event (a visit that never scrolls — a short page or instant bounce — is not a Cascade session). Its **reached** depth is the deepest milestone crossed.
+3. **Pace** = time from load to the deepest point ÷ quarters reached (ms per 25% milestone). Each visit is tiered by pace: **Blitz** (`<2s`/quarter), **Skim** (`2–6s`), **Steady** (`6–20s`), **Studied** (`20s+`). Thresholds live in `CASCADE_BLITZ` / `CASCADE_SKIM` / `CASCADE_STEADY` at the top of the block.
+4. **Segment durations** (load→25, 25→50, 50→75, 75→100) are computed per visit where both endpoints crossed, then averaged globally (The Descent) and per page.
+5. Per page it derives the median pace, dominant tempo, tier mix, average reach, and per-segment averages; pages need ≥ `CASCADE_MIN` (2) scrolling sessions to rank on the boards.
+
+**Admin tab sections:**
+- **Stats**: Scroll Sessions, Median Time to 25%, Median Pace / ¼, Read Rate %
+- **Pace Mix**: canvas donut + legend across the four tempos; centre shows the **read rate** (Steady + Studied share)
+- **Slowest-Read Pages**: pages ranked by median pace, slowest first — where visitors read most deliberately (bar fuller = slower); annotated with dominant tempo + session count
+- **The Descent**: average time per quarter-page segment (load→25→50→75→100), light→deep amber ramp — where people slow down or race the bottom half
+- **Fastest-Consumed Pages**: the inverse board, fastest pace first (bars inverse-scaled so fastest reads fullest) — content blown past
+- **Pace Explorer**: pick any page → its tempo mix chips, per-segment average times, and median pace
+
+**Derived schema (for export):**
+```js
+{ scrollSessions, readRate, skimRate, medianPaceMs, medianTimeTo25Ms,
+  tierCounts:{blitz,skim,steady,studied},
+  descentAvgMs:{loadTo25,s25to50,s50to75,s75to100},
+  slowestPages:[{page,sessions,medianPaceMs,dominantTier,avgReachPct,tiers,segments}], fastestPages:[…] }
+```
+
+**Technical notes:**
+- Donut, tier tags, and the Descent bars use the warm amber/sand/clay ramp (`rgba(214,190,150…)` → `rgba(150,104,62…)` light→deep; Blitz muted grey) — no blue/pink. New `.casc-*` CSS classes; reuses the `spotlight-board`/`sp-*` bar styles, `analytics-stat-chip`, `compass-legend`/`compass-donut-row`, `journey-select`, `jFmtDur()`, `jPageLabel()`, `escHtml()`.
+- Fastest-board bars are inverse-scaled (faster pace = fuller bar), matching Latch's speed-bar precedent; the slow board scales fuller for slower.
+- The first `scroll` fires at the 25% threshold after a 250ms debounce, so "load→25%" is a proxy for the first vertical engagement, not a literal pixel event (consistent with Depth/Latch caveats). A page shorter than the viewport can log all thresholds near-simultaneously (fast pace) — it means the content fit on one screen.
+- Pace is per session (`sid`), so one visitor across several tabs counts as separate visits (consistent with the rest of the family).
+- Tab renders lazily on click, same pattern as Echo/Arc/Fuse/etc.
+
+**API:** none new on `CommissionData` — uses `CommissionData.getAnalytics()`. Logic lives in `renderCascadeTab()` / `buildCascade()` inside `admin/index.html`.
+
+---
+
+*Last updated: 2026-09-17*

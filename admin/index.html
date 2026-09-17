@@ -1031,6 +1031,32 @@
 		.echo-explore-summary strong { color: #d6a878; }
 		.echo-empty { color: #444; font-size: 0.85em; padding: 0.5em 0; }
 
+		/* Cascade tab — scroll velocity & reading pace (warm amber ramp, no blue/pink) */
+		.casc-tag { font-family: 'Courier New', monospace; font-size: 0.66em; letter-spacing: 0.04em;
+			padding: 0.12em 0.5em; border-radius: 3px; margin-left: 0.5em; white-space: nowrap; }
+		.casc-tag-blitz   { background: rgba(120,116,108,0.18); color: #9a958c; border: 1px solid rgba(120,116,108,0.35); }
+		.casc-tag-skim    { background: rgba(214,190,150,0.18); color: #d6be96; border: 1px solid rgba(214,190,150,0.4); }
+		.casc-tag-steady  { background: rgba(201,168,124,0.2);  color: #c9a87c; border: 1px solid rgba(201,168,124,0.42); }
+		.casc-tag-studied { background: rgba(150,104,62,0.22);  color: #d6a878; border: 1px solid rgba(150,104,62,0.45); }
+		/* The Descent — per-segment time bars */
+		.casc-seg { display: flex; align-items: center; gap: 0.7em; margin: 0.35em 0; }
+		.casc-seg-lbl { font-family: 'Courier New', monospace; font-size: 0.72em; color: #8c887f;
+			letter-spacing: 0.04em; width: 5.6em; flex: 0 0 auto; text-align: right; }
+		.casc-seg-track { flex: 1 1 auto; height: 14px; background: rgba(255,255,255,0.04);
+			border-radius: 3px; overflow: hidden; }
+		.casc-seg-fill { height: 100%; border-radius: 3px; }
+		.casc-seg-val { font-family: 'Courier New', monospace; font-size: 0.72em; color: #b7b2a8;
+			width: 5.2em; flex: 0 0 auto; }
+		.casc-dist { display: flex; gap: 0.5em; flex-wrap: wrap; margin: 0.4em 0 0.2em; }
+		.casc-dist-chip { display: flex; flex-direction: column; align-items: center; gap: 0.15em;
+			padding: 0.5em 0.9em; background: rgba(255,255,255,0.03); border: 1px solid rgba(201,168,124,0.18);
+			border-radius: 5px; min-width: 4.6em; }
+		.casc-dist-num { font-size: 1.15em; font-weight: 600; color: #d6a878; font-family: 'Courier New', monospace; }
+		.casc-dist-lbl { font-size: 0.62em; color: #8c887f; font-family: 'Courier New', monospace; letter-spacing: 0.03em; }
+		.casc-explore-summary { font-size: 0.8em; color: #b7b2a8; margin: 0.2em 0 0.7em; line-height: 1.5; }
+		.casc-explore-summary strong { color: #d6a878; }
+		.casc-empty { color: #444; font-size: 0.85em; padding: 0.5em 0; }
+
 		/* Tide tab — trends & momentum (reuses spotlight bars) */
 		#tide-canvas { display: block; }
 		.tide-win { display: flex; align-items: center; gap: 0.6em; flex-wrap: wrap; margin-bottom: 1em; }
@@ -1169,6 +1195,7 @@
 				<button class="admin-tab" data-tab="fuse">Fuse</button>
 				<button class="admin-tab" data-tab="arc">Arc</button>
 				<button class="admin-tab" data-tab="echo">Echo</button>
+				<button class="admin-tab" data-tab="cascade">Cascade</button>
 			</div>
 
 			<!-- ============ GALLERY TAB ============ -->
@@ -2628,6 +2655,54 @@
 
 						</div>
 
+						<div id="tab-cascade" class="tab-content">
+
+							<div class="admin-card">
+								<h3>Cascade — Scroll Velocity &amp; Reading Pace</h3>
+								<p class="hint">Depth measures <em>how far</em> a visitor scrolls; Arc measures <em>when</em> in a visit activity crests; Latch clocks the <em>first</em> interaction. None measures the <strong>rate of descent</strong> &mdash; how <em>fast</em> a page is consumed. Cascade reconstructs each page-visit&rsquo;s scroll timeline from the <code>25 / 50 / 75 / 100%</code> depth events analytics already records and clocks the time between milestones, separating <strong>skimmers</strong> who race to the bottom from <strong>readers</strong> who linger. A page blown through in seconds signals content that isn&rsquo;t landing; a page read slowly is one that holds. Read-only over <code>_gam_analytics_v1</code> &mdash; no new storage key, no <code>analytics.js</code> change. Pace = time from load to deepest point ÷ quarters reached (ms per 25% milestone). A page-visit needs a pageview and at least one scroll event to count; a visit that never scrolls (short page or instant bounce) is not a Cascade session. Keyed by <code>sid</code>, so one visitor across several tabs counts as separate visits (consistent with the rest of the family).</p>
+								<div id="cascade-stats" class="analytics-stats" style="margin-bottom:1em"></div>
+								<div style="display:flex;gap:0.5em;flex-wrap:wrap">
+									<button class="button small" id="cascade-refresh-btn">Refresh</button>
+									<button class="button small" id="cascade-export-btn">Export JSON</button>
+								</div>
+							</div>
+
+							<div class="admin-card">
+								<h3>Pace Mix — How Pages Get Consumed</h3>
+								<p class="hint">Every scrolling page-visit falls into one of four tempos by its pace (time per quarter-page): <strong>Blitz</strong> (raced past, &lt;2s/quarter), <strong>Skim</strong> (quick scan, 2&ndash;6s), <strong>Steady</strong> (normal reading, 6&ndash;20s), <strong>Studied</strong> (lingered, 20s+). The centre shows the share that actually <em>read</em> (Steady + Studied) rather than skimmed.</p>
+								<div class="compass-donut-row">
+									<canvas id="cascade-donut" width="180" height="180"></canvas>
+									<div id="cascade-legend" class="compass-legend"></div>
+								</div>
+							</div>
+
+							<div class="admin-card">
+								<h3>Slowest-Read Pages — Most Time per Milestone</h3>
+								<p class="hint">Pages ranked by average pace, slowest first &mdash; where visitors advance most deliberately through the content. A slow, high-pace page is one people are genuinely reading, not skimming. Annotated with the dominant tempo and how many scrolling sessions it&rsquo;s based on.</p>
+								<div id="cascade-slow"></div>
+							</div>
+
+							<div class="admin-card">
+								<h3>The Descent — Average Time per Scroll Segment</h3>
+								<p class="hint">Where in the page visitors slow down or speed up. Each bar is the average time spent crossing one quarter of the page &mdash; from load to 25%, then 25&rarr;50, 50&rarr;75, 75&rarr;100 &mdash; averaged over every qualifying page-visit. A long first bar means a strong above-the-fold hold; a collapsing tail means people race the bottom half.</p>
+								<div id="cascade-descent"></div>
+							</div>
+
+							<div class="admin-card">
+								<h3>Fastest-Consumed Pages — Blown Past</h3>
+								<p class="hint">The inverse board: pages with the fastest pace, where visitors race to the bottom with barely a pause. Content here isn&rsquo;t holding the eye &mdash; candidates to tighten, re-sequence, or lead with something stronger.</p>
+								<div id="cascade-fast"></div>
+							</div>
+
+							<div class="admin-card">
+								<h3>Pace Explorer</h3>
+								<p class="hint">Pick any page to inspect its scroll rhythm &mdash; the tempo mix across its visits, the average time spent in each quarter-page segment, and its median pace.</p>
+								<select id="cascade-explore-select" class="journey-select" style="margin-bottom:0.9em"></select>
+								<div id="cascade-explore"></div>
+							</div>
+
+						</div>
+
 		</div><!-- /#admin-dash -->
 		<input type="file" id="img-file-input" accept="image/*" style="display:none" />
 
@@ -3681,6 +3756,9 @@ document.addEventListener('click', function(e){
   }
   if (e.target.dataset && e.target.dataset.tab === 'echo') {
     renderEchoTab();
+  }
+  if (e.target.dataset && e.target.dataset.tab === 'cascade') {
+    renderCascadeTab();
   }
 });
 
@@ -9825,6 +9903,335 @@ document.getElementById('echo-export-btn').addEventListener('click', function() 
   var url  = URL.createObjectURL(blob);
   var a    = document.createElement('a');
   a.href = url; a.download = 'echo-' + Date.now() + '.json'; a.click();
+  URL.revokeObjectURL(url);
+});
+
+/* ================================================================
+   CASCADE — Scroll Velocity & Reading Pace (Admin → Cascade tab)
+   The rate-of-descent dimension of scroll behaviour. Depth measures how FAR
+   a visitor scrolls; Cascade measures how FAST — the time between the
+   25/50/75/100% depth milestones analytics already records — separating
+   skimmers (raced to the bottom) from readers (lingered). Read-only over
+   _gam_analytics_v1; no new storage key, no analytics.js change. Warm amber
+   ramp, no blue/pink.
+================================================================ */
+var CASCADE_BLITZ  = 2000;    /* < 2s  per quarter-page = raced past */
+var CASCADE_SKIM   = 6000;    /* 2–6s  per quarter = quick scan */
+var CASCADE_STEADY = 20000;   /* 6–20s = steady read; 20s+ = studied */
+var CASCADE_MIN    = 2;       /* min scrolling sessions for a page to rank */
+var CASCADE_TIER_LABEL = { blitz: 'Blitz', skim: 'Skim', steady: 'Steady', studied: 'Studied' };
+
+function cascadeTierOf(pace) {
+  if (pace < CASCADE_BLITZ)  return 'blitz';
+  if (pace < CASCADE_SKIM)   return 'skim';
+  if (pace < CASCADE_STEADY) return 'steady';
+  return 'studied';
+}
+
+function cascMedian(arr) {
+  if (!arr.length) return 0;
+  var s = arr.slice().sort(function(a, b){ return a - b; });
+  var m = Math.floor(s.length / 2);
+  return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2;
+}
+
+function cascDur(ms) {
+  ms = ms || 0;
+  if (ms < 1000)  return Math.round(ms) + 'ms';
+  if (ms < 60000) return (Math.round(ms / 100) / 10) + 's';
+  return jFmtDur(ms);
+}
+
+function buildCascade() {
+  var events = CommissionData.getAnalytics() || [];
+
+  /* group pv + scroll events by sid|page → first-crossing timestamps */
+  var pk = {};
+  events.forEach(function(e) {
+    if (!e || !e.sid) return;
+    if (e.type !== 'pv' && e.type !== 'scroll') return;
+    var page = e.page || '/';
+    var k = e.sid + '|' + page;
+    var rec = pk[k] || (pk[k] = { sid: e.sid, page: page, t0: null, cross: {} });
+    if (e.type === 'pv') {
+      if (rec.t0 === null || e.ts < rec.t0) rec.t0 = e.ts;
+    } else {
+      var d = e.depth;
+      if (d && (rec.cross[d] === undefined || e.ts < rec.cross[d])) rec.cross[d] = e.ts;
+    }
+  });
+
+  /* one record per page-visit that has a pageview AND at least one scroll */
+  var visits = [];
+  Object.keys(pk).forEach(function(k) {
+    var rec = pk[k];
+    if (rec.t0 === null) return;
+    var depths = [25, 50, 75, 100].filter(function(d){ return rec.cross[d] !== undefined; });
+    if (!depths.length) return;
+    var off = {};
+    depths.forEach(function(d){ off[d] = Math.max(0, rec.cross[d] - rec.t0); });
+    var reached  = depths[depths.length - 1];
+    var quarters = reached / 25;
+    var pace     = quarters ? off[reached] / quarters : off[reached];
+    var segs = { s1: null, s2: null, s3: null, s4: null };
+    if (rec.cross[25]  !== undefined) segs.s1 = off[25];
+    if (rec.cross[25]  !== undefined && rec.cross[50]  !== undefined) segs.s2 = Math.max(0, off[50]  - off[25]);
+    if (rec.cross[50]  !== undefined && rec.cross[75]  !== undefined) segs.s3 = Math.max(0, off[75]  - off[50]);
+    if (rec.cross[75]  !== undefined && rec.cross[100] !== undefined) segs.s4 = Math.max(0, off[100] - off[75]);
+    visits.push({ sid: rec.sid, page: rec.page, reached: reached, pace: pace, tier: cascadeTierOf(pace), segs: segs });
+  });
+
+  var total = visits.length;
+  var tierCounts = { blitz: 0, skim: 0, steady: 0, studied: 0 };
+  var allPaces = [], allTo25 = [];
+  var globalSeg = { s1: [], s2: [], s3: [], s4: [] };
+  var pages = {};
+
+  visits.forEach(function(v) {
+    tierCounts[v.tier]++;
+    allPaces.push(v.pace);
+    if (v.segs.s1 !== null) allTo25.push(v.segs.s1);
+    ['s1', 's2', 's3', 's4'].forEach(function(s){ if (v.segs[s] !== null) globalSeg[s].push(v.segs[s]); });
+    var p = pages[v.page] || (pages[v.page] = {
+      page: v.page, count: 0, paces: [], reachSum: 0,
+      tiers: { blitz: 0, skim: 0, steady: 0, studied: 0 },
+      segRaw: { s1: [], s2: [], s3: [], s4: [] }
+    });
+    p.count++;
+    p.paces.push(v.pace);
+    p.reachSum += v.reached;
+    p.tiers[v.tier]++;
+    ['s1', 's2', 's3', 's4'].forEach(function(s){ if (v.segs[s] !== null) p.segRaw[s].push(v.segs[s]); });
+  });
+
+  function segAvg(list) {
+    return { avg: list.length ? list.reduce(function(a, b){ return a + b; }, 0) / list.length : 0, n: list.length };
+  }
+
+  var pageArr = Object.keys(pages).map(function(pg) {
+    var p = pages[pg];
+    p.label    = jPageLabel(pg);
+    p.pace     = cascMedian(p.paces);
+    p.avgReach = p.count ? Math.round(p.reachSum / p.count) : 0;
+    var dom = 'steady', domN = -1;
+    ['blitz', 'skim', 'steady', 'studied'].forEach(function(t){ if (p.tiers[t] > domN) { domN = p.tiers[t]; dom = t; } });
+    p.dom = dom;
+    p.seg = { s1: segAvg(p.segRaw.s1), s2: segAvg(p.segRaw.s2), s3: segAvg(p.segRaw.s3), s4: segAvg(p.segRaw.s4) };
+    return p;
+  });
+
+  var ranked = pageArr.filter(function(p){ return p.count >= CASCADE_MIN; });
+  var slow = ranked.slice().sort(function(a, b){ return b.pace - a.pace; });
+  var fast = ranked.slice().sort(function(a, b){ return a.pace - b.pace; });
+  var readCount = tierCounts.steady + tierCounts.studied;
+  var skimCount = tierCounts.blitz + tierCounts.skim;
+
+  return {
+    total: total,
+    tierCounts: tierCounts,
+    medianPace: cascMedian(allPaces),
+    medianTo25: cascMedian(allTo25),
+    readRate: total ? Math.round(readCount / total * 100) : 0,
+    skimRate: total ? Math.round(skimCount / total * 100) : 0,
+    descent: { s1: segAvg(globalSeg.s1), s2: segAvg(globalSeg.s2), s3: segAvg(globalSeg.s3), s4: segAvg(globalSeg.s4) },
+    slow: slow,
+    fast: fast,
+    pages: pageArr,
+    explore: pageArr.slice().sort(function(a, b){ return b.count - a.count; })
+  };
+}
+
+function cascPaceBars(rows, mode) {
+  if (!rows.length) {
+    return '<p class="casc-empty">Not enough scrolling sessions yet — pages rank once at least ' + CASCADE_MIN + ' visits scroll them.</p>';
+  }
+  var cap = rows.reduce(function(m, r){ return Math.max(m, r.pace); }, 1);
+  return '<div class="spotlight-board">' + rows.slice(0, 12).map(function(r) {
+    var w = mode === 'fast'
+      ? Math.round((1 - Math.min(r.pace, cap) / cap) * 88) + 12   /* faster → fuller */
+      : Math.round((r.pace / cap) * 100);                          /* slower → fuller */
+    return '<div class="spotlight-row">' +
+      '<div class="sp-info">' +
+        '<div class="sp-label" title="' + escHtml(r.label) + '">' + escHtml(r.label) + '</div>' +
+        '<div class="sp-bar-wrap"><div class="sp-bar" style="width:' + w + '%"></div></div>' +
+      '</div>' +
+      '<div class="sp-meta">' +
+        '<span class="sp-time">' + cascDur(r.pace) + '</span>' +
+        '<span class="sp-views">/¼ · <span class="casc-tag casc-tag-' + r.dom + '">' + CASCADE_TIER_LABEL[r.dom] + '</span> · ' +
+          r.count + (r.count === 1 ? ' session' : ' sessions') + '</span>' +
+      '</div>' +
+    '</div>';
+  }).join('') + '</div>';
+}
+
+function cascDescentBars(desc) {
+  var segs = [
+    { k: 's1', lbl: 'Load → 25%', color: 'rgba(214,190,150,0.9)' },
+    { k: 's2', lbl: '25 → 50%',   color: 'rgba(201,168,124,0.92)' },
+    { k: 's3', lbl: '50 → 75%',   color: 'rgba(176,122,74,0.92)' },
+    { k: 's4', lbl: '75 → 100%',  color: 'rgba(150,104,62,0.92)' }
+  ];
+  var max = segs.reduce(function(m, s){ return Math.max(m, desc[s.k].avg); }, 1);
+  if (max <= 0) return '<p class="casc-empty">No completed scroll segments yet — the descent fills as visitors scroll through whole pages.</p>';
+  return segs.map(function(s) {
+    var d = desc[s.k];
+    var w = Math.round((d.avg / max) * 100);
+    return '<div class="casc-seg">' +
+      '<span class="casc-seg-lbl">' + s.lbl + '</span>' +
+      '<span class="casc-seg-track"><span class="casc-seg-fill" style="width:' + w + '%;background:' + s.color + '"></span></span>' +
+      '<span class="casc-seg-val">' + (d.n ? cascDur(d.avg) : '—') + '</span>' +
+    '</div>';
+  }).join('');
+}
+
+function drawCascadeDonut(cd) {
+  var canvas = document.getElementById('cascade-donut');
+  if (!canvas) return;
+  var ctx = canvas.getContext('2d');
+  var W = canvas.width, H = canvas.height;
+  ctx.clearRect(0, 0, W, H);
+  var cx = W / 2, cy = H / 2, rOut = 78, rIn = 46;
+
+  if (!cd.total) {
+    ctx.fillStyle = '#444';
+    ctx.font = '12px -apple-system, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('No scroll data yet.', cx, cy);
+    return;
+  }
+
+  var slices = [
+    { v: cd.tierCounts.blitz,   color: 'rgba(120,116,108,0.6)' },
+    { v: cd.tierCounts.skim,    color: 'rgba(214,190,150,0.9)' },
+    { v: cd.tierCounts.steady,  color: 'rgba(201,168,124,0.92)' },
+    { v: cd.tierCounts.studied, color: 'rgba(150,104,62,0.9)' }
+  ];
+  var start = -Math.PI / 2;
+  slices.forEach(function(s) {
+    if (!s.v) return;
+    var ang = (s.v / cd.total) * Math.PI * 2;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.arc(cx, cy, rOut, start, start + ang);
+    ctx.closePath();
+    ctx.fillStyle = s.color;
+    ctx.fill();
+    start += ang;
+  });
+
+  ctx.globalCompositeOperation = 'destination-out';
+  ctx.beginPath();
+  ctx.arc(cx, cy, rIn, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.globalCompositeOperation = 'source-over';
+
+  ctx.fillStyle = '#c9a87c';
+  ctx.font = 'bold 22px -apple-system, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(cd.readRate + '%', cx, cy - 6);
+  ctx.fillStyle = '#8c887f';
+  ctx.font = '9px "Courier New", monospace';
+  ctx.fillText('READ', cx, cy + 12);
+}
+
+function renderCascadeTab() {
+  var cd = buildCascade();
+  function chip(num, label) {
+    return '<div class="analytics-stat-chip"><span class="asc-num">' + num +
+      '</span><span class="asc-label">' + label + '</span></div>';
+  }
+  document.getElementById('cascade-stats').innerHTML =
+    chip(cd.total,                             'Scroll Sessions')      +
+    chip(cd.total ? cascDur(cd.medianTo25) : '—', 'Median Time to 25%') +
+    chip(cd.total ? cascDur(cd.medianPace) : '—', 'Median Pace / ¼')   +
+    chip(cd.total ? cd.readRate + '%' : '—',   'Read Rate');
+
+  /* Pace-mix donut */
+  drawCascadeDonut(cd);
+  document.getElementById('cascade-legend').innerHTML = cd.total
+    ? [
+        { key: 'blitz',   label: 'Blitz — raced past',   color: 'rgba(120,116,108,0.6)' },
+        { key: 'skim',    label: 'Skim — quick scan',    color: 'rgba(214,190,150,0.9)' },
+        { key: 'steady',  label: 'Steady — read',        color: 'rgba(201,168,124,0.92)' },
+        { key: 'studied', label: 'Studied — lingered',   color: 'rgba(150,104,62,0.9)' }
+      ].map(function(s) {
+        var v = cd.tierCounts[s.key];
+        var share = cd.total ? Math.round(v / cd.total * 100) : 0;
+        return '<div class="compass-legend-item">' +
+          '<span class="compass-legend-swatch" style="background:' + s.color + '"></span>' +
+          '<span>' + escHtml(s.label) + '</span>' +
+          '<span class="compass-legend-val">' + v + ' · ' + share + '%</span>' +
+        '</div>';
+      }).join('')
+    : '<p class="casc-empty">No scrolling sessions recorded yet. Cascade populates as visitors scroll the public pages.</p>';
+
+  document.getElementById('cascade-slow').innerHTML    = cascPaceBars(cd.slow, 'slow');
+  document.getElementById('cascade-descent').innerHTML = cascDescentBars(cd.descent);
+  document.getElementById('cascade-fast').innerHTML    = cascPaceBars(cd.fast, 'fast');
+
+  /* Pace explorer */
+  var sel  = document.getElementById('cascade-explore-select');
+  var opts = cd.explore;
+  var prev = sel.value;
+  sel.innerHTML = opts.map(function(p) {
+    return '<option value="' + escHtml(p.page) + '">' + escHtml(p.label) + ' (' + p.count + ')</option>';
+  }).join('');
+  if (prev && opts.some(function(p){ return p.page === prev; })) sel.value = prev;
+
+  function drawExplore() {
+    var el = document.getElementById('cascade-explore');
+    var p  = cd.pages.filter(function(x){ return x.page === sel.value; })[0];
+    if (!p) {
+      el.innerHTML = '<p class="casc-empty">Pick a page above to inspect its scroll rhythm.</p>';
+      return;
+    }
+    el.innerHTML =
+      '<p class="casc-explore-summary"><strong>' + escHtml(p.label) + '</strong> was scrolled in <strong>' + p.count +
+        '</strong> ' + (p.count === 1 ? 'session' : 'sessions') + ' at a median pace of <strong>' + cascDur(p.pace) +
+        '</strong> per quarter-page (dominant tempo: <strong>' + CASCADE_TIER_LABEL[p.dom] + '</strong>), reaching an average depth of <strong>' +
+        p.avgReach + '%</strong>.</p>' +
+      '<div class="casc-dist">' +
+        '<div class="casc-dist-chip"><span class="casc-dist-num">' + p.tiers.blitz   + '</span><span class="casc-dist-lbl">BLITZ</span></div>' +
+        '<div class="casc-dist-chip"><span class="casc-dist-num">' + p.tiers.skim    + '</span><span class="casc-dist-lbl">SKIM</span></div>' +
+        '<div class="casc-dist-chip"><span class="casc-dist-num">' + p.tiers.steady  + '</span><span class="casc-dist-lbl">STEADY</span></div>' +
+        '<div class="casc-dist-chip"><span class="casc-dist-num">' + p.tiers.studied + '</span><span class="casc-dist-lbl">STUDIED</span></div>' +
+      '</div>' +
+      cascDescentBars(p.seg);
+  }
+  sel.onchange = drawExplore;
+  drawExplore();
+}
+
+document.getElementById('cascade-refresh-btn').addEventListener('click', renderCascadeTab);
+
+document.getElementById('cascade-export-btn').addEventListener('click', function() {
+  var cd = buildCascade();
+  function pageRow(p) {
+    return {
+      page: p.page, sessions: p.count, medianPaceMs: Math.round(p.pace), dominantTier: p.dom,
+      avgReachPct: p.avgReach, tiers: p.tiers,
+      segments: {
+        loadTo25: Math.round(p.seg.s1.avg), s25to50: Math.round(p.seg.s2.avg),
+        s50to75: Math.round(p.seg.s3.avg), s75to100: Math.round(p.seg.s4.avg)
+      }
+    };
+  }
+  var out = {
+    scrollSessions: cd.total, readRate: cd.readRate, skimRate: cd.skimRate,
+    medianPaceMs: Math.round(cd.medianPace), medianTimeTo25Ms: Math.round(cd.medianTo25),
+    tierCounts: cd.tierCounts,
+    descentAvgMs: {
+      loadTo25: Math.round(cd.descent.s1.avg), s25to50: Math.round(cd.descent.s2.avg),
+      s50to75: Math.round(cd.descent.s3.avg), s75to100: Math.round(cd.descent.s4.avg)
+    },
+    slowestPages: cd.slow.slice(0, 50).map(pageRow),
+    fastestPages: cd.fast.slice(0, 50).map(pageRow)
+  };
+  var blob = new Blob([JSON.stringify(out, null, 2)], { type: 'application/json' });
+  var url  = URL.createObjectURL(blob);
+  var a    = document.createElement('a');
+  a.href = url; a.download = 'cascade-' + Date.now() + '.json'; a.click();
   URL.revokeObjectURL(url);
 });
 </script>

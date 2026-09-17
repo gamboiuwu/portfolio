@@ -154,7 +154,7 @@ Inquiries, Feedback.
   - **Companions Explorer** — pick any artwork, see what visitors most view alongside it
   - A curation signal for sequencing the portfolio and deciding what to hang next to what.
   - Derived live from `_gam_spotlight_v1` — no new storage key.
-- **Tide** *(newest)* — **trends & momentum**. Every other analytics tool aggregates
+- **Tide** — **trends & momentum**. Every other analytics tool aggregates
   all-time totals; Tide is the only one with a sense of **direction**. It splits the data
   into a recent window and the equal-length window immediately before it and reports the
   deltas — what's rising, what's fading, and whether the site overall is gaining ground.
@@ -167,6 +167,20 @@ Inquiries, Feedback.
   - **Pages Trending** and **Sources Trending** — pages and acquisition channels moving
     up or down versus the prior window
   - Derived live from `_gam_analytics_v1` + `_gam_spotlight_v1` — no new storage key.
+- **Cascade** *(newest)* — **scroll velocity & reading pace**. Depth measures *how far*
+  a visitor scrolls; Arc measures *when* in a visit activity crests; Latch clocks the
+  *first* interaction. Cascade is the only one that measures the **rate of descent** —
+  how *fast* a page is consumed. It reconstructs each page-visit's scroll timeline from
+  the 25/50/75/100% depth events already recorded and clocks the time between milestones,
+  separating **skimmers** (raced to the bottom) from **readers** (lingered). It surfaces:
+  - Stats: scroll sessions, median time-to-25%, median pace per quarter-page, read rate
+  - **Pace Mix** donut across four tempos (Blitz / Skim / Steady / Studied); centre = read rate
+  - **Slowest-Read Pages** — where visitors advance most deliberately (genuinely reading)
+  - **The Descent** — average time spent crossing each quarter (load→25→50→75→100),
+    showing where people slow down or race the bottom half
+  - **Fastest-Consumed Pages** — the inverse board: content blown past, candidates to tighten
+  - **Pace Explorer** — pick a page to see its tempo mix, per-segment times, and median pace
+  - Derived live from `_gam_analytics_v1` — no new storage key, no `analytics.js` change.
 - **Revenue** — financial dashboard derived from the commission Queue: total earned,
   pipeline value, monthly earnings chart, revenue by type, top clients.
 - **Palette** — extract dominant colors from an uploaded artwork (k-means), save
