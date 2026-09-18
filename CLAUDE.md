@@ -208,6 +208,7 @@ Password-protected (SHA-256 hash in localStorage, 5-attempt lockout). Session tr
 | Fuse        | Conversion latency & sales-cycle — the missing *time* dimension of Beacon: joins persistent-visitor identity (`vid`/`vfirst`) with `goal` events to measure how long and how many visits it takes a visitor to reach their first commission-intent signal; conversion-speed donut (Instant→7 days+), visits-before-converting distribution, first-intent-signal mix, and a recent-conversions feed |
 | Arc         | Session engagement lifecycle / intra-visit tempo — lines every event up by its offset from its own session's first event to show *when within a visit* activity crests and when sessions go quiet: activity curve by time-bin (0–15s…5m+), in-visit survival (retention within one visit), event-mix-over-time (early scrolls → mid clicks/intent → late exits), and a longest-sustained-visits feed |
 | Echo        | Artwork re-engagement & magnetic pull — the first tool to measure *intra-visit re-visitation of the same piece*: counts how often each artwork is re-entered (scrolled past, then returned to) within one visit; per-artwork **pull rate** (share of viewers who looked twice), attention-split donut (one glance vs came back), most-magnetic (pull rate) and most-re-viewed (raw returns) leaderboards, glance-and-gone cold list, and a per-artwork look-distribution explorer |
+| Meter       | Reading tempo & scroll velocity — the first tool on the *speed* axis: anchors each visit's scroll milestones (25/50/75/100%) to its landing time and computes a **reading pace** (seconds per quarter-page) per session×page; tempo-mix donut (Raced/Steady/Studied/Immersed), slowest-read (lingering) & fastest-scroll (skimmed) page leaderboards, and a per-page **descent-profile explorer** (avg time to reach each depth). Distinct from Depth (spatial reach, no time), Arc (event bins from session start), Latch (first-interaction latency only) |
 
 ---
 
@@ -1179,6 +1180,46 @@ Answers the simplest magnetism question no other tool asks: **which artworks mak
 
 ---
 
+## Meter — Reading Tempo & Scroll Velocity (Admin → Meter tab) — NEW TOOL
+
+Answers the one question about scrolling no other tool measures: **how fast do visitors move down a page?** Depth answers *how far* they scroll (spatial reach); Arc buckets events by time-since-arrival across a whole session; Latch clocks only the *first* interaction. None measures the **speed of the descent** — the elapsed time between scroll milestones. Meter is that missing **velocity** axis: it clocks how long a visit takes to travel down each page and turns it into a **reading pace**. Pages people *linger* on are being read; pages they *race* through are skimmed or skippable — the clearest read on whether the writing and layout actually hold the eye on the way down.
+
+**Why it's genuinely new:** it is a *time-per-scroll-distance* view, an axis no existing tool computes. Depth reads scroll events only as reach tiers (a spatial count, no time); Arc lines *all* event types up by offset from session start (a whole-session lifecycle, not per-page descent speed); Latch measures the latency of the *first* action alone. Meter is the first to read the same `scroll` events as a **rate** — percent scrolled per unit time, per page.
+
+**No new storage key, no `analytics.js` change** — derived live from `_gam_analytics_v1`, using the `scroll` events analytics already records at the 25 / 50 / 75 / 100 thresholds together with the `pv` timestamp that anchors each page's landing time. The same read-only pattern as Depth/Arc.
+
+**How it works:**
+1. `buildMeter()` groups events by session×page, capturing the earliest `pv` `ts` (landing time `t0`) and the earliest `ts` at which each scroll milestone was reached.
+2. A session×page with no scroll milestone is **not a reading visit** (never scrolled → no tempo) and is excluded; one with no anchoring `pv` is skipped (can't measure the descent from landing).
+3. Per reading visit it derives `maxDepth` (deepest milestone), `spanMs` (`deepestMilestoneTs − t0` = time from landing to deepest scroll), and **`msPerPct`** = `spanMs / maxDepth` — the reading pace. It also records the ms-from-landing to each individual tier reached (the descent profile).
+4. `meterBandOf()` sorts each visit's pace into a tempo band; per-page aggregation averages the pace, the read time, and the per-tier descent times.
+
+**Tempo bands** (ms per percent scrolled, constants `METER_RACE`/`METER_STEADY`/`METER_STUDY` at the top of the Meter block, warm amber→grey ramp — no blue/pink): **Raced** (`<120`, a fast skim), **Steady** (`120–500`, a normal browse), **Studied** (`500–1200`, a deliberate read), **Immersed** (`≥1200`, dwelling long). Pace is surfaced to the user as **seconds per quarter-page** (`msPerPct × 25 / 1000`) for legibility.
+
+**Admin tab sections:**
+- **Stats**: Reading Sessions, Median Pace / Quarter, Skim Rate % (share of visits in the Raced band), Most-Studied Page
+- **Reading Tempo Mix**: canvas donut + legend across the four bands (Immersed / Studied / Steady / Raced); centre shows the median seconds-per-quarter pace
+- **Slowest-Read Pages — Where Visitors Linger**: pages ranked by average reading pace, slowest first (the pages that hold attention), annotated with reading-visit count and average read time
+- **Raced Through — Fastest Scrolls**: the inverse — pages scrolled through fastest (skimmed, weak-hook candidates)
+- **Descent Profile Explorer**: pick any page → the average time to reach each scroll depth (25→100%) as timing chips, plus the page's pace and average read time — the *timing* companion to Depth's *reach* funnel
+
+**Derived schema (for export):**
+```js
+{ readingSessions, medianPaceMsPerPct, medianSecPerQuarter, skimRate,
+  tempoMix:{immersed,studied,steady,raced},
+  slowestPages:[{page, readingVisits, avgPaceMsPerPct, avgSecPerQuarter, avgReadMs, avgTimeToTier:{25,50,75,100}}], fastestPages:[…] }
+```
+
+**Technical notes:**
+- Donut + swatches use the warm amber/sand ramp (`rgba(176,122,74…)` immersed → `rgba(120,116,108,0.5)` raced) — no blue/pink. New `.meter-*` CSS classes; reuses `jBarList()`, `analytics-stat-chip`, `compass-legend`/`compass-donut-row`, `jFmtDur()`, `jPageLabel()`, `escHtml()`.
+- The first `scroll` event fires at the 25% threshold, so pace is a proxy for descent speed, not a literal pixel-velocity (consistent with Depth's caveat). Pages need ≥ `METER_MIN_VISITS` (2) reading visits to rank on the slow/fast boards, so one visit can't top a leaderboard.
+- Pace is per session×page (`sid`), so one visitor across several tabs may count more than once (consistent with the rest of the family).
+- Tab renders lazily on click, same pattern as Echo/Arc/Fuse/etc.
+
+**API:** none new on `CommissionData` — uses `CommissionData.getAnalytics()`. Logic lives in `renderMeterTab()` / `buildMeter()` inside `admin/index.html`.
+
+---
+
 ## Commission System
 
 ### Pages
@@ -1256,4 +1297,4 @@ Stored in `_gam_prices_v1`. Three sections: `digital`, `stickers`, `animation`. 
 
 ---
 
-*Last updated: 2026-08-20*
+*Last updated: 2026-09-18*
