@@ -154,7 +154,21 @@ Inquiries, Feedback.
   - **Companions Explorer** — pick any artwork, see what visitors most view alongside it
   - A curation signal for sequencing the portfolio and deciding what to hang next to what.
   - Derived live from `_gam_spotlight_v1` — no new storage key.
-- **Tide** *(newest)* — **trends & momentum**. Every other analytics tool aggregates
+- **Chapter** *(newest)* — **visit-over-visit behavioral evolution**. The loyalty tools
+  (Orbit, Ripple, Fuse) measure *whether/when* a visitor returns or converts; none asks
+  what they *do* when they come back. Chapter is the first view keyed to the **visit
+  number** — it places every session at its 1st / 2nd / 3rd… visit (by persistent `vid`)
+  and aggregates engagement per position, so you can see whether a returning audience
+  deepens or fades. It surfaces:
+  - Stats: visits analyzed, returning-visit share, avg visits/visitor, deepest-engaging visit
+  - **Engagement Deepening** — a canvas curve of the composite engagement index (0–100) by
+    visit number; rising = familiarity breeds depth, falling = the first visit is the peak
+  - **First Visit vs Returning** — every engagement signal averaged for first vs returning
+    visits, with the ▲/▼ shift between them
+  - **Commission Intent by Visit Number** — which visit actually converts
+  - **Metric Explorer** — any single signal's trajectory across the visit sequence
+  - Derived live from `_gam_analytics_v1` + `_gam_spotlight_v1` — no new storage key.
+- **Tide** — **trends & momentum**. Every other analytics tool aggregates
   all-time totals; Tide is the only one with a sense of **direction**. It splits the data
   into a recent window and the equal-length window immediately before it and reports the
   deltas — what's rising, what's fading, and whether the site overall is gaining ground.
