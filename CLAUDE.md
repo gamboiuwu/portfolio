@@ -208,6 +208,7 @@ Password-protected (SHA-256 hash in localStorage, 5-attempt lockout). Session tr
 | Fuse        | Conversion latency & sales-cycle — the missing *time* dimension of Beacon: joins persistent-visitor identity (`vid`/`vfirst`) with `goal` events to measure how long and how many visits it takes a visitor to reach their first commission-intent signal; conversion-speed donut (Instant→7 days+), visits-before-converting distribution, first-intent-signal mix, and a recent-conversions feed |
 | Arc         | Session engagement lifecycle / intra-visit tempo — lines every event up by its offset from its own session's first event to show *when within a visit* activity crests and when sessions go quiet: activity curve by time-bin (0–15s…5m+), in-visit survival (retention within one visit), event-mix-over-time (early scrolls → mid clicks/intent → late exits), and a longest-sustained-visits feed |
 | Echo        | Artwork re-engagement & magnetic pull — the first tool to measure *intra-visit re-visitation of the same piece*: counts how often each artwork is re-entered (scrolled past, then returned to) within one visit; per-artwork **pull rate** (share of viewers who looked twice), attention-split donut (one glance vs came back), most-magnetic (pull rate) and most-re-viewed (raw returns) leaderboards, glance-and-gone cold list, and a per-artwork look-distribution explorer |
+| Chapter     | Visit-over-visit behavioral evolution — the first view keyed to the *visit number*: joins `_gam_analytics_v1` + `_gam_spotlight_v1` by persistent `vid`, places each session at its 1st/2nd/3rd… visit position, and aggregates engagement per position to show whether a returning audience deepens or fades: composite engagement-index curve by visit number, first-visit-vs-returning per-metric comparison scorecard, commission-intent by visit number, and a per-metric visit-sequence explorer |
 
 ---
 
@@ -1179,6 +1180,47 @@ Answers the simplest magnetism question no other tool asks: **which artworks mak
 
 ---
 
+## Chapter — Visit-over-Visit Behavioral Evolution (Admin → Chapter tab) — NEW TOOL
+
+Answers the retention question the loyalty tools structurally leave open: **as a visitor comes back, do they engage more deeply — or is the first visit the only one that counts?** Orbit reports an all-time loyalty snapshot (new vs. returning, frequency, recency) but treats every returning visit as one undifferentiated bucket; Ripple measures cohort *return* (did a week's arrivals come back) but not what they *do* when they return; Fuse clocks how long it takes to convert. **None lines visits up by their position in a visitor's history and compares the engagement each earns.** Chapter is the first view keyed to the **visit number** — it places every session at its 1st / 2nd / 3rd… visit and aggregates engagement per position, revealing whether familiarity breeds depth (returning visitors read further, dwell on the artwork longer, edge toward a commission) or whether later visits are drive-bys. That single trajectory decides whether the site is worth a returning-visitor nurture (feature rotation, new-work banners, a mailing list) or whether the first impression is the whole game.
+
+**Why it's genuinely new:** it is an *engagement-by-visit-number* aggregate, an axis no existing tool computes. Orbit/Ripple/Fuse all key off the persistent visitor but measure *whether/when* someone returns or converts — never *how their behaviour changes* across successive visits. Ember scores a single session on one axis over the whole audience; Chapter takes that same composite and plots its **trajectory across the visit sequence**. Facet compares by *device*; Chapter compares by *visit position* — the temporal-familiarity dimension.
+
+**No new storage key, no `analytics.js` change** — derived live from `_gam_analytics_v1` (`pv` / `click` / `scroll` / `exit` / `goal`) and `_gam_spotlight_v1` (artwork viewport ms), joined by session id, then grouped by the persistent `vid` (and `vfirst`) that `analytics.js` already stamps on every `pv` (added for Orbit). The same read-only pattern as Orbit/Ripple/Fuse.
+
+**Visit-order model:** a session's **visit number** is derived per persistent visitor — group a `vid`'s sessions, sort by first-pageview time, and assign an ordinal (1, 2, 3…). This is robust to the raw `vnum` field (which it cross-checks) and folds legacy sessions without a `vid` in as first visits keyed by `sid`. Positions are bucketed **V1 / V2 / V3 / V4 / V5+**.
+
+**Engagement Index (per session, 0–100):** the same capped-and-weighted composite Ember uses, so the curve reads on a familiar scale — pages (cap 5 → 20 pts), dwell (cap 3 min → 25), scroll (cap 100% → 20), clicks (cap 6 → 15), artwork ms (cap 60 s → 15), any commission goal (→ 5). Constants live in `CHAPTER_W` / `CHAPTER_CAP` at the top of the Chapter block.
+
+**How it works:**
+1. `buildChapter()` groups analytics events by `sid` (pages, clicks, max scroll, dwell = `max(event-span, longest exit.ms)`, goal flag, `vid`), joins artwork ms per `sid` from spotlight, and scores each session.
+2. It groups sessions by `vid` (fallback `legacy:<sid>`), sorts each visitor's sessions by first-pageview time, and stamps each with its `visitIndex`.
+3. It aggregates every engagement signal into V1…V5+ buckets, computes each bucket's averages and intent rate, and derives a first-visit-vs-returning (`visitIndex ≥ 2`) comparison per metric with the percentage shift.
+
+**Admin tab sections:**
+- **Stats**: Visits Analyzed, Returning-Visit Share %, Avg Visits / Visitor, Deepest-Engaging Visit (the position with the highest average index)
+- **Engagement Deepening — Index by Visit Number**: canvas line + area of the average engagement index at each visit position; a rising line = familiarity deepens engagement, a falling line = the first visit is the peak
+- **First Visit vs Returning — What Changes**: per-metric comparison scorecard — every signal averaged for first visits (sand bar) vs all returning visits (amber bar), annotated with the ▲/▼ percentage shift
+- **Commission Intent by Visit Number**: share of visits at each position that fired a commission-intent goal — which visit actually converts
+- **Metric Explorer by Visit Number**: pick any single signal to see its per-visit trajectory (the detail behind the composite curve)
+
+**Derived schema (for export):**
+```js
+{ totalSessions, uniqueVisitors, returningVisitors, returningSessions, returningShare, avgVisits, deepestVisit,
+  byVisit:[{visit, sessions, avgScore, avgPages, avgDwellMs, avgScroll, avgClicks, avgArtMs, intentRate}],
+  firstVsReturning:[{metric, firstVisit, returning, deltaPct}] }
+```
+
+**Technical notes:**
+- Curve, area fill, scorecard bars, and points use the warm amber/sand palette (`#c9a87c` / `#d6a878` line & returning, `rgba(214,190,150…)` first-visit) — no blue/pink. New `.chapter-*` CSS classes; reuses `jBarList()`, `jFmtDur()`, `analytics-stat-chip`, the `spotlight-board`/`sp-*` bar styles, the `journey-select` dropdown, and `escHtml()`.
+- Since higher is deeper for every metric shown, the comparison delta is direction-unambiguous (amber ▲ = engagement climbed on return, muted clay ▼ = it fell).
+- Keyed by the **persistent visitor** (`vid`), so a return in a new tab correctly counts as the same person and its later position (the point of a visit-over-visit view); the engagement *within* each session is still measured per `sid`.
+- Tab renders lazily on click, same pattern as Echo/Arc/Fuse/etc.
+
+**API:** none new on `CommissionData` — uses `CommissionData.getAnalytics()` + `.getSpotlight()`. Logic lives in `renderChapterTab()` / `buildChapter()` inside `admin/index.html`.
+
+---
+
 ## Commission System
 
 ### Pages
@@ -1256,4 +1298,4 @@ Stored in `_gam_prices_v1`. Three sections: `digital`, `stickers`, `animation`. 
 
 ---
 
-*Last updated: 2026-08-20*
+*Last updated: 2026-09-23*

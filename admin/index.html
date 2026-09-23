@@ -1031,6 +1031,32 @@
 		.echo-explore-summary strong { color: #d6a878; }
 		.echo-empty { color: #444; font-size: 0.85em; padding: 0.5em 0; }
 
+		/* Chapter tab — visit-over-visit behavioral evolution (warm amber, no blue/pink) */
+		#chapter-curve { display: block; max-width: 100%; }
+		.chapter-cmp { display: flex; flex-direction: column; gap: 0.3em; }
+		.chapter-cmp-head { display: flex; gap: 1.1em; font-size: 0.6em; color: #8c887f;
+			font-family: 'Courier New', monospace; letter-spacing: 0.04em; margin-bottom: 0.4em; }
+		.chapter-cmp-head .sw { display: inline-block; width: 0.8em; height: 0.8em; border-radius: 2px;
+			vertical-align: -1px; margin-right: 0.35em; }
+		.chapter-cmp-row { display: grid; grid-template-columns: 8.5em 1fr 3.8em; align-items: center;
+			gap: 0.85em; padding: 0.55em 0; border-bottom: 1px solid rgba(201,168,124,0.12); }
+		.chapter-cmp-metric { font-size: 0.75em; color: #b7b2a8; font-family: 'Courier New', monospace;
+			letter-spacing: 0.02em; }
+		.chapter-cmp-bars { display: flex; flex-direction: column; gap: 0.32em; }
+		.chapter-cmp-bar { position: relative; height: 1.2em; background: rgba(255,255,255,0.03);
+			border-radius: 3px; overflow: hidden; }
+		.chapter-cmp-bar > i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 3px; min-width: 2px; }
+		.chapter-cmp-bar.first > i { background: rgba(214,190,150,0.55); }
+		.chapter-cmp-bar.ret > i   { background: rgba(176,122,74,0.9); }
+		.chapter-cmp-bar > em { position: absolute; right: 0.45em; top: 50%; transform: translateY(-50%);
+			font-style: normal; font-size: 0.66em; color: #d8d2c6; font-family: 'Courier New', monospace;
+			text-shadow: 0 0 3px rgba(0,0,0,0.5); }
+		.chapter-delta { font-size: 0.72em; font-family: 'Courier New', monospace; text-align: right; white-space: nowrap; }
+		.chapter-delta.up   { color: #d6a878; }
+		.chapter-delta.down { color: #9a7a52; }
+		.chapter-delta.flat { color: #8c887f; }
+		.chapter-empty { color: #444; font-size: 0.85em; padding: 0.5em 0; }
+
 		/* Tide tab — trends & momentum (reuses spotlight bars) */
 		#tide-canvas { display: block; }
 		.tide-win { display: flex; align-items: center; gap: 0.6em; flex-wrap: wrap; margin-bottom: 1em; }
@@ -1169,6 +1195,7 @@
 				<button class="admin-tab" data-tab="fuse">Fuse</button>
 				<button class="admin-tab" data-tab="arc">Arc</button>
 				<button class="admin-tab" data-tab="echo">Echo</button>
+				<button class="admin-tab" data-tab="chapter">Chapter</button>
 			</div>
 
 			<!-- ============ GALLERY TAB ============ -->
@@ -2628,6 +2655,49 @@
 
 						</div>
 
+						<div id="tab-chapter" class="tab-content">
+
+							<div class="admin-card">
+								<h3>Chapter — Visit-over-Visit Behavioral Evolution</h3>
+								<p class="hint">Orbit counts <em>whether</em> visitors return; Ripple tracks <em>cohort retention</em>; Fuse clocks <em>time to convert</em>. None asks the sharper follow-up: <strong>as a visitor comes back, do they engage more deeply?</strong> Chapter is the only view keyed to the <strong>visit number</strong> &mdash; it lines every visit up as a 1st, 2nd, 3rd&hellip; chapter of the same visitor and compares the engagement it earns. It reveals whether a returning audience reads further, dwells on the artwork longer, and edges toward a commission &mdash; or whether the first visit is the only one that counts. That decides whether the site is worth a returning-visitor nurture (feature rotation, new-work banners) or whether the first impression is the whole game. Read-only over <code>_gam_analytics_v1</code> + <code>_gam_spotlight_v1</code>, joined by <code>vid</code> (persistent visitor) &mdash; no new storage key, no <code>analytics.js</code> change. Visit order is derived per visitor from session start times; legacy sessions without a <code>vid</code> fold in as first visits.</p>
+								<div id="chapter-stats" class="analytics-stats" style="margin-bottom:1em"></div>
+								<div style="display:flex;gap:0.5em;flex-wrap:wrap">
+									<button class="button small" id="chapter-refresh-btn">Refresh</button>
+									<button class="button small" id="chapter-export-btn">Export JSON</button>
+								</div>
+							</div>
+
+							<div class="admin-card">
+								<h3>Engagement Deepening — Index by Visit Number</h3>
+								<p class="hint">A 0&ndash;100 composite engagement index (pages, dwell, scroll, clicks, artwork attention, and commission intent, each capped and weighted) averaged across every visit at each position. A line that <em>rises</em> left-to-right means familiarity breeds engagement &mdash; returning visitors go deeper each time. A line that <em>falls</em> means the first visit is the peak and later ones are drive-bys.</p>
+								<canvas id="chapter-curve" width="640" height="240"></canvas>
+							</div>
+
+							<div class="admin-card">
+								<h3>First Visit vs Returning — What Changes</h3>
+								<p class="hint">Every engagement signal, averaged for first-ever visits (sand) versus all returning visits (amber), with the shift between them. The clearest read on <em>how</em> behaviour changes once someone already knows the work &mdash; which signals climb on return and which fade.</p>
+								<div class="chapter-cmp-head">
+									<span><span class="sw" style="background:rgba(214,190,150,0.55)"></span>First visit</span>
+									<span><span class="sw" style="background:rgba(176,122,74,0.9)"></span>Returning</span>
+								</div>
+								<div id="chapter-compare" class="chapter-cmp"></div>
+							</div>
+
+							<div class="admin-card">
+								<h3>Commission Intent by Visit Number</h3>
+								<p class="hint">Share of visits at each position that fired any commission-intent signal (CTA click or form engagement). Answers the business question directly: <strong>which visit actually converts?</strong> If intent climbs with visit number, patience &mdash; and a reason to come back &mdash; is what closes the commission.</p>
+								<div id="chapter-intent"></div>
+							</div>
+
+							<div class="admin-card">
+								<h3>Metric Explorer by Visit Number</h3>
+								<p class="hint">Pick any single signal to see its trajectory across the visit sequence &mdash; the per-metric detail behind the composite curve above.</p>
+								<select id="chapter-metric-select" class="journey-select" style="margin-bottom:0.9em"></select>
+								<div id="chapter-explore"></div>
+							</div>
+
+						</div>
+
 		</div><!-- /#admin-dash -->
 		<input type="file" id="img-file-input" accept="image/*" style="display:none" />
 
@@ -3681,6 +3751,9 @@ document.addEventListener('click', function(e){
   }
   if (e.target.dataset && e.target.dataset.tab === 'echo') {
     renderEchoTab();
+  }
+  if (e.target.dataset && e.target.dataset.tab === 'chapter') {
+    renderChapterTab();
   }
 });
 
@@ -9825,6 +9898,323 @@ document.getElementById('echo-export-btn').addEventListener('click', function() 
   var url  = URL.createObjectURL(blob);
   var a    = document.createElement('a');
   a.href = url; a.download = 'echo-' + Date.now() + '.json'; a.click();
+  URL.revokeObjectURL(url);
+});
+
+/* ── Chapter — Visit-over-Visit Behavioral Evolution ──
+   Read-only over _gam_analytics_v1 + _gam_spotlight_v1, joined by vid (persistent
+   visitor). Every session is placed at its visit position (1st, 2nd, 3rd… for the
+   same visitor) and its engagement is aggregated per position, so we can see whether
+   a returning audience deepens or fades. Distinct from Orbit (loyalty counts), Ripple
+   (cohort retention), Fuse (conversion latency), Ember (single-session score): the
+   novel axis is engagement-by-visit-NUMBER. No new storage key, no analytics.js
+   change. Warm amber/sand palette, no blue/pink. */
+var CHAPTER_W   = { pages: 20, dwell: 25, scroll: 20, clicks: 15, art: 15, goal: 5 };
+var CHAPTER_CAP = { pages: 5, dwell: 180000, scroll: 100, clicks: 6, art: 60000 };
+var CHAPTER_BUCKETS = 5;   /* V1..V4 then V5+ */
+
+function chapterScore(s) {
+  var sc = 0;
+  sc += Math.min(s.pv,     CHAPTER_CAP.pages)  / CHAPTER_CAP.pages  * CHAPTER_W.pages;
+  sc += Math.min(s.dwell,  CHAPTER_CAP.dwell)  / CHAPTER_CAP.dwell  * CHAPTER_W.dwell;
+  sc += Math.min(s.scroll, CHAPTER_CAP.scroll) / CHAPTER_CAP.scroll * CHAPTER_W.scroll;
+  sc += Math.min(s.clicks, CHAPTER_CAP.clicks) / CHAPTER_CAP.clicks * CHAPTER_W.clicks;
+  sc += Math.min(s.artMs,  CHAPTER_CAP.art)    / CHAPTER_CAP.art    * CHAPTER_W.art;
+  if (s.goal) sc += CHAPTER_W.goal;
+  return Math.max(0, Math.min(100, Math.round(sc)));
+}
+
+/* per-session accessor for each comparable metric (single source of truth) */
+var CHAPTER_METRICS = [
+  { key: 'score',  label: 'Engagement Index',  cap: 100, f: function(s){ return s.score;  }, fmt: function(v){ return Math.round(v); },              bavg: 'avgScore'  },
+  { key: 'pv',     label: 'Pages / Visit',      cap: null, f: function(s){ return s.pv;     }, fmt: function(v){ return Math.round(v * 10) / 10; },    bavg: 'avgPv'     },
+  { key: 'dwell',  label: 'Time on Site',       cap: null, f: function(s){ return s.dwell;  }, fmt: function(v){ return jFmtDur(v); },                 bavg: 'avgDwell'  },
+  { key: 'scroll', label: 'Scroll Depth',       cap: 100,  f: function(s){ return s.scroll; }, fmt: function(v){ return Math.round(v) + '%'; },        bavg: 'avgScroll' },
+  { key: 'clicks', label: 'Clicks / Visit',     cap: null, f: function(s){ return s.clicks; }, fmt: function(v){ return Math.round(v * 10) / 10; },    bavg: 'avgClicks' },
+  { key: 'art',    label: 'Artwork Attention',  cap: null, f: function(s){ return s.artMs;  }, fmt: function(v){ return jFmtDur(v); },                 bavg: 'avgArt'    },
+  { key: 'intent', label: 'Commission Intent',  cap: 1,    f: function(s){ return s.goal ? 1 : 0; }, fmt: function(v){ return Math.round(v * 100) + '%'; }, bavg: 'intentRate' }
+];
+
+function buildChapter() {
+  var events = CommissionData.getAnalytics() || [];
+  var spots  = CommissionData.getSpotlight() || [];
+
+  /* artwork ms per session */
+  var artBySid = {};
+  spots.forEach(function(e) { var s = e.sid || '?'; artBySid[s] = (artBySid[s] || 0) + (e.ms || 0); });
+
+  /* group analytics by session */
+  var S = {};
+  events.forEach(function(e) {
+    var sid = e.sid || '?';
+    var s = S[sid] || (S[sid] = { sid: sid, pv: 0, clicks: 0, scroll: 0, exitMs: 0,
+      first: e.ts || 0, last: e.ts || 0, goal: false, vid: null, vfirst: null,
+      vnum: 0, entry: null, firstPvTs: Infinity });
+    if (e.ts) { if (e.ts < s.first) s.first = e.ts; if (e.ts > s.last) s.last = e.ts; }
+    if (e.type === 'pv') {
+      s.pv++;
+      if (e.ts != null && e.ts < s.firstPvTs) { s.firstPvTs = e.ts; s.entry = e.page; }
+      if (e.vid) s.vid = e.vid;
+      if (e.vfirst != null) s.vfirst = e.vfirst;
+      if (e.vnum) s.vnum = e.vnum;
+    }
+    else if (e.type === 'click')  s.clicks++;
+    else if (e.type === 'scroll') { if ((e.depth || 0) > s.scroll) s.scroll = e.depth || 0; }
+    else if (e.type === 'exit')   { if ((e.ms || 0) > s.exitMs) s.exitMs = e.ms || 0; }
+    else if (e.type === 'goal')   s.goal = true;
+  });
+
+  var sessions = Object.keys(S).map(function(sid) {
+    var s = S[sid];
+    s.artMs   = artBySid[sid] || 0;
+    s.dwell   = Math.max(s.last - s.first, s.exitMs, 0);
+    s.score   = chapterScore(s);
+    s.key     = s.vid || ('legacy:' + sid);
+    s.firstTs = (s.firstPvTs === Infinity ? s.first : s.firstPvTs);
+    return s;
+  }).filter(function(s) { return s.pv > 0; });
+
+  /* derive visit order per persistent visitor */
+  var byVid = {};
+  sessions.forEach(function(s) { (byVid[s.key] || (byVid[s.key] = [])).push(s); });
+  Object.keys(byVid).forEach(function(k) {
+    byVid[k].slice().sort(function(a, b) { return a.firstTs - b.firstTs; })
+      .forEach(function(s, i) { s.visitIndex = i + 1; });
+  });
+
+  var uniqueVisitors    = Object.keys(byVid).length;
+  var returningVisitors = Object.keys(byVid).filter(function(k) { return byVid[k].length >= 2; }).length;
+
+  /* aggregate per visit-number bucket */
+  var buckets = [];
+  for (var i = 1; i <= CHAPTER_BUCKETS; i++) {
+    buckets.push({ idx: i, label: (i < CHAPTER_BUCKETS ? 'Visit ' + i : 'Visit ' + CHAPTER_BUCKETS + '+'),
+      n: 0, pv: 0, dwell: 0, scroll: 0, clicks: 0, art: 0, goal: 0, score: 0 });
+  }
+  sessions.forEach(function(s) {
+    var b = buckets[Math.min(s.visitIndex, CHAPTER_BUCKETS) - 1];
+    b.n++; b.pv += s.pv; b.dwell += s.dwell; b.scroll += s.scroll;
+    b.clicks += s.clicks; b.art += s.artMs; b.goal += (s.goal ? 1 : 0); b.score += s.score;
+  });
+  buckets.forEach(function(b) {
+    var n = b.n || 1;
+    b.avgPv = b.pv / n; b.avgDwell = b.dwell / n; b.avgScroll = b.scroll / n;
+    b.avgClicks = b.clicks / n; b.avgArt = b.art / n; b.avgScore = b.score / n;
+    b.intentRate = b.n ? b.goal / b.n : 0;
+  });
+  var present = buckets.filter(function(b) { return b.n > 0; });
+
+  /* deepest-engaging visit position */
+  var deepest = present.slice().sort(function(a, b) { return b.avgScore - a.avgScore; })[0] || null;
+
+  /* first vs returning comparison */
+  var firstSessions = sessions.filter(function(s) { return s.visitIndex === 1; });
+  var retSessions   = sessions.filter(function(s) { return s.visitIndex >= 2; });
+  function avgOf(arr, f) { return arr.length ? arr.reduce(function(t, x) { return t + f(x); }, 0) / arr.length : 0; }
+  var compare = CHAPTER_METRICS.map(function(m) {
+    var fa = avgOf(firstSessions, m.f), ra = avgOf(retSessions, m.f);
+    var pct = fa ? (ra - fa) / fa : (ra ? 1 : 0);
+    return { key: m.key, label: m.label, cap: m.cap, fmt: m.fmt, firstAvg: fa, retAvg: ra, deltaPct: pct };
+  });
+
+  return {
+    sessions: sessions, buckets: present, allBuckets: buckets,
+    uniqueVisitors: uniqueVisitors, returningVisitors: returningVisitors,
+    totalSessions: sessions.length, returningSessions: retSessions.length,
+    firstSessions: firstSessions.length,
+    returningShare: sessions.length ? retSessions.length / sessions.length : 0,
+    avgVisits: uniqueVisitors ? sessions.length / uniqueVisitors : 0,
+    deepest: deepest, compare: compare
+  };
+}
+
+function chapterMval(b, key) {
+  var m = CHAPTER_METRICS.filter(function(x) { return x.key === key; })[0];
+  return b[m.bavg];
+}
+
+function drawChapterCurve(ch) {
+  var canvas = document.getElementById('chapter-curve');
+  if (!canvas) return;
+  var ctx = canvas.getContext('2d');
+  var W = canvas.width, H = canvas.height;
+  ctx.clearRect(0, 0, W, H);
+  var padL = 38, padR = 18, padT = 18, padB = 34;
+  var plotW = W - padL - padR, plotH = H - padT - padB;
+
+  var pts = ch.buckets;
+  if (pts.length < 1) {
+    ctx.fillStyle = '#444'; ctx.font = '12px -apple-system, sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText('No visits recorded yet. Chapter fills as visitors return.', W / 2, H / 2);
+    return;
+  }
+
+  /* gridlines + y labels (0,25,50,75,100) */
+  ctx.strokeStyle = 'rgba(201,168,124,0.12)';
+  ctx.fillStyle = '#8c887f';
+  ctx.font = '9px "Courier New", monospace';
+  ctx.textAlign = 'right';
+  ctx.textBaseline = 'middle';
+  for (var g = 0; g <= 100; g += 25) {
+    var y = padT + plotH - (g / 100) * plotH;
+    ctx.beginPath(); ctx.moveTo(padL, y); ctx.lineTo(W - padR, y); ctx.stroke();
+    ctx.fillText(String(g), padL - 6, y);
+  }
+
+  function xOf(i) { return pts.length === 1 ? padL + plotW / 2 : padL + (i / (pts.length - 1)) * plotW; }
+  function yOf(v) { return padT + plotH - (Math.max(0, Math.min(100, v)) / 100) * plotH; }
+
+  /* area fill */
+  ctx.beginPath();
+  ctx.moveTo(xOf(0), padT + plotH);
+  pts.forEach(function(b, i) { ctx.lineTo(xOf(i), yOf(b.avgScore)); });
+  ctx.lineTo(xOf(pts.length - 1), padT + plotH);
+  ctx.closePath();
+  ctx.fillStyle = 'rgba(201,168,124,0.14)';
+  ctx.fill();
+
+  /* line */
+  ctx.beginPath();
+  pts.forEach(function(b, i) { var fn = i ? 'lineTo' : 'moveTo'; ctx[fn](xOf(i), yOf(b.avgScore)); });
+  ctx.strokeStyle = '#c9a87c';
+  ctx.lineWidth = 2.5;
+  ctx.lineJoin = 'round';
+  ctx.stroke();
+
+  /* points + value labels + x labels */
+  ctx.textAlign = 'center';
+  pts.forEach(function(b, i) {
+    var x = xOf(i), y = yOf(b.avgScore);
+    ctx.beginPath(); ctx.arc(x, y, 4, 0, Math.PI * 2);
+    ctx.fillStyle = '#d6a878'; ctx.fill();
+    ctx.strokeStyle = '#2c2926'; ctx.lineWidth = 1.5; ctx.stroke();
+    ctx.fillStyle = '#e6dfd2';
+    ctx.font = 'bold 10px "Courier New", monospace';
+    ctx.textBaseline = 'bottom';
+    ctx.fillText(Math.round(b.avgScore), x, y - 8);
+    ctx.fillStyle = '#8c887f';
+    ctx.font = '9px "Courier New", monospace';
+    ctx.textBaseline = 'top';
+    ctx.fillText(b.label.replace('Visit ', 'V'), x, padT + plotH + 8);
+  });
+}
+
+function chapterMetricBars(ch, key) {
+  var m = CHAPTER_METRICS.filter(function(x) { return x.key === key; })[0];
+  var rows = ch.buckets.map(function(b) { return { label: b.label, v: chapterMval(b, key), n: b.n }; });
+  if (!rows.length) return '<p class="chapter-empty">No visits recorded yet.</p>';
+  var max = rows.reduce(function(mx, r) { return Math.max(mx, r.v); }, 0);
+  if (m.cap) max = Math.max(max, m.cap);
+  if (!max) max = 1;
+  return '<div class="spotlight-board">' + rows.map(function(r) {
+    var pct = Math.round(r.v / max * 100);
+    return '<div class="spotlight-row">' +
+      '<div class="sp-info">' +
+        '<div class="sp-label">' + escHtml(r.label) + '</div>' +
+        '<div class="sp-bar-wrap"><div class="sp-bar" style="width:' + pct + '%"></div></div>' +
+      '</div>' +
+      '<div class="sp-meta">' +
+        '<span class="sp-time">' + m.fmt(r.v) + '</span>' +
+        '<span class="sp-views">' + r.n + (r.n === 1 ? ' visit' : ' visits') + '</span>' +
+      '</div>' +
+    '</div>';
+  }).join('') + '</div>';
+}
+
+function renderChapterTab() {
+  var ch = buildChapter();
+  function chip(num, label) {
+    return '<div class="analytics-stat-chip"><span class="asc-num">' + num +
+      '</span><span class="asc-label">' + label + '</span></div>';
+  }
+  document.getElementById('chapter-stats').innerHTML =
+    chip(ch.totalSessions,                                              'Visits Analyzed')  +
+    chip(ch.totalSessions ? Math.round(ch.returningShare * 100) + '%' : '—', 'Returning-Visit Share') +
+    chip(ch.uniqueVisitors ? (Math.round(ch.avgVisits * 100) / 100)   : '—', 'Avg Visits / Visitor') +
+    chip(ch.deepest ? ch.deepest.label : '—',                          'Deepest-Engaging Visit');
+
+  /* Engagement curve */
+  drawChapterCurve(ch);
+
+  /* First vs returning comparison */
+  var cmp = document.getElementById('chapter-compare');
+  if (!ch.totalSessions) {
+    cmp.innerHTML = '<p class="chapter-empty">No visits recorded yet. Chapter populates as visitors browse and return.</p>';
+  } else if (!ch.returningSessions) {
+    cmp.innerHTML = '<p class="chapter-empty">No returning visits yet &mdash; every session so far is a first visit. This comparison appears once a visitor comes back (tracked by persistent <code>vid</code>).</p>';
+  } else {
+    cmp.innerHTML = ch.compare.map(function(c) {
+      var scaleMax = c.cap || Math.max(c.firstAvg, c.retAvg) || 1;
+      var fw = Math.round(Math.min(1, c.firstAvg / scaleMax) * 100);
+      var rw = Math.round(Math.min(1, c.retAvg / scaleMax) * 100);
+      var pct = Math.round(c.deltaPct * 100);
+      var dir = pct > 0 ? 'up' : (pct < 0 ? 'down' : 'flat');
+      var arrow = pct > 0 ? '▲' : (pct < 0 ? '▼' : '–');
+      var dtxt = pct === 0 ? 'even' : (pct > 0 ? '+' : '') + pct + '%';
+      return '<div class="chapter-cmp-row">' +
+        '<div class="chapter-cmp-metric">' + escHtml(c.label) + '</div>' +
+        '<div class="chapter-cmp-bars">' +
+          '<div class="chapter-cmp-bar first"><i style="width:' + fw + '%"></i><em>' + c.fmt(c.firstAvg) + '</em></div>' +
+          '<div class="chapter-cmp-bar ret"><i style="width:' + rw + '%"></i><em>' + c.fmt(c.retAvg) + '</em></div>' +
+        '</div>' +
+        '<div class="chapter-delta ' + dir + '">' + arrow + ' ' + dtxt + '</div>' +
+      '</div>';
+    }).join('');
+  }
+
+  /* Commission intent by visit number */
+  document.getElementById('chapter-intent').innerHTML = ch.buckets.length
+    ? jBarList(
+        ch.buckets.map(function(b) { return { label: b.label, count: Math.round(b.intentRate * 100), _b: b }; }),
+        100,
+        { suffix: function(r) {
+            var b = r._b;
+            return Math.round(b.intentRate * 100) + '% fired intent · ' + b.goal + '/' + b.n + (b.n === 1 ? ' visit' : ' visits');
+          } }
+      )
+    : '<p class="chapter-empty">No visits recorded yet — intent-by-visit fills as sessions accumulate.</p>';
+
+  /* Metric explorer */
+  var sel = document.getElementById('chapter-metric-select');
+  var prev = sel.value;
+  sel.innerHTML = CHAPTER_METRICS.map(function(m) {
+    return '<option value="' + m.key + '">' + escHtml(m.label) + '</option>';
+  }).join('');
+  if (prev && CHAPTER_METRICS.some(function(m) { return m.key === prev; })) sel.value = prev;
+  function drawExplore() {
+    document.getElementById('chapter-explore').innerHTML = ch.buckets.length
+      ? chapterMetricBars(ch, sel.value)
+      : '<p class="chapter-empty">No visits recorded yet.</p>';
+  }
+  sel.onchange = drawExplore;
+  drawExplore();
+}
+
+document.getElementById('chapter-refresh-btn').addEventListener('click', renderChapterTab);
+
+document.getElementById('chapter-export-btn').addEventListener('click', function() {
+  var ch = buildChapter();
+  var out = {
+    totalSessions: ch.totalSessions, uniqueVisitors: ch.uniqueVisitors,
+    returningVisitors: ch.returningVisitors, returningSessions: ch.returningSessions,
+    returningShare: Math.round(ch.returningShare * 1000) / 1000,
+    avgVisits: Math.round(ch.avgVisits * 100) / 100,
+    deepestVisit: ch.deepest ? ch.deepest.label : null,
+    byVisit: ch.buckets.map(function(b) {
+      return { visit: b.label, sessions: b.n, avgScore: Math.round(b.avgScore * 10) / 10,
+        avgPages: Math.round(b.avgPv * 100) / 100, avgDwellMs: Math.round(b.avgDwell),
+        avgScroll: Math.round(b.avgScroll * 10) / 10, avgClicks: Math.round(b.avgClicks * 100) / 100,
+        avgArtMs: Math.round(b.avgArt), intentRate: Math.round(b.intentRate * 1000) / 1000 };
+    }),
+    firstVsReturning: ch.compare.map(function(c) {
+      return { metric: c.label, firstVisit: Math.round(c.firstAvg * 100) / 100,
+        returning: Math.round(c.retAvg * 100) / 100, deltaPct: Math.round(c.deltaPct * 1000) / 1000 };
+    })
+  };
+  var blob = new Blob([JSON.stringify(out, null, 2)], { type: 'application/json' });
+  var url  = URL.createObjectURL(blob);
+  var a    = document.createElement('a');
+  a.href = url; a.download = 'chapter-' + Date.now() + '.json'; a.click();
   URL.revokeObjectURL(url);
 });
 </script>
